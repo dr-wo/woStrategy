@@ -57,6 +57,7 @@ def plot_cumulative_laps_by_day(
     team_fig.tight_layout()
 
     if output_path:
+        output_path = str(output_path)
         if "." in output_path:
             base, ext = output_path.rsplit(".", 1)
             driver_fig.savefig(f"{base}_drivers.{ext}", dpi=150, bbox_inches="tight")

@@ -76,6 +76,7 @@ def plot_race_sim(
     corrected_fig, corrected_ax = _make_plot(apply_correction=True)
 
     if output_path:
+        output_path = str(output_path)
         if "." in output_path:
             base, ext = output_path.rsplit(".", 1)
             raw_fig.savefig(f"{base}_uncorrected.{ext}", dpi=150, bbox_inches="tight")

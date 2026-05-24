@@ -1,8 +1,6 @@
-from wostrategy.core.session import Session
+"""Compatibility exports for tyre degradation models.
 
-year = 2021
-round = 21
+Model implementations live in :mod:`wostrategy.model.tyre_degragation`.
+"""
 
-for session_name in ['FP1', 'FP2', 'FP3']:
-    session = Session(year, round, session_name)
-    quicklaps = session.quicklaps()
+from wostrategy.model.tyre_degragation import *  # noqa: F403
