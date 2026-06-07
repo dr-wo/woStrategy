@@ -36,12 +36,17 @@ from wostrategy.plots.quali_performance import (
     result_output_path as _result_output_path,
     save_relative_team_pace_figures,
 )
-from wostrategy.tools import load_all_session_laps_with_telemetry_gap_summary
+from wostrategy.tools import (
+    load_all_session_laps,
+    load_all_session_laps_with_telemetry_gap_summary,
+)
+
+LAP_TIME_ONLY = "LapTimeOnly"
 
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race_range": [1, 5],
+    "race_range": [1, 6],
     "target_team": "Mercedes",
     "quick_lap_threshold": 1.07,
     "clean_min_time_delta_seconds": None,
@@ -54,6 +59,7 @@ SCRIPT_CONFIG = {
     "track_evolution_fit": EXPONENTIAL_TRACK_EVOLUTION_MODEL,
     "teammate_delta_threshold_percent": 0.6,
     "calculate_best_sectors": True,
+    "allow_lap_time_only": True,
     "telemetry_cache_dir": None,
     "force_refresh_telemetry": False,
     "test": False,
@@ -73,6 +79,7 @@ def calculate_quali_performance(
     last_quali_part_only: bool = SCRIPT_CONFIG["last_quali_part_only"],
     top_driver_count: int | None = SCRIPT_CONFIG["top_driver_count"],
     track_evolution_fit: str = SCRIPT_CONFIG["track_evolution_fit"],
+    lap_time_only: bool = False,
 ) -> QualiPerformanceResult | str:
     return analysis_calculate_quali_performance(
         laps,
@@ -84,6 +91,7 @@ def calculate_quali_performance(
         last_quali_part_only=last_quali_part_only,
         top_driver_count=top_driver_count,
         track_evolution_fit=track_evolution_fit,
+        lap_time_only=lap_time_only,
     )
 
 
@@ -103,19 +111,44 @@ def run_quali_performance_tracker(
         "teammate_delta_threshold_percent"
     ],
     calculate_best_sectors: bool = SCRIPT_CONFIG["calculate_best_sectors"],
+    allow_lap_time_only: bool = SCRIPT_CONFIG["allow_lap_time_only"],
     telemetry_cache_dir: str | Path | None = SCRIPT_CONFIG["telemetry_cache_dir"],
     force_refresh_telemetry: bool = SCRIPT_CONFIG["force_refresh_telemetry"],
     test: bool = SCRIPT_CONFIG["test"],
 ) -> QualiPerformanceResult | str:
     """Load quali laps/telemetry, calculate track-evolution-corrected team bests."""
-    laps = load_all_session_laps_with_telemetry_gap_summary(
-        year=year,
-        rounds=[race],
-        session_names=[FORMAL_QUALIFYING_SESSION],
-        test=test,
-        telemetry_cache_dir=telemetry_cache_dir,
-        force_refresh_telemetry=force_refresh_telemetry,
-    )
+    lap_time_only = False
+    try:
+        laps = load_all_session_laps_with_telemetry_gap_summary(
+            year=year,
+            rounds=[race],
+            session_names=[FORMAL_QUALIFYING_SESSION],
+            test=test,
+            telemetry_cache_dir=telemetry_cache_dir,
+            force_refresh_telemetry=force_refresh_telemetry,
+        )
+    except Exception as exc:
+        if not allow_lap_time_only:
+            raise
+        print(
+            f"{year} race {race} {FORMAL_QUALIFYING_SESSION}: "
+            f"telemetry loading failed ({exc}), falling back to lap-time-only mode."
+        )
+        laps = _load_quali_lap_times(year=year, race=race, test=test)
+        lap_time_only = True
+
+    if not lap_time_only and allow_lap_time_only and not _has_clean_gap_columns(
+        laps,
+        clean_min_time_delta_seconds=clean_min_time_delta_seconds,
+        clean_mean_time_delta_seconds=clean_mean_time_delta_seconds,
+    ):
+        print(
+            f"{year} race {race} {FORMAL_QUALIFYING_SESSION}: "
+            "telemetry gap columns unavailable, falling back to lap-time-only mode."
+        )
+        laps = _load_quali_lap_times(year=year, race=race, test=test)
+        lap_time_only = True
+
     if laps.empty:
         raise ValueError(
             f"No laps loaded for year={year}, race={race}, "
@@ -131,6 +164,7 @@ def run_quali_performance_tracker(
         last_quali_part_only=last_quali_part_only,
         top_driver_count=top_driver_count,
         track_evolution_fit=track_evolution_fit,
+        lap_time_only=lap_time_only,
     )
     result = analyzer.calculate(laps)
     if result == "Wet":
@@ -163,6 +197,7 @@ def plot_quali_performance_range(
         "teammate_delta_threshold_percent"
     ],
     calculate_best_sectors: bool = SCRIPT_CONFIG["calculate_best_sectors"],
+    allow_lap_time_only: bool = SCRIPT_CONFIG["allow_lap_time_only"],
     telemetry_cache_dir: str | Path | None = SCRIPT_CONFIG["telemetry_cache_dir"],
     force_refresh_telemetry: bool = SCRIPT_CONFIG["force_refresh_telemetry"],
     test: bool = SCRIPT_CONFIG["test"],
@@ -183,6 +218,7 @@ def plot_quali_performance_range(
             last_quali_part_only=last_quali_part_only,
             top_driver_count=top_driver_count,
             track_evolution_fit=track_evolution_fit,
+            allow_lap_time_only=allow_lap_time_only,
             telemetry_cache_dir=telemetry_cache_dir,
             force_refresh_telemetry=force_refresh_telemetry,
             test=test,
@@ -190,16 +226,17 @@ def plot_quali_performance_range(
         if result == "Wet":
             continue
 
-        records.extend(
-            relative_team_pace_rows(
-                result=result,
-                year=year,
-                race=race,
-                target_team=target_team,
-                teammate_delta_threshold_percent=teammate_delta_threshold_percent,
-                calculate_best_sectors=calculate_best_sectors,
-            )
+        race_records = relative_team_pace_rows(
+            result=result,
+            year=year,
+            race=race,
+            target_team=target_team,
+            teammate_delta_threshold_percent=teammate_delta_threshold_percent,
+            calculate_best_sectors=calculate_best_sectors,
         )
+        for record in race_records:
+            record[LAP_TIME_ONLY] = result.lap_time_only
+        records.extend(race_records)
 
     if not records:
         raise ValueError("No dry quali results available for the requested race range.")
@@ -291,6 +328,50 @@ def _format_usage_row(row: object) -> str:
     return usage
 
 
+def _load_quali_lap_times(*, year: int, race: int | str, test: bool) -> pd.DataFrame:
+    return load_all_session_laps(
+        year=year,
+        rounds=[race],
+        session_names=[FORMAL_QUALIFYING_SESSION],
+        test=test,
+    )
+
+
+def _has_clean_gap_columns(
+    laps: pd.DataFrame,
+    *,
+    clean_min_time_delta_seconds: float | None,
+    clean_mean_time_delta_seconds: float | None,
+) -> bool:
+    min_defined = clean_min_time_delta_seconds is not None
+    mean_defined = clean_mean_time_delta_seconds is not None
+    if min_defined and mean_defined:
+        raise ValueError(
+            "Define at most one clean gap filter when allowing lap-time-only fallback."
+        )
+    if not min_defined and not mean_defined:
+        return False
+
+    column = (
+        "MinTimeDeltaToDriverAhead"
+        if min_defined
+        else "MeanTimeDeltaToDriverAhead"
+    )
+    return column in laps.columns and laps[column].notna().any()
+
+
+def print_lap_time_only_summary(summaries) -> None:
+    lap_only_races: set[int] = set()
+    for summary in summaries:
+        if LAP_TIME_ONLY not in summary.columns:
+            continue
+        lap_only_rows = summary.loc[summary[LAP_TIME_ONLY].fillna(False)]
+        lap_only_races.update(int(race) for race in lap_only_rows["Race"].dropna().unique())
+
+    race_label = ", ".join(f"R{race}" for race in sorted(lap_only_races)) or "none"
+    print(f"Lap-time-only races: {race_label}")
+
+
 def main() -> None:
     args = _parse_args()
     race_range = _parse_race_range(args.race_range)
@@ -320,6 +401,7 @@ def main() -> None:
             track_evolution_fit=fit_model_name,
             teammate_delta_threshold_percent=args.teammate_delta_threshold_percent,
             calculate_best_sectors=args.calculate_best_sectors,
+            allow_lap_time_only=args.allow_lap_time_only,
             telemetry_cache_dir=args.telemetry_cache_dir,
             force_refresh_telemetry=args.force_refresh_telemetry,
             test=args.test,
@@ -336,6 +418,7 @@ def main() -> None:
                 f"{_result_output_path(model_output_path, result_type)}"
             )
     print(f"Rows plotted: {sum(len(summary) for summary in summaries.values())}")
+    print_lap_time_only_summary(summaries.values())
     if args.show:
         plt.show()
     else:
@@ -419,6 +502,16 @@ def _parse_args() -> argparse.Namespace:
         action=argparse.BooleanOptionalAction,
         default=SCRIPT_CONFIG["calculate_best_sectors"],
         help="Build and plot a team best-sector lap from corrected S1/S2/S3 results.",
+    )
+    parser.add_argument(
+        "--allow-lap-time-only",
+        action=argparse.BooleanOptionalAction,
+        default=SCRIPT_CONFIG["allow_lap_time_only"],
+        help=(
+            "Try telemetry gap summaries first. If unavailable, select push laps from "
+            "lap time only and fit track evolution from those unfiltered lap-time "
+            "push laps."
+        ),
     )
     parser.add_argument(
         "--telemetry-cache-dir",

@@ -16,12 +16,14 @@ class PushLapSelector:
         new_tyre_only: bool,
         clean_min_time_delta_behind_seconds: float | None = None,
         clean_mean_time_delta_behind_seconds: float | None = None,
+        lap_time_only: bool = False,
     ) -> None:
         self.quick_lap_threshold = quick_lap_threshold
         self.clean_min_time_delta_seconds = clean_min_time_delta_seconds
         self.clean_mean_time_delta_seconds = clean_mean_time_delta_seconds
         self.clean_min_time_delta_behind_seconds = clean_min_time_delta_behind_seconds
         self.clean_mean_time_delta_behind_seconds = clean_mean_time_delta_behind_seconds
+        self.lap_time_only = lap_time_only
         self.dry_compounds = tuple(compound.upper() for compound in dry_compounds)
         self.new_tyre_only = new_tyre_only
 
@@ -37,6 +39,7 @@ class PushLapSelector:
             clean_mean_time_delta_behind_seconds=(
                 self.clean_mean_time_delta_behind_seconds
             ),
+            lap_time_only=self.lap_time_only,
         )
 
     def select_push_laps(self, laps: pd.DataFrame) -> pd.DataFrame:
@@ -56,15 +59,27 @@ def add_push_lap_flags(
     clean_mean_time_delta_seconds: float | None,
     clean_min_time_delta_behind_seconds: float | None = None,
     clean_mean_time_delta_behind_seconds: float | None = None,
+    lap_time_only: bool = False,
 ) -> pd.DataFrame:
-    clean_delta_column, clean_delta_threshold = _resolve_clean_delta_filter(
-        clean_min_time_delta_seconds=clean_min_time_delta_seconds,
-        clean_mean_time_delta_seconds=clean_mean_time_delta_seconds,
-        suffix="Ahead",
-    )
+    if lap_time_only:
+        if (
+            clean_min_time_delta_behind_seconds is not None
+            or clean_mean_time_delta_behind_seconds is not None
+        ):
+            raise ValueError(
+                "Behind clean gap filters cannot be used when lap_time_only is enabled."
+            )
+        clean_delta_column = None
+        clean_delta_threshold = None
+    else:
+        clean_delta_column, clean_delta_threshold = _resolve_clean_delta_filter(
+            clean_min_time_delta_seconds=clean_min_time_delta_seconds,
+            clean_mean_time_delta_seconds=clean_mean_time_delta_seconds,
+            suffix="Ahead",
+        )
     clean_delta_behind_column: str | None = None
     clean_delta_behind_threshold: float | None = None
-    if (
+    if not lap_time_only and (
         clean_min_time_delta_behind_seconds is not None
         or clean_mean_time_delta_behind_seconds is not None
     ):
@@ -79,10 +94,11 @@ def add_push_lap_flags(
         "Driver",
         "LapTime",
         "LapStartTime",
-        clean_delta_column,
         "PitOutTime",
         "PitInTime",
     }
+    if clean_delta_column is not None:
+        required_columns.add(clean_delta_column)
     if clean_delta_behind_column is not None:
         required_columns.add(clean_delta_behind_column)
     missing_columns = required_columns.difference(laps.columns)
@@ -112,7 +128,7 @@ def add_push_lap_flags(
 
     driver_fastest = flagged.groupby("Driver")["LapTimeSeconds"].transform("min")
     flagged["IsQuickLap"] = flagged["LapTimeSeconds"] <= quick_lap_threshold * driver_fastest
-    if clean_delta_threshold == 0:
+    if lap_time_only or clean_delta_threshold == 0:
         flagged["IsCleanLap"] = flagged["IsQuickLap"]
     else:
         flagged["IsCleanLap"] = (

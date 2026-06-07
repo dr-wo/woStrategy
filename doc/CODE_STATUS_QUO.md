@@ -137,6 +137,7 @@ Chainable filters:
 Important behavior:
 
 - `_fill_missing_outlap_laptimes` fills missing out-lap `LapTime` when `PitOutTime` and the next `LapStartTime` can produce a positive duration.
+- Missing or invalid circuit distance falls back to `race_lap_number = 78`, so sessions with incomplete circuit metadata can still load laps.
 - `clean_laps` computes a time gap from FastF1 car data using `DistanceToDriverAhead / speed`.
 - `effective_stint` adds `EffectiveStint` and `EffectiveStintLapNumber`; it heuristically marks short or slow-lap-heavy stints as quali-sim and combines eligible stints with small pit gaps.
 
@@ -289,6 +290,7 @@ Return keys:
   - returns `"Wet"` when wet/intermediate compounds are present
   - flags clean dry push laps
   - optionally filters to new tyres only
+  - can run in lap-time-only mode, where clean laps are quick non-in/out laps without telemetry gap filtering
   - fits track evolution on the dominant dry compound using `wostrategy.model.track_evolution`
   - optionally filters only the fit sample to top drivers
   - applies the selected fit to eligible laps
@@ -425,6 +427,8 @@ Scripts are importable modules under `src/wostrategy/script`.
 
 - CLI for dry formal qualifying (`Q`) performance tracking across a race range.
 - Loads lap data plus cached telemetry gap summaries; wet or intermediate tyre usage returns/skips `Wet`.
+- Supports `--allow-lap-time-only`, which tries telemetry first and falls back to plain lap-time push-lap selection only when telemetry loading fails or the requested gap summary column is unavailable.
+- Prints a final one-line fallback summary, for example `Lap-time-only races: R6` or `Lap-time-only races: none`.
 - Delegates qualifying correction and aggregation to `analysis.quali_performance`.
 - Delegates relative pace figure rendering/saving to `plots.quali_performance`.
 - Filters to clean dry push laps, optionally requiring `FreshTyre` new-tyre laps only; default is new tyres only.
@@ -472,17 +476,22 @@ Current tests:
   - Dominant compound validation
   - New-tyre filtering
   - Top-driver filtered evolution applied to all drivers
+  - Lap-time-only qualifying calculation without telemetry gap columns
+  - Requested telemetry gap column availability for fallback
   - Exponential track-evolution fit path
   - Q1/Q2/Q3 qualifying-part propagation
   - Last-qualifying-part-only final performance selection
   - Team fastest/average aggregation and teammate-delta fallback
   - Corrected sector ratio preservation
   - Best-sector team result assembly
+- `tests/test_session.py`
+  - Session race-lap fallback when circuit distance metadata is missing
+  - Valid circuit distance handling
 
 Observed verification status in this workspace:
 
-- `pytest -q`: failed because `pytest` command was not found.
-- `python -m pytest -q`: failed because default `python` is Python 2.7 and has no pytest.
+- `../Fast-F1/.venv/bin/python -m pytest tests/test_clean_lap_track_development.py tests/test_quali_performance_tracker.py tests/test_session.py`: passed with `33 passed, 1 warning`.
+- `python3 -m compileall src tests`: passed.
 - `python3 -m pytest -q`: failed because Python 3.9 has no pytest installed.
 - A neighboring Fast-F1 virtualenv does have the needed test stack.
 - `../Fast-F1/.venv/bin/python -m pytest tests/test_clean_lap_track_development.py tests/test_quali_performance_tracker.py`: passed with `27 passed, 1 warning`.

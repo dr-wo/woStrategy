@@ -13,6 +13,7 @@ from wostrategy.script.quali_performance_tracker import (
     TRACK_EVO_CORRECTED_LAP_TIME_SECONDS,
     _add_corrected_sector_times,
     _add_track_evolution_correction,
+    _has_clean_gap_columns,
     _parse_race_range,
     _team_best_sector_rows,
     _team_fastest_and_average_rows,
@@ -138,6 +139,51 @@ def test_calculate_quali_performance_filters_used_tyres_when_enabled():
 
     assert result != "Wet"
     assert result.quickest_drivers["Driver"].tolist() == ["LEC", "NOR"]
+
+
+def test_calculate_quali_performance_can_use_lap_time_only_without_telemetry_gaps():
+    laps = _laps(
+        [
+            ("Ferrari", "LEC", "SOFT", 80.0, 2, True, 1),
+            ("Ferrari", "HAM", "SOFT", 81.0, 5, True, 2),
+            ("McLaren", "NOR", "SOFT", 82.0, 8, True, 3),
+        ]
+    ).drop(columns=["MinTimeDeltaToDriverAhead", "MeanTimeDeltaToDriverAhead"])
+
+    result = calculate_quali_performance(
+        laps,
+        quick_lap_threshold=1.07,
+        clean_min_time_delta_seconds=None,
+        clean_mean_time_delta_seconds=None,
+        lap_time_only=True,
+        top_driver_count=None,
+        track_evolution_fit=LINEAR_TRACK_EVOLUTION_MODEL,
+    )
+
+    assert result != "Wet"
+    assert result.dominant_compound == "SOFT"
+    assert result.laps["IsCleanLap"].equals(result.laps["IsQuickLap"])
+    assert set(result.quickest_drivers["Driver"]) == {"LEC", "HAM", "NOR"}
+
+
+def test_has_clean_gap_columns_requires_requested_telemetry_column_with_data():
+    laps = pd.DataFrame({"MeanTimeDeltaToDriverAhead": [pd.NA, 4.5]})
+
+    assert _has_clean_gap_columns(
+        laps,
+        clean_min_time_delta_seconds=None,
+        clean_mean_time_delta_seconds=3.0,
+    )
+    assert not _has_clean_gap_columns(
+        laps,
+        clean_min_time_delta_seconds=3.0,
+        clean_mean_time_delta_seconds=None,
+    )
+    assert not _has_clean_gap_columns(
+        pd.DataFrame({"MeanTimeDeltaToDriverAhead": [pd.NA]}),
+        clean_min_time_delta_seconds=None,
+        clean_mean_time_delta_seconds=3.0,
+    )
 
 
 def test_calculate_quali_performance_uses_top_drivers_for_evolution_fit():

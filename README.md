@@ -83,6 +83,7 @@ python -m wostrategy.script.quali_performance_tracker \
   --target-team Mercedes \
   --new-tyre-only \
   --last-quali-part-only \
+  --allow-lap-time-only \
   --track-evolution-fit exponential
 ```
 
@@ -92,6 +93,12 @@ across Q1/Q2/Q3, but each driver's presented result is selected only from the
 last qualifying part they reached. For example, a driver eliminated in Q2 uses
 only Q2 corrected laps for the final result even if a corrected Q1 lap is
 faster.
+
+`--allow-lap-time-only` keeps telemetry as the preferred clean-lap source. If
+telemetry loading fails, or the requested per-lap telemetry gap column is
+missing/empty, the tracker falls back to lap-time-only push-lap selection for
+that race. The final console output includes a brief line such as
+`Lap-time-only races: R6` or `Lap-time-only races: none`.
 
 Example local outputs from `temp/`:
 

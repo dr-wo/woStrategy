@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from math import ceil
+from math import ceil, isfinite
 from typing import Union
 
 import fastf1
@@ -26,8 +26,8 @@ class Session:
         self._session = self._load_session(**kwargs)
         self._original_laps = self._session.laps
         self.laps = self._session.laps
-        self.lap_distance = self._session.get_circuit_info().marshal_sectors["Distance"].max()
-        self.race_lap_number = max(ceil(3e5 / self.lap_distance), 78)
+        self.lap_distance = self._lap_distance()
+        self.race_lap_number = self._race_lap_number()
         self._add_stint_lap_number()
 
     def _load_session(self, **kwargs) -> FastF1Session:
@@ -64,6 +64,24 @@ class Session:
                 continue
 
             session.laps.loc[filled_laptimes.index, "LapTime"] = filled_laptimes
+
+    def _lap_distance(self) -> float | None:
+        try:
+            lap_distance = self._session.get_circuit_info().marshal_sectors["Distance"].max()
+        except Exception:
+            return None
+
+        if pd.isna(lap_distance):
+            return None
+        lap_distance = float(lap_distance)
+        if not isfinite(lap_distance) or lap_distance <= 0:
+            return None
+        return lap_distance
+
+    def _race_lap_number(self) -> int:
+        if self.lap_distance is None:
+            return 78
+        return max(ceil(3e5 / self.lap_distance), 78)
 
     def _add_stint_lap_number(self) -> None:
         self.laps["StintLapNumber"] = self.laps.groupby(["Driver", "Stint"], sort=False).cumcount() + 1

@@ -55,6 +55,7 @@ class QualiPerformanceResult:
     evolution_rate_seconds_per_lap: float
     reference_session_lap_order: int
     evolution_drivers: list[str] | None
+    lap_time_only: bool = False
 
 
 class QualiPerformanceAnalyzer:
@@ -69,6 +70,7 @@ class QualiPerformanceAnalyzer:
         top_driver_count: int | None,
         track_evolution_fit: str,
         last_quali_part_only: bool = False,
+        lap_time_only: bool = False,
     ) -> None:
         self.quick_lap_threshold = quick_lap_threshold
         self.clean_min_time_delta_seconds = clean_min_time_delta_seconds
@@ -78,6 +80,7 @@ class QualiPerformanceAnalyzer:
         self.last_quali_part_only = last_quali_part_only
         self.top_driver_count = top_driver_count
         self.track_evolution_fit = track_evolution_fit
+        self.lap_time_only = lap_time_only
 
     def calculate(self, laps: pd.DataFrame) -> QualiPerformanceResult | str:
         return calculate_quali_performance(
@@ -90,6 +93,7 @@ class QualiPerformanceAnalyzer:
             top_driver_count=self.top_driver_count,
             track_evolution_fit=self.track_evolution_fit,
             last_quali_part_only=self.last_quali_part_only,
+            lap_time_only=self.lap_time_only,
         )
 
 
@@ -104,6 +108,7 @@ def calculate_quali_performance(
     top_driver_count: int | None,
     track_evolution_fit: str,
     last_quali_part_only: bool = False,
+    lap_time_only: bool = False,
 ) -> QualiPerformanceResult | str:
     """Return corrected quickest quali laps, or ``Wet`` if wet/inter tyres are present."""
     _require_columns(laps, {"Team", "Driver", "LapNumber", "LapTime", "Compound"})
@@ -119,6 +124,7 @@ def calculate_quali_performance(
         quick_lap_threshold=quick_lap_threshold,
         clean_min_time_delta_seconds=clean_min_time_delta_seconds,
         clean_mean_time_delta_seconds=clean_mean_time_delta_seconds,
+        lap_time_only=lap_time_only,
     )
     dry_compounds = tuple(compound.upper() for compound in dry_compounds)
     push_laps = prepared.loc[
@@ -183,6 +189,7 @@ def calculate_quali_performance(
         evolution_rate_seconds_per_lap=evolution_fit.evolution_rate_seconds_per_lap,
         reference_session_lap_order=reference_lap_order,
         evolution_drivers=evolution_drivers,
+        lap_time_only=lap_time_only,
     )
 
 

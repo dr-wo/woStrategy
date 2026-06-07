@@ -158,6 +158,34 @@ def test_add_push_lap_flags_accepts_zero_clean_delta_as_no_gap_filter():
     assert result["IsPushLap"].tolist() == [False, True, False]
 
 
+def test_add_push_lap_flags_can_use_lap_time_only_without_gap_columns():
+    laps = _laps(
+        lap_numbers=[1, 2, 3],
+        lap_times=[None, 80.0, None],
+        pit_out=[True, False, False],
+        pit_in=[False, False, True],
+        min_gaps=[None, None, None],
+    ).drop(
+        columns=[
+            "MinTimeDeltaToDriverAhead",
+            "MeanTimeDeltaToDriverAhead",
+            "MinTimeDeltaToDriverBehind",
+            "MeanTimeDeltaToDriverBehind",
+        ]
+    )
+
+    result = add_push_lap_flags(
+        laps,
+        quick_lap_threshold=1.07,
+        clean_min_time_delta_seconds=None,
+        clean_mean_time_delta_seconds=None,
+        lap_time_only=True,
+    )
+
+    assert result["IsCleanLap"].tolist() == [False, True, False]
+    assert result["IsPushLap"].tolist() == [False, True, False]
+
+
 def test_add_push_lap_flags_can_use_mean_delta_clean_filter():
     laps = _laps(
         lap_numbers=[1, 2, 3],
