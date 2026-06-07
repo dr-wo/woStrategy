@@ -74,6 +74,22 @@ python -m wostrategy.script.push_lap_track_development \
   --track-evolution-fit exponential
 ```
 
+Tyre strategy summary for one feature race:
+
+```bash
+python -m wostrategy.script.tyre_strategy_summary \
+  --year 2026 \
+  --race 6
+```
+
+This prints Chinese and English two-column strategy tables ordered by finishing
+position, and writes CSVs to `temp/` by default:
+
+```text
+temp/tyre_strategy_summary_2026_6_R_chinese.csv
+temp/tyre_strategy_summary_2026_6_R_english.csv
+```
+
 Qualifying performance tracking:
 
 ```bash

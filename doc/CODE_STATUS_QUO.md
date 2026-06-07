@@ -418,6 +418,15 @@ Scripts are importable modules under `src/wostrategy/script`.
 - CLI for one lap's front-car time/distance gap map.
 - Loads one FastF1 session and driver lap, builds telemetry with `TelemetryDataLoader(skip_lap_errors=False)`, and plots the two telemetry maps.
 
+`tyre_strategy_summary.py`
+
+- CLI for one feature race tyre strategy summary.
+- Loads one race session with `load_all_session_laps`, derives tyre segments per driver, and prints Chinese and English two-column tables.
+- Orders rows by `SessionResultRank` finishing position when available, falling back to driver name.
+- Detects tyre changes from compound changes or `TyreLife` decreasing; this handles fitted old tyres without requiring the new stint age to start at zero.
+- Ignores pit-lane pass-throughs where pit markers exist but tyre age continues.
+- Writes separate two-column CSV tables to `temp/` by default, with `_chinese.csv` and `_english.csv` suffixes.
+
 `export_telemetry_cache_csv.py`
 
 - Exports one cached telemetry pickle to CSV.
@@ -487,9 +496,16 @@ Current tests:
 - `tests/test_session.py`
   - Session race-lap fallback when circuit distance metadata is missing
   - Valid circuit distance handling
+- `tests/test_tyre_strategy_summary.py`
+  - Drive-through pit-lane pass ignored when tyre age continues
+  - Same-compound tyre change detected when tyre age decreases
+  - Chinese and English compound strategy formatting
+  - Table ordering by finishing rank
+  - Separate two-column CSV exports
 
 Observed verification status in this workspace:
 
+- `../Fast-F1/.venv/bin/python -m pytest tests/test_tyre_strategy_summary.py`: passed with `5 passed, 1 warning`.
 - `../Fast-F1/.venv/bin/python -m pytest tests/test_clean_lap_track_development.py tests/test_quali_performance_tracker.py tests/test_session.py`: passed with `33 passed, 1 warning`.
 - `python3 -m compileall src tests`: passed.
 - `python3 -m pytest -q`: failed because Python 3.9 has no pytest installed.
