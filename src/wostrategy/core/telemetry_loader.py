@@ -339,13 +339,110 @@ def summarize_lap_gap_metrics(
         )
 
     summary_input = telemetry.loc[:, [*group_columns, time_delta_column, distance_delta_column]]
-    return (
+    ahead_summary = (
         summary_input.groupby(list(group_columns), dropna=False, as_index=False)
         .agg(
             MinTimeDeltaToDriverAhead=(time_delta_column, "min"),
             MeanTimeDeltaToDriverAhead=(time_delta_column, "mean"),
             MinDistanceToDriverAhead=(distance_delta_column, "min"),
             MeanDistanceToDriverAhead=(distance_delta_column, "mean"),
+        )
+    )
+    behind_summary = _summarize_lap_gap_behind(
+        telemetry,
+        group_columns=group_columns,
+        time_delta_column=time_delta_column,
+        distance_delta_column=distance_delta_column,
+    )
+    if behind_summary.empty:
+        ahead_summary["MinTimeDeltaToDriverBehind"] = pd.NA
+        ahead_summary["MeanTimeDeltaToDriverBehind"] = pd.NA
+        ahead_summary["MinDistanceToDriverBehind"] = pd.NA
+        ahead_summary["MeanDistanceToDriverBehind"] = pd.NA
+        return ahead_summary
+
+    return ahead_summary.merge(
+        behind_summary,
+        on=list(group_columns),
+        how="left",
+    )
+
+
+def _summarize_lap_gap_behind(
+    telemetry: pd.DataFrame,
+    *,
+    group_columns: tuple[str, ...],
+    time_delta_column: str,
+    distance_delta_column: str,
+) -> pd.DataFrame:
+    required_columns = {
+        *group_columns,
+        "DriverNumber",
+        "DriverAhead",
+        time_delta_column,
+        distance_delta_column,
+    }
+    if required_columns.difference(telemetry.columns):
+        return pd.DataFrame(
+            columns=[
+                *group_columns,
+                "MinTimeDeltaToDriverBehind",
+                "MeanTimeDeltaToDriverBehind",
+                "MinDistanceToDriverBehind",
+                "MeanDistanceToDriverBehind",
+            ]
+        )
+
+    driver_lookup_columns = [
+        column
+        for column in ("Year", "Round", "SessionName", "LapNumber", "Driver", "DriverNumber")
+        if column in telemetry.columns
+    ]
+    driver_lookup = (
+        telemetry.loc[:, driver_lookup_columns]
+        .dropna(subset=["Driver", "DriverNumber"])
+        .drop_duplicates()
+        .copy()
+    )
+    driver_lookup["DriverNumber"] = driver_lookup["DriverNumber"].astype("string")
+
+    behind_samples = telemetry.dropna(subset=["DriverAhead", time_delta_column]).copy()
+    behind_samples["DriverAhead"] = behind_samples["DriverAhead"].astype("string")
+    merge_columns = [
+        column
+        for column in ("Year", "Round", "SessionName", "LapNumber")
+        if column in group_columns and column in telemetry.columns
+    ]
+    target_lookup = driver_lookup.rename(
+        columns={
+            "Driver": "TargetDriver",
+            "DriverNumber": "DriverAhead",
+        }
+    )
+    behind_samples = behind_samples.merge(
+        target_lookup[[*merge_columns, "TargetDriver", "DriverAhead"]],
+        on=[*merge_columns, "DriverAhead"],
+        how="inner",
+    )
+    if behind_samples.empty:
+        return pd.DataFrame(
+            columns=[
+                *group_columns,
+                "MinTimeDeltaToDriverBehind",
+                "MeanTimeDeltaToDriverBehind",
+                "MinDistanceToDriverBehind",
+                "MeanDistanceToDriverBehind",
+            ]
+        )
+
+    behind_samples["Driver"] = behind_samples["TargetDriver"]
+    return (
+        behind_samples.groupby(list(group_columns), dropna=False, as_index=False)
+        .agg(
+            MinTimeDeltaToDriverBehind=(time_delta_column, "min"),
+            MeanTimeDeltaToDriverBehind=(time_delta_column, "mean"),
+            MinDistanceToDriverBehind=(distance_delta_column, "min"),
+            MeanDistanceToDriverBehind=(distance_delta_column, "mean"),
         )
     )
 

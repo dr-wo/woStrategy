@@ -14,10 +14,14 @@ class PushLapSelector:
         clean_mean_time_delta_seconds: float | None,
         dry_compounds: tuple[str, ...],
         new_tyre_only: bool,
+        clean_min_time_delta_behind_seconds: float | None = None,
+        clean_mean_time_delta_behind_seconds: float | None = None,
     ) -> None:
         self.quick_lap_threshold = quick_lap_threshold
         self.clean_min_time_delta_seconds = clean_min_time_delta_seconds
         self.clean_mean_time_delta_seconds = clean_mean_time_delta_seconds
+        self.clean_min_time_delta_behind_seconds = clean_min_time_delta_behind_seconds
+        self.clean_mean_time_delta_behind_seconds = clean_mean_time_delta_behind_seconds
         self.dry_compounds = tuple(compound.upper() for compound in dry_compounds)
         self.new_tyre_only = new_tyre_only
 
@@ -27,6 +31,12 @@ class PushLapSelector:
             quick_lap_threshold=self.quick_lap_threshold,
             clean_min_time_delta_seconds=self.clean_min_time_delta_seconds,
             clean_mean_time_delta_seconds=self.clean_mean_time_delta_seconds,
+            clean_min_time_delta_behind_seconds=(
+                self.clean_min_time_delta_behind_seconds
+            ),
+            clean_mean_time_delta_behind_seconds=(
+                self.clean_mean_time_delta_behind_seconds
+            ),
         )
 
     def select_push_laps(self, laps: pd.DataFrame) -> pd.DataFrame:
@@ -44,11 +54,27 @@ def add_push_lap_flags(
     quick_lap_threshold: float,
     clean_min_time_delta_seconds: float | None,
     clean_mean_time_delta_seconds: float | None,
+    clean_min_time_delta_behind_seconds: float | None = None,
+    clean_mean_time_delta_behind_seconds: float | None = None,
 ) -> pd.DataFrame:
     clean_delta_column, clean_delta_threshold = _resolve_clean_delta_filter(
         clean_min_time_delta_seconds=clean_min_time_delta_seconds,
         clean_mean_time_delta_seconds=clean_mean_time_delta_seconds,
+        suffix="Ahead",
     )
+    clean_delta_behind_column: str | None = None
+    clean_delta_behind_threshold: float | None = None
+    if (
+        clean_min_time_delta_behind_seconds is not None
+        or clean_mean_time_delta_behind_seconds is not None
+    ):
+        clean_delta_behind_column, clean_delta_behind_threshold = (
+            _resolve_clean_delta_filter(
+                clean_min_time_delta_seconds=clean_min_time_delta_behind_seconds,
+                clean_mean_time_delta_seconds=clean_mean_time_delta_behind_seconds,
+                suffix="Behind",
+            )
+        )
     required_columns = {
         "Driver",
         "LapTime",
@@ -57,6 +83,8 @@ def add_push_lap_flags(
         "PitOutTime",
         "PitInTime",
     }
+    if clean_delta_behind_column is not None:
+        required_columns.add(clean_delta_behind_column)
     missing_columns = required_columns.difference(laps.columns)
     if missing_columns:
         missing = ", ".join(sorted(missing_columns))
@@ -91,6 +119,15 @@ def add_push_lap_flags(
             flagged["IsQuickLap"]
             & (flagged[clean_delta_column] > clean_delta_threshold)
         )
+    if clean_delta_behind_column is not None:
+        if clean_delta_behind_threshold == 0:
+            behind_clean = flagged["IsQuickLap"]
+        else:
+            behind_clean = (
+                flagged["IsQuickLap"]
+                & (flagged[clean_delta_behind_column] > clean_delta_behind_threshold)
+            )
+        flagged["IsCleanLap"] = flagged["IsCleanLap"] & behind_clean
     candidate_push = flagged["IsQuickLap"] & flagged["IsCleanLap"]
     flagged["IsOutLap"] = flagged["PitOutTime"].notna()
     flagged["IsInLap"] = flagged["PitInTime"].notna()
@@ -201,6 +238,7 @@ def _resolve_clean_delta_filter(
     *,
     clean_min_time_delta_seconds: float | None,
     clean_mean_time_delta_seconds: float | None,
+    suffix: str,
 ) -> tuple[str, float]:
     min_defined = clean_min_time_delta_seconds is not None
     mean_defined = clean_mean_time_delta_seconds is not None
@@ -211,5 +249,5 @@ def _resolve_clean_delta_filter(
         )
 
     if min_defined:
-        return "MinTimeDeltaToDriverAhead", float(clean_min_time_delta_seconds)
-    return "MeanTimeDeltaToDriverAhead", float(clean_mean_time_delta_seconds)
+        return f"MinTimeDeltaToDriver{suffix}", float(clean_min_time_delta_seconds)
+    return f"MeanTimeDeltaToDriver{suffix}", float(clean_mean_time_delta_seconds)

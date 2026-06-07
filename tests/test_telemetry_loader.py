@@ -177,6 +177,30 @@ def test_summarize_lap_gap_metrics_aggregates_by_lap():
     assert result["MeanDistanceToDriverAhead"].iloc[0] == 20.0
 
 
+def test_summarize_lap_gap_metrics_derives_driver_behind_gap():
+    telemetry = pd.DataFrame(
+        {
+            "Year": [2026, 2026, 2026, 2026],
+            "Round": [1, 1, 1, 1],
+            "SessionName": ["R", "R", "R", "R"],
+            "Driver": ["VER", "VER", "LEC", "LEC"],
+            "DriverNumber": ["1", "1", "16", "16"],
+            "DriverAhead": ["", "", "1", "1"],
+            "LapNumber": [1, 1, 1, 1],
+            "TimeDeltaToDriverAhead": [8.0, 9.0, 2.0, 4.0],
+            "DistanceToDriverAhead": [80.0, 90.0, 20.0, 40.0],
+        }
+    )
+
+    result = summarize_lap_gap_metrics(telemetry)
+    ver = result.loc[result["Driver"] == "VER"].iloc[0]
+
+    assert ver["MinTimeDeltaToDriverBehind"] == 2.0
+    assert ver["MeanTimeDeltaToDriverBehind"] == 3.0
+    assert ver["MinDistanceToDriverBehind"] == 20.0
+    assert ver["MeanDistanceToDriverBehind"] == 30.0
+
+
 def test_load_session_laps_with_telemetry_gap_summary_merges_metrics_and_caches(tmp_path):
     def session_factory(round_number, session_name):
         assert round_number == 1

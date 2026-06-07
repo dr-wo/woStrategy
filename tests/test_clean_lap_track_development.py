@@ -178,6 +178,28 @@ def test_add_push_lap_flags_can_use_mean_delta_clean_filter():
     assert result["IsPushLap"].tolist() == [False, True, False]
 
 
+def test_add_push_lap_flags_can_filter_car_behind_gap():
+    laps = _laps(
+        lap_numbers=[1, 2, 3, 4],
+        lap_times=[None, 80.0, 81.0, None],
+        pit_out=[True, False, False, False],
+        pit_in=[False, False, False, True],
+        min_gaps=[None, 6.0, 6.0, None],
+        min_gaps_behind=[None, 6.0, 2.0, None],
+    )
+
+    result = add_push_lap_flags(
+        laps,
+        quick_lap_threshold=1.07,
+        clean_min_time_delta_seconds=5.0,
+        clean_mean_time_delta_seconds=None,
+        clean_min_time_delta_behind_seconds=5.0,
+    )
+
+    assert result["IsCleanLap"].tolist() == [False, True, False, False]
+    assert result["IsPushLap"].tolist() == [False, True, False, False]
+
+
 def test_add_push_lap_flags_requires_exactly_one_clean_delta_filter():
     laps = _laps(
         lap_numbers=[1, 2, 3],
@@ -291,6 +313,8 @@ def _laps(
     pit_in,
     min_gaps,
     mean_gaps=None,
+    min_gaps_behind=None,
+    mean_gaps_behind=None,
     driver="VER",
     stint=1,
     start_minutes=None,
@@ -299,6 +323,10 @@ def _laps(
         start_minutes = lap_numbers
     if mean_gaps is None:
         mean_gaps = min_gaps
+    if min_gaps_behind is None:
+        min_gaps_behind = min_gaps
+    if mean_gaps_behind is None:
+        mean_gaps_behind = min_gaps_behind
 
     return pd.DataFrame(
         {
@@ -311,6 +339,8 @@ def _laps(
             "PitInTime": _pit_times(pit_in, lap_numbers),
             "MinTimeDeltaToDriverAhead": min_gaps,
             "MeanTimeDeltaToDriverAhead": mean_gaps,
+            "MinTimeDeltaToDriverBehind": min_gaps_behind,
+            "MeanTimeDeltaToDriverBehind": mean_gaps_behind,
         }
     )
 
