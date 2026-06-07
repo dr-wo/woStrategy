@@ -1,6 +1,6 @@
 # woStrategy Code Status Quo
 
-Last reviewed: 2026-05-24
+Last reviewed: 2026-06-07
 
 This document is a compact map of the current `woStrategy` package so future coding agents can orient quickly without rereading every module. It describes the repository as observed in the working tree, including uncommitted and untracked files.
 
@@ -156,6 +156,10 @@ Current caveat:
 - `MeanTimeDeltaToDriverAhead`
 - `MinDistanceToDriverAhead`
 - `MeanDistanceToDriverAhead`
+- `MinTimeDeltaToDriverBehind`
+- `MeanTimeDeltaToDriverBehind`
+- `MinDistanceToDriverBehind`
+- `MeanDistanceToDriverBehind`
 - `SessionResultRank`, when FastF1 `session.results` exposes driver result positions
 
 Both loaders catch exceptions per session, print skip messages, and continue.
@@ -206,6 +210,7 @@ Top-level telemetry helpers:
 - `load_session_telemetry`: batch loads full telemetry across sessions.
 - `load_or_cache_session_telemetry`: reads a pickle cache unless `force_refresh=True`; otherwise loads and writes a pickle.
 - `summarize_lap_gap_metrics`: aggregates full telemetry to per-lap min and mean time/distance gaps.
+- Behind-car gaps are derived by matching telemetry rows where another car's `DriverAhead` equals the current driver's `DriverNumber`; when this cannot be derived, the behind-gap columns are still present with missing values.
 
 ## Tools
 
@@ -252,7 +257,8 @@ Return keys:
 - Contains push-lap dataframe preparation and selection logic.
 - `PushLapSelector` wraps the common configuration:
   - quick-lap threshold
-  - min/mean clean gap filter
+  - min/mean clean gap filter to the car ahead
+  - optional min/mean clean gap filter to the car behind
   - dry compounds
   - new-tyre-only filtering
 - `add_push_lap_flags` marks:
@@ -268,6 +274,9 @@ Return keys:
 - Clean-gap filtering requires exactly one of:
   - `clean_min_time_delta_seconds`
   - `clean_mean_time_delta_seconds`
+- Behind-car clean-gap filtering is optional. When configured, exactly one of the corresponding behind thresholds should be used:
+  - `clean_min_time_delta_behind_seconds`
+  - `clean_mean_time_delta_behind_seconds`
 - A clean threshold of `0` is accepted and means no clean-gap cut beyond the quick-lap requirement.
 - `select_dry_push_laps` filters to dry compounds and, by default in scripts, new tyres only via `FreshTyre`.
 - `select_top_drivers` prefers `SessionResultRank`; it falls back to fastest uncorrected session lap if result ranks are unavailable.
@@ -443,6 +452,7 @@ Current tests:
   - Multi-session telemetry loading
   - Pickle cache write/reuse
   - Per-lap gap summaries
+  - Derived car-behind per-lap gap summaries
   - Merge of lap summaries into session laps
   - Merge of FastF1-style session result rank into lap rows
 - `tests/test_clean_lap_track_development.py`
@@ -450,6 +460,7 @@ Current tests:
   - Slow laps, consecutive push laps, and dirty lap rejection
   - Driver fastest lap threshold behavior
   - Min vs mean clean-gap filters
+  - Optional car-behind clean-gap filtering
   - Session lap order by `LapStartTime`
   - Top-driver selection using FastF1 result rank before fastest-lap fallback
   - Top-driver count greater than available drivers

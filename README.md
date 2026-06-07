@@ -32,6 +32,12 @@ Track evolution supports both `linear` and `exponential` fits. The exponential
 fit uses `y = A * e^(-kx) + B`. Selecting `--track-evolution-fit exponential`
 also writes linear comparison plots for comparison.
 
+Telemetry-backed clean-lap filtering can use both the gap to the car ahead and,
+when configured by analysis code, the gap to the car behind. The behind-car gap
+is derived from telemetry rows where another driver reports the current driver
+as `DriverAhead`, then aggregated to the same per-lap min/mean summary shape as
+the existing ahead-car metrics.
+
 ## Usage
 
 ```python
