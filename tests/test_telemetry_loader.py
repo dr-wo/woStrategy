@@ -156,6 +156,50 @@ def test_load_or_cache_session_telemetry_writes_and_reuses_cache(tmp_path):
     assert second["DistanceToDriverAhead"].tolist() == first["DistanceToDriverAhead"].tolist()
 
 
+def test_load_or_cache_session_telemetry_refreshes_stale_cache_without_time_delta(tmp_path):
+    cache_path = get_session_telemetry_cache_path(
+        year=2026,
+        round_number=1,
+        session_name="R",
+        cache_dir=tmp_path,
+    )
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        {
+            "Distance": [0.0, 100.0],
+            "DistanceToDriverAhead": [999.0, 999.0],
+            "Time": pd.to_timedelta([0.0, 10.0], unit="s"),
+        }
+    ).to_pickle(cache_path)
+    session = FakeSession(
+        [
+            FakeLap(
+                {"Driver": "LEC", "LapNumber": 1},
+                pd.DataFrame(
+                    {
+                        "Distance": [0.0, 100.0],
+                        "DistanceToDriverAhead": [50.0, 50.0],
+                        "Time": pd.to_timedelta([0.0, 10.0], unit="s"),
+                    }
+                ),
+            )
+        ]
+    )
+
+    result = load_or_cache_session_telemetry(
+        session,
+        year=2026,
+        round_number=1,
+        session_name="R",
+        cache_dir=tmp_path,
+    )
+    refreshed = pd.read_pickle(cache_path)
+
+    assert result["DistanceToDriverAhead"].tolist() == [50.0, 50.0]
+    assert result["TimeDeltaToDriverAhead"].tolist() == [5.0, 5.0]
+    assert "TimeDeltaToDriverAhead" in refreshed.columns
+
+
 def test_summarize_lap_gap_metrics_aggregates_by_lap():
     telemetry = pd.DataFrame(
         {

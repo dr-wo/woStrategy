@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from wostrategy.analysis.push_laps import (
     PushLapSelector,
@@ -23,22 +24,27 @@ from wostrategy.plots.track_development import (
     plot_compound_lap_time_fits,
     plot_top_driver_summary,
 )
-from wostrategy.tools import load_all_session_laps_with_telemetry_gap_summary
+from wostrategy.tools import (
+    load_all_session_laps,
+    load_all_session_laps_with_telemetry_gap_summary,
+)
 
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race": 4,
+    "race": 7,
     "section": "Q",
     "quick_lap_threshold": 1.07,
     "clean_mean_time_delta_seconds": 3,
     "dry_compounds": ("SOFT", "MEDIUM", "HARD"),
     "top_driver_count": 10,
     "new_tyre_only": True,
-    "track_evolution_fit": LINEAR_TRACK_EVOLUTION_MODEL,
+    # "track_evolution_fit": LINEAR_TRACK_EVOLUTION_MODEL,
+    "track_evolution_fit": EXPONENTIAL_TRACK_EVOLUTION_MODEL,
     "output": None,
     "telemetry_cache_dir": None,
-    "force_refresh_telemetry": False,
+    "force_refresh_telemetry": True,
+    "allow_lap_time_only": True,
     "test": False,
     "show": False,
 }
@@ -59,6 +65,7 @@ def plot_push_lap_track_development(
     output_path: str | Path | None = None,
     telemetry_cache_dir: str | Path | None = None,
     force_refresh_telemetry: bool = False,
+    allow_lap_time_only: bool = SCRIPT_CONFIG["allow_lap_time_only"],
     test: bool = False,
 ):
     """Load one session and create push-lap track development plots."""
@@ -70,15 +77,42 @@ def plot_push_lap_track_development(
     )
     print(f"Telemetry cache path: {cache_path}")
 
-    laps = load_all_session_laps_with_telemetry_gap_summary(
-        year=year,
-        rounds=[race],
-        session_names=[section],
-        test=test,
-        telemetry_cache_dir=telemetry_cache_dir,
-        force_refresh_telemetry=force_refresh_telemetry,
-    )
+    lap_time_only = False
+    try:
+        laps = load_all_session_laps_with_telemetry_gap_summary(
+            year=year,
+            rounds=[race],
+            session_names=[section],
+            test=test,
+            telemetry_cache_dir=telemetry_cache_dir,
+            force_refresh_telemetry=force_refresh_telemetry,
+        )
+    except Exception as exc:
+        if not allow_lap_time_only:
+            raise
+        print(
+            f"{year} round {race} session {section}: telemetry loading failed "
+            f"({exc}), falling back to lap-time-only mode."
+        )
+        laps = load_all_session_laps(
+            year=year,
+            rounds=[race],
+            session_names=[section],
+            test=test,
+        )
+        lap_time_only = True
     print(f"Telemetry cache saved/loaded from: {cache_path}")
+
+    if not lap_time_only and allow_lap_time_only and not _has_clean_gap_columns(
+        laps,
+        clean_min_time_delta_seconds=clean_min_time_delta_seconds,
+        clean_mean_time_delta_seconds=clean_mean_time_delta_seconds,
+    ):
+        print(
+            f"{year} round {race} session {section}: telemetry gap columns unavailable, "
+            "falling back to lap-time-only mode."
+        )
+        lap_time_only = True
 
     selector = PushLapSelector(
         quick_lap_threshold=quick_lap_threshold,
@@ -86,6 +120,7 @@ def plot_push_lap_track_development(
         clean_mean_time_delta_seconds=clean_mean_time_delta_seconds,
         dry_compounds=dry_compounds,
         new_tyre_only=new_tyre_only,
+        lap_time_only=lap_time_only,
     )
     flagged_laps = selector.add_flags(laps)
     push_laps = selector.select_push_laps(flagged_laps)
@@ -167,6 +202,7 @@ def plot_push_lap_track_development(
             fig.savefig(output_paths[figure_key], dpi=150, bbox_inches="tight")
 
     print(f"Quick laps: {int(flagged_laps['IsQuickLap'].sum())}")
+    print(f"Lap-time-only mode: {lap_time_only}")
     print(f"Clean quick laps: {int(flagged_laps['IsCleanLap'].sum())}")
     tyre_label = "new-tyre " if new_tyre_only else ""
     print(f"Dry compound {tyre_label}push laps: {len(push_laps)}")
@@ -293,6 +329,7 @@ def main() -> None:
         output_path=output_path,
         telemetry_cache_dir=args.telemetry_cache_dir,
         force_refresh_telemetry=args.force_refresh_telemetry,
+        allow_lap_time_only=args.allow_lap_time_only,
         test=args.test,
     )
 
@@ -369,6 +406,12 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         default=SCRIPT_CONFIG["force_refresh_telemetry"],
     )
+    parser.add_argument(
+        "--allow-lap-time-only",
+        action=argparse.BooleanOptionalAction,
+        default=SCRIPT_CONFIG["allow_lap_time_only"],
+        help="Fall back to lap-time-only push-lap selection when telemetry gaps are unavailable.",
+    )
     parser.add_argument("--test", action="store_true", default=SCRIPT_CONFIG["test"])
     parser.add_argument("--show", action="store_true", default=SCRIPT_CONFIG["show"])
     return parser.parse_args()
@@ -384,6 +427,29 @@ def _parse_optional_float(value: str) -> float | None:
     if value.lower() in {"none", "null"}:
         return None
     return float(value)
+
+
+def _has_clean_gap_columns(
+    laps: pd.DataFrame,
+    *,
+    clean_min_time_delta_seconds: float | None,
+    clean_mean_time_delta_seconds: float | None,
+) -> bool:
+    min_defined = clean_min_time_delta_seconds is not None
+    mean_defined = clean_mean_time_delta_seconds is not None
+    if min_defined and mean_defined:
+        raise ValueError(
+            "Define at most one clean gap filter when allowing lap-time-only fallback."
+        )
+    if not min_defined and not mean_defined:
+        return False
+
+    column = (
+        "MinTimeDeltaToDriverAhead"
+        if min_defined
+        else "MeanTimeDeltaToDriverAhead"
+    )
+    return column in laps.columns and laps[column].notna().any()
 
 
 def _selected_plot_models(track_evolution_fit: str) -> dict[str, TrackEvolutionModel]:

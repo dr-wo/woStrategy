@@ -171,7 +171,7 @@ def calculate_quali_performance(
             fresh_tyre_mask(corrected_push_laps["FreshTyre"])
         ].copy()
     performance_laps = (
-        latest_qualifying_part_laps(corrected_push_laps)
+        latest_qualifying_part_laps(corrected_push_laps, reference_laps=prepared)
         if last_quali_part_only
         else corrected_push_laps
     )
@@ -202,6 +202,7 @@ def relative_team_pace_rows(
     teammate_delta_threshold_percent: float | None,
     calculate_best_sectors: bool,
 ) -> list[dict[str, object]]:
+    event_name = _event_name_from_laps(result.laps)
     team_pace = team_fastest_and_average_rows(
         result.quickest_drivers,
         teammate_delta_threshold_percent=teammate_delta_threshold_percent,
@@ -228,6 +229,7 @@ def relative_team_pace_rows(
                 {
                     "Year": year,
                     "Race": race,
+                    "EventName": event_name,
                     RESULT_TYPE: row[RESULT_TYPE],
                     "Team": row["Team"],
                     "Driver": row["Driver"],
@@ -248,6 +250,16 @@ def relative_team_pace_rows(
                 }
             )
     return records
+
+
+def _event_name_from_laps(laps: pd.DataFrame) -> str | None:
+    for column in ("EventName", "RaceName", "EventLocation", "EventCountry"):
+        if column not in laps.columns:
+            continue
+        values = laps[column].dropna().astype(str)
+        if not values.empty:
+            return values.iloc[0]
+    return None
 
 
 def compound_evolution_rate(push_laps: pd.DataFrame, compound: str) -> float:
@@ -398,15 +410,39 @@ def quickest_driver_laps(push_laps: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def latest_qualifying_part_laps(push_laps: pd.DataFrame) -> pd.DataFrame:
+def latest_qualifying_part_laps(
+    push_laps: pd.DataFrame,
+    *,
+    reference_laps: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     if QUALIFYING_PART not in push_laps.columns:
         return push_laps.copy()
 
+    latest_parts = (
+        latest_qualifying_parts_by_driver(reference_laps)
+        if reference_laps is not None
+        else None
+    )
     part_rank = push_laps[QUALIFYING_PART].map(qualifying_part_rank)
     filtered_indexes = []
     for _, driver_laps in push_laps.assign(_QualifyingPartRank=part_rank).groupby(
         ["Team", "Driver"], sort=False
     ):
+        team = driver_laps["Team"].iloc[0]
+        driver = driver_laps["Driver"].iloc[0]
+        latest_rank = (
+            latest_parts.get((team, driver))
+            if latest_parts is not None
+            else None
+        )
+        if latest_rank is not None:
+            filtered_indexes.extend(
+                driver_laps.loc[
+                    driver_laps["_QualifyingPartRank"] == latest_rank
+                ].index.tolist()
+            )
+            continue
+
         ranked_laps = driver_laps.dropna(subset=["_QualifyingPartRank"])
         if ranked_laps.empty:
             filtered_indexes.extend(driver_laps.index.tolist())
@@ -417,6 +453,27 @@ def latest_qualifying_part_laps(push_laps: pd.DataFrame) -> pd.DataFrame:
         )
 
     return push_laps.loc[filtered_indexes].copy()
+
+
+def latest_qualifying_parts_by_driver(laps: pd.DataFrame) -> dict[tuple[object, object], float]:
+    if QUALIFYING_PART not in laps.columns:
+        return {}
+
+    required_columns = {"Team", "Driver", QUALIFYING_PART}
+    if required_columns.difference(laps.columns):
+        return {}
+
+    ranked = laps.loc[:, ["Team", "Driver", QUALIFYING_PART]].copy()
+    ranked["_QualifyingPartRank"] = ranked[QUALIFYING_PART].map(qualifying_part_rank)
+    ranked = ranked.dropna(subset=["_QualifyingPartRank"])
+    if ranked.empty:
+        return {}
+
+    return (
+        ranked.groupby(["Team", "Driver"], dropna=False)["_QualifyingPartRank"]
+        .max()
+        .to_dict()
+    )
 
 
 def qualifying_part_rank(value: object) -> float:

@@ -16,6 +16,10 @@ TRACK_EVO_CORRECTED_LAP_TIME_SECONDS = "track_evo_corrected_lap_time_seconds"
 
 LINEAR_TRACK_EVOLUTION_MODEL = "linear"
 EXPONENTIAL_TRACK_EVOLUTION_MODEL = "exponential"
+TRACK_X_COLUMN = "LapNumber"
+TRACK_SLOPE_PARAMETER = "track_slope_seconds_per_lap"
+TRACK_AMPLITUDE_PARAMETER = "track_amplitude_seconds"
+TRACK_DECAY_PARAMETER = "track_decay_rate"
 
 
 @dataclass(frozen=True)
@@ -196,6 +200,31 @@ def get_track_evolution_model(name: str) -> TrackEvolutionModel:
     except KeyError as exc:
         options = ", ".join(sorted(models))
         raise ValueError(f"Unknown track evolution fit {name!r}. Options: {options}") from exc
+
+
+def get_track_evolution_term_config(
+    name: str = LINEAR_TRACK_EVOLUTION_MODEL,
+    *,
+    x_column: str = TRACK_X_COLUMN,
+) -> dict[str, object]:
+    normalized = name.strip().lower()
+    if normalized == LINEAR_TRACK_EVOLUTION_MODEL:
+        return {
+            "model": LINEAR_TRACK_EVOLUTION_MODEL,
+            "x_column": x_column,
+            "parameter": TRACK_SLOPE_PARAMETER,
+            "label": "track_x",
+        }
+    if normalized == EXPONENTIAL_TRACK_EVOLUTION_MODEL:
+        return {
+            "model": EXPONENTIAL_TRACK_EVOLUTION_MODEL,
+            "x_column": x_column,
+            "amplitude_parameter": TRACK_AMPLITUDE_PARAMETER,
+            "decay_parameter": TRACK_DECAY_PARAMETER,
+            "label": "track_x",
+        }
+    options = ", ".join([LINEAR_TRACK_EVOLUTION_MODEL, EXPONENTIAL_TRACK_EVOLUTION_MODEL])
+    raise ValueError(f"Unknown track evolution term {name!r}. Options: {options}")
 
 
 def dominant_compound(compounds: pd.Series, *, require_majority: bool) -> str | None:

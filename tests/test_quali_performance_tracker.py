@@ -302,6 +302,37 @@ def test_calculate_quali_performance_can_use_only_driver_last_quali_part():
     ) == {"Q2"}
 
 
+def test_last_quali_part_uses_latest_entered_part_even_without_push_lap():
+    laps = pd.concat(
+        [
+            _driver_stint("Ferrari", "LEC", "SOFT", 80.0, 2, True, None, "Q2"),
+            _driver_stint("Ferrari", "LEC", "SOFT", 100.0, 5, True, None, "Q3"),
+            _driver_stint("Ferrari", "HAM", "SOFT", 81.0, 8, True, None, "Q3"),
+            _driver_stint("McLaren", "NOR", "SOFT", 82.0, 11, True, None, "Q3"),
+        ],
+        ignore_index=True,
+    )
+
+    result = calculate_quali_performance(
+        laps,
+        quick_lap_threshold=1.20,
+        clean_min_time_delta_seconds=None,
+        clean_mean_time_delta_seconds=3.0,
+        last_quali_part_only=True,
+        track_evolution_fit=LINEAR_TRACK_EVOLUTION_MODEL,
+    )
+
+    assert result != "Wet"
+    assert "LEC" not in set(result.quickest_drivers["Driver"])
+    assert not (
+        (result.eligible_laps["Driver"] == "LEC")
+        & (result.eligible_laps[QUALIFYING_PART] == "Q2")
+    ).any()
+    assert set(
+        result.eligible_laps.loc[result.eligible_laps["Driver"] == "HAM", QUALIFYING_PART]
+    ) == {"Q3"}
+
+
 def test_team_fastest_and_average_rows_uses_two_driver_mean_or_single_result():
     quickest_drivers = pd.DataFrame(
         {

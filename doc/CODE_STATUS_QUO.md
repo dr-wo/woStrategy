@@ -1,6 +1,6 @@
 # woStrategy Code Status Quo
 
-Last reviewed: 2026-06-07
+Last reviewed: 2026-06-14
 
 This document is a compact map of the current `woStrategy` package so future coding agents can orient quickly without rereading every module. It describes the repository as observed in the working tree, including uncommitted and untracked files.
 
@@ -76,6 +76,7 @@ Plot functions are exposed through `wostrategy.plots`, not through the root pack
 - Exponential fitting uses NumPy only: it scans candidate `k` values and solves `A`/`B` via least squares for each candidate. No SciPy dependency is required.
 - Shared helpers include:
   - `get_track_evolution_model`
+  - `get_track_evolution_term_config`
   - `fit_compound_track_evolution`
   - `add_track_evolution_correction`
   - `dominant_compound`
@@ -90,13 +91,21 @@ Plot functions are exposed through `wostrategy.plots`, not through the root pack
 
 - Contains `FuelCorrection` and `FixedRateFuelCorrection`.
 - `FixedRateFuelCorrection` estimates initial fuel by session type and can add `RemainingFuel` and `FuelCorrection`.
+- Also defines a linear fuel-consumption model interface and term-config helper for long-run model presets.
 - Still experimental and not yet covered by the focused tests.
 
 `src/wostrategy/model/tyre_degragation.py`
 
-- Contains exploratory tyre degradation code.
+- Contains exploratory tyre degradation code and a linear tyre-degradation model interface used by long-run model presets.
 - The previous import-time execution was moved behind `main()` so importing the module is safe.
 - File name still has a spelling issue: `tyre_degragation.py`.
+
+`src/wostrategy/model/long_run_performance.py`
+
+- Defines configurable long-run lap-time model presets and fitting helpers.
+- Presets include `linear_components` and `linear_components_exponential_track`.
+- Supports custom model configs composed of linear and exponential terms.
+- Provides `LongRunLapTimeFit`, `get_long_run_model_config`, `fit_long_run_lap_time_model`, `normalize_long_run_model_config`, and `reference_values_from_config`.
 
 Compatibility note:
 
@@ -149,7 +158,7 @@ Current caveat:
 
 `src/wostrategy/core/session_loader.py`
 
-`load_session_laps` is the generic batch loader. It loops over `rounds` and `session_names`, builds a session using an injected `session_factory`, optionally runs `enrich_session(session)`, copies `session.laps`, and appends `Year`, `Round`, and `SessionName`.
+`load_session_laps` is the generic batch loader. It loops over `rounds` and `session_names`, builds a session using an injected `session_factory`, optionally runs `enrich_session(session)`, copies `session.laps`, and appends `Year`, `Round`, `SessionName`, available FastF1 event metadata, and available session result rank.
 
 `load_session_laps_with_telemetry_gap_summary` does the same, then loads or reuses full telemetry for each session and merges per-lap gap summary columns:
 
@@ -164,6 +173,12 @@ Current caveat:
 - `SessionResultRank`, when FastF1 `session.results` exposes driver result positions
 
 Both loaders catch exceptions per session, print skip messages, and continue.
+
+Session event metadata behavior:
+
+- `_add_session_event_metadata` reads `session.data.event` when using the project `Session` wrapper, or `session.event` for FastF1-like test doubles.
+- It adds any available `EventName`, `EventFormat`, `EventCountry`, `EventLocation`, and `OfficialEventName`.
+- Plot helpers use this metadata to show event-aware race tick labels.
 
 Session result rank behavior:
 
@@ -209,7 +224,7 @@ There is no file extension by default. Unsafe cache-name characters are replaced
 Top-level telemetry helpers:
 
 - `load_session_telemetry`: batch loads full telemetry across sessions.
-- `load_or_cache_session_telemetry`: reads a pickle cache unless `force_refresh=True`; otherwise loads and writes a pickle.
+- `load_or_cache_session_telemetry`: reads a pickle cache unless `force_refresh=True`; otherwise loads and writes a pickle. Existing cache files that are missing the current estimator output column, for example `TimeDeltaToDriverAhead`, are treated as stale and rebuilt.
 - `summarize_lap_gap_metrics`: aggregates full telemetry to per-lap min and mean time/distance gaps.
 - Behind-car gaps are derived by matching telemetry rows where another car's `DriverAhead` equals the current driver's `DriverNumber`; when this cannot be derived, the behind-gap columns are still present with missing values.
 
@@ -294,10 +309,10 @@ Return keys:
   - fits track evolution on the dominant dry compound using `wostrategy.model.track_evolution`
   - optionally filters only the fit sample to top drivers
   - applies the selected fit to eligible laps
-  - optionally restricts final performance laps to each driver's last reached qualifying part via `last_quali_part_only`
+  - optionally restricts final performance laps to each driver's latest entered qualifying part via `last_quali_part_only`; this latest part is determined from all prepared session laps, not only valid push laps
   - adds corrected sector times when sector data is present
   - produces corrected quickest driver and team summaries
-- `relative_team_pace_rows` builds long-form summary rows for relative team pace plots.
+- `relative_team_pace_rows` builds long-form summary rows for relative team pace plots and includes event metadata when available.
 - Team aggregation helpers include:
   - `team_fastest_and_average_rows`
   - `team_best_sector_rows`
@@ -387,6 +402,7 @@ Return keys:
   - `save_relative_team_pace_figures`
   - `result_output_path`
   - `sync_y_limits`
+- Race-axis tick labels include short event names when `EventName`/race metadata is available.
 - Result types currently include:
   - `fastest`
   - `average`
@@ -404,12 +420,12 @@ Scripts are importable modules under `src/wostrategy/script`.
 `push_lap_track_development.py`
 
 - CLI for one-session push-lap analysis.
-- Loads laps with telemetry gap summaries.
+- Loads laps with telemetry gap summaries, with optional lap-time-only fallback when telemetry gaps are unavailable.
 - Delegates push-lap flagging/filtering to `analysis.push_laps`.
 - Delegates figure rendering to `plots.track_development`.
 - Supports `--new-tyre-only` / `--no-new-tyre-only`; default is new tyres only.
 - Supports `--track-evolution-fit {linear,exponential}`.
-- Default fit is `linear`.
+- Default fit is currently `exponential`.
 - When `exponential` is selected, the script writes both linear and exponential plot files for comparison.
 - Writes paired plots for session time and total lap order, plus `_summary` and `_summary_total_lap` plots when `top_driver_count` is set.
 
@@ -444,7 +460,7 @@ Scripts are importable modules under `src/wostrategy/script`.
 - Uses `SessionLapOrder` and a dominant dry compound (>50% of selected laps) to fit track evolution.
 - Optional `top_driver_count` filters only the evolution-fit sample; the fitted model is then applied to all eligible laps, including drivers not used in the fit.
 - Supports `--last-quali-part-only` / `--no-last-quali-part-only`; the current script config enables it by default.
-- When `last_quali_part_only` is enabled, track evolution is still fitted from all eligible quali push laps across Q1/Q2/Q3, but final fastest/average/best-sector presentation uses only each driver's latest reached qualifying part.
+- When `last_quali_part_only` is enabled, track evolution is still fitted from all eligible quali push laps across Q1/Q2/Q3, but final fastest/average/best-sector presentation uses only each driver's latest entered qualifying part. If a driver entered Q3 but has no valid Q3 push lap, their Q2 laps are not used as a fallback.
 - Supports `--track-evolution-fit {linear,exponential}`.
 - The current script config uses `exponential`; selecting it runs and saves both linear and exponential result plots for comparison.
 - Corrects lap times relative to the last eligible push lap of the quali and adds track-evolution corrected lap-time columns.
@@ -453,7 +469,19 @@ Scripts are importable modules under `src/wostrategy/script`.
   - team fastest driver result
   - team average result from both drivers' corrected fastest laps
   - optional best-sector result when `calculate_best_sectors` is enabled
+- Writes a `<output-stem>_usage.csv` beside saved plots. It includes plotted rows plus a `SourceLaps` column showing the driver/lap/Q-part or sector composition used for each plotted point.
 - Printed summaries include evolution-fit drivers, team driver/lap/Q-part usage, average-mode fallback notes, and best-sector composition.
+
+`long_run_performance.py`
+
+- CLI for race long-run performance analysis over a numeric race range.
+- Loads race laps with telemetry gap summaries and filters to consecutive clean-air dry runs.
+- Fits driver stint estimates against tyre age, removes obvious stint-estimate outliers, corrects estimates to a shared tyre-life-zero reference lap, and aggregates team performance by compound coverage/usage.
+- Can use `--track-evolution-rate-source quali` to run or reuse a linear qualifying track-evolution rate for race stint correction; `race` disables the external quali rate.
+- Reference team defaults to the WCC leader after the requested end race when `--reference-team` is omitted.
+- Writes per-race CSVs for filtered laps, driver stint fits, driver estimate sanity diagnostics, track-evolution correction stats, team/compound reference estimates, and final team performance.
+- Writes driver fit plots and an aggregate long-run performance trend plot.
+- Prints diagnostic summaries for fitted driver estimates, excluded estimates, compound coverage, and saved output paths.
 
 ## Tests
 
@@ -464,6 +492,7 @@ Current tests:
   - Telemetry loader metadata handling
   - Multi-session telemetry loading
   - Pickle cache write/reuse
+  - Stale telemetry cache refresh when `TimeDeltaToDriverAhead` is missing
   - Per-lap gap summaries
   - Derived car-behind per-lap gap summaries
   - Merge of lap summaries into session laps
@@ -489,7 +518,7 @@ Current tests:
   - Requested telemetry gap column availability for fallback
   - Exponential track-evolution fit path
   - Q1/Q2/Q3 qualifying-part propagation
-  - Last-qualifying-part-only final performance selection
+  - Last-qualifying-part-only final performance selection using the driver's latest entered qualifying part
   - Team fastest/average aggregation and teammate-delta fallback
   - Corrected sector ratio preservation
   - Best-sector team result assembly

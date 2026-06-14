@@ -279,10 +279,12 @@ def load_or_cache_session_telemetry(
         session_name=session_name,
         cache_dir=cache_dir,
     )
-    if cache_path.exists() and not force_refresh:
-        return pd.read_pickle(cache_path)
-
     loader = telemetry_loader or TelemetryDataLoader()
+    if cache_path.exists() and not force_refresh:
+        telemetry = pd.read_pickle(cache_path)
+        if loader.time_delta_estimator.output_column in telemetry.columns:
+            return telemetry
+
     telemetry = loader.load_session(
         session,
         year=year,

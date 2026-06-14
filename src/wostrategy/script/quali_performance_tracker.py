@@ -46,7 +46,7 @@ LAP_TIME_ONLY = "LapTimeOnly"
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race_range": [1, 6],
+    "race_range": [1, 7],
     "target_team": "Mercedes",
     "quick_lap_threshold": 1.07,
     "clean_min_time_delta_seconds": None,
@@ -245,6 +245,7 @@ def plot_quali_performance_range(
     figures = QualiPerformancePlotter(target_team=target_team).plot_relative_team_pace(summary)
     if output_path is not None:
         save_relative_team_pace_figures(figures, output_path)
+        save_relative_usage_csv(summary, output_path)
 
     print_relative_usage_summary(summary)
     return summary, figures
@@ -305,6 +306,20 @@ def print_relative_usage_summary(summary: pd.DataFrame) -> None:
             for row in team_rows.itertuples(index=False)
         )
         print(f"{team} ({result_type}): {usage}")
+
+
+def usage_output_path(output_path: str | Path) -> Path:
+    output_path = Path(output_path)
+    return output_path.with_name(f"{output_path.stem}_usage.csv")
+
+
+def save_relative_usage_csv(summary: pd.DataFrame, output_path: str | Path) -> Path:
+    output_file = usage_output_path(output_path)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    usage = summary.copy()
+    usage["SourceLaps"] = usage.apply(_format_usage_row, axis=1)
+    usage.to_csv(output_file, index=False)
+    return output_file
 
 
 def format_lap_time(value: float | pd.Timedelta | object) -> str:
@@ -417,6 +432,7 @@ def main() -> None:
                 f"  {fit_model_name} {result_type}: "
                 f"{_result_output_path(model_output_path, result_type)}"
             )
+        print(f"  {fit_model_name} usage csv: {usage_output_path(model_output_path)}")
     print(f"Rows plotted: {sum(len(summary) for summary in summaries.values())}")
     print_lap_time_only_summary(summaries.values())
     if args.show:

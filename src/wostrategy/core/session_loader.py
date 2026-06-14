@@ -50,6 +50,7 @@ def load_session_laps(
             session_laps["Year"] = year
             session_laps["Round"] = round_number
             session_laps["SessionName"] = session_name
+            session_laps = _add_session_event_metadata(session_laps, session)
             session_laps = _add_session_result_rank(session_laps, session)
             all_laps.append(session_laps)
 
@@ -102,6 +103,7 @@ def load_session_laps_with_telemetry_gap_summary(
             session_laps["Year"] = year
             session_laps["Round"] = round_number
             session_laps["SessionName"] = session_name
+            session_laps = _add_session_event_metadata(session_laps, session)
             session_laps = _add_session_result_rank(session_laps, session)
 
             try:
@@ -135,6 +137,39 @@ def load_session_laps_with_telemetry_gap_summary(
         return pd.concat(all_laps, ignore_index=True)
 
     return pd.DataFrame(columns=empty_columns or ["Year", "Round", "SessionName"])
+
+
+def _add_session_event_metadata(
+    session_laps: pd.DataFrame,
+    session: object,
+) -> pd.DataFrame:
+    fastf1_session = getattr(session, "data", session)
+    event = getattr(fastf1_session, "event", None)
+    if event is None:
+        return session_laps
+
+    output = session_laps.copy()
+    for source_column, target_column in (
+        ("EventName", "EventName"),
+        ("EventFormat", "EventFormat"),
+        ("Country", "EventCountry"),
+        ("Location", "EventLocation"),
+        ("OfficialEventName", "OfficialEventName"),
+    ):
+        value = _event_value(event, source_column)
+        if value is not None:
+            output[target_column] = value
+    return output
+
+
+def _event_value(event: object, column: str) -> object | None:
+    try:
+        value = event[column]
+    except (KeyError, TypeError):
+        value = getattr(event, column, None)
+    if pd.isna(value):
+        return None
+    return value
 
 
 def _add_session_result_rank(session_laps: pd.DataFrame, session: object) -> pd.DataFrame:

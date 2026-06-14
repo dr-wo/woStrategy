@@ -4,9 +4,9 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from matplotlib.ticker import MaxNLocator
 
 from wostrategy.analysis.quali_performance import RESULT_TYPE
+from wostrategy.plots.race_labels import race_tick_labels
 from wostrategy.plots.style_maps import F1_TEAM_COLORS
 
 
@@ -50,14 +50,17 @@ def plot_relative_team_pace(
         )
 
     ax.axhline(100.0, color="black", linewidth=1, alpha=0.5)
-    ax.set_xlabel("Race number")
+    tick_frame = race_tick_labels(summary, round_column="Race")
+    ax.set_xlabel("Round")
+    if not tick_frame.empty:
+        ax.set_xticks(tick_frame["Race"])
+        ax.set_xticklabels(tick_frame["Label"], rotation=45, ha="right")
     result_label = result_type.replace("_", " ").title()
     ax.set_ylabel(f"{result_label} corrected lap time (% of {target_team})")
     ax.set_title(
         f"{summary['Year'].iloc[0]} Quali {result_label} Pace "
         f"Relative to {target_team}"
     )
-    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.grid(True, alpha=0.3)
     ax.legend(title="Team", ncols=2)
     fig.tight_layout()
