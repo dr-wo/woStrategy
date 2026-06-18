@@ -448,6 +448,16 @@ Scripts are importable modules under `src/wostrategy/script`.
 - Exports one cached telemetry pickle to CSV.
 - Requires the cache file to already exist.
 
+`pure_lap_time_trace.py`
+
+- CLI for plotting selected race lap-time traces against collected lap number rather than real race lap number.
+- Loads one session with `load_all_session_laps`.
+- `traces` accepts one or more trace definitions keyed by trace name. Each trace can select real laps with `lap`/`laps`, apply an `off-set`/`offset` in seconds, and override `color`, `linestyle`/`line-style`, `marker`, and `label`.
+- Default trace styling uses team colors from `plots.style_maps`; repeated traces for the same driver are distinguished by line style unless explicitly overridden.
+- Supports `--y-range` or `SCRIPT_CONFIG["y_range"]` to pin the left lap-time axis.
+- Optional `delta_traces` are calculated from the already-collected trace plot data. A delta trace references `trace_a`, `trace_b`, and collected `lap`/`laps`; for each collected lap it subtracts `trace_b` pure lap time from `trace_a` pure lap time and accumulates the result.
+- Delta lines are drawn in black by default on a right-hand y-axis, with `--delta-y-range` available to pin that axis. Positive accumulated delta means `trace_a` lost time to `trace_b`.
+
 `quali_performance_tracker.py`
 
 - CLI for dry formal qualifying (`Q`) performance tracking across a race range.
@@ -531,6 +541,12 @@ Current tests:
   - Chinese and English compound strategy formatting
   - Table ordering by finishing rank
   - Separate two-column CSV exports
+- `tests/test_pure_lap_time_trace.py`
+  - Lap selector range expansion
+  - Trace config normalization, repeated driver traces, and style overrides
+  - Collected lap numbering and trace offsets
+  - Accumulated deltas calculated from collected trace plot data
+  - Left y-axis range and right-hand black delta axis plotting
 
 Observed verification status in this workspace:
 

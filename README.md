@@ -97,6 +97,26 @@ temp/tyre_strategy_summary_2026_6_R_chinese.csv
 temp/tyre_strategy_summary_2026_6_R_english.csv
 ```
 
+Pure lap-time trace comparison:
+
+```bash
+python -m wostrategy.script.pure_lap_time_trace \
+  --year 2026 \
+  --race 7 \
+  --session R \
+  --traces-json '{"RUS": {"lap": ["37-61"], "off-set": 0.12}, "HAM": {"lap": ["41-61"], "off-set": 0}}' \
+  --delta-traces-json '{"RUS vs HAM": {"trace_a": "RUS", "trace_b": "HAM", "lap": ["7-21"]}}' \
+  --y-range 80 83
+```
+
+The script first collects laps from `traces`, plots each trace against collected
+lap number, then optionally computes accumulated deltas from that collected
+plot data. Delta trace `lap` values are collected lap numbers, not real race
+lap numbers. In the example above, collected lap 7 for `RUS` is compared with
+collected lap 7 for `HAM`, even if those are different real race laps. The
+accumulated delta is drawn as a black line on the right-hand axis. Positive
+delta means `trace_a` lost time to `trace_b`.
+
 Qualifying performance tracking:
 
 ```bash
