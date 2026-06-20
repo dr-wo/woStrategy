@@ -13,6 +13,16 @@ from .quali_performance import (
     QualiPerformanceResult,
     calculate_quali_performance,
 )
+from .race_performance_review import (
+    MonteCarloRacePerformanceAlgorithm,
+    MonteCarloRacePerformanceConfig,
+    MonteCarloRacePerformanceResult,
+    RacePerformanceReviewAlgorithm,
+    calculate_monte_carlo_race_performance_review,
+    is_wet_race,
+    summarize_monte_carlo_race_performance,
+    wet_lap_proportion_by_driver,
+)
 from wostrategy.model.track_evolution import (
     EXPONENTIAL_TRACK_EVOLUTION_MODEL,
     LINEAR_TRACK_EVOLUTION_MODEL,
@@ -46,9 +56,14 @@ __all__ = [
     "PushLapSelector",
     "QualiPerformanceAnalyzer",
     "QualiPerformanceResult",
+    "MonteCarloRacePerformanceAlgorithm",
+    "MonteCarloRacePerformanceConfig",
+    "MonteCarloRacePerformanceResult",
+    "RacePerformanceReviewAlgorithm",
     "add_track_evolution_correction",
     "add_push_lap_flags",
     "calculate_quali_performance",
+    "calculate_monte_carlo_race_performance_review",
     "dominant_compound",
     "fit_compound_track_evolution",
     "fresh_tyre_mask",
@@ -56,4 +71,7 @@ __all__ = [
     "get_track_evolution_model",
     "select_dry_push_laps",
     "select_top_drivers",
+    "is_wet_race",
+    "summarize_monte_carlo_race_performance",
+    "wet_lap_proportion_by_driver",
 ]

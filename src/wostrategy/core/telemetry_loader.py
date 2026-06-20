@@ -377,14 +377,8 @@ def _summarize_lap_gap_behind(
     time_delta_column: str,
     distance_delta_column: str,
 ) -> pd.DataFrame:
-    required_columns = {
-        *group_columns,
-        "DriverNumber",
-        "DriverAhead",
-        time_delta_column,
-        distance_delta_column,
-    }
-    if required_columns.difference(telemetry.columns):
+    common_required = {*group_columns, "DriverNumber"}
+    if common_required.difference(telemetry.columns):
         return pd.DataFrame(
             columns=[
                 *group_columns,
@@ -395,6 +389,41 @@ def _summarize_lap_gap_behind(
             ]
         )
 
+    physical_required = {"SessionTime", "Distance", "Speed"}
+    if not physical_required.difference(telemetry.columns):
+        physical_summary = _summarize_lap_gap_behind_from_track_position(
+            telemetry,
+            group_columns=group_columns,
+        )
+        if not physical_summary.empty:
+            return physical_summary
+
+    driver_ahead_required = {"DriverAhead", time_delta_column, distance_delta_column}
+    if driver_ahead_required.difference(telemetry.columns):
+        return pd.DataFrame(
+            columns=[
+                *group_columns,
+                "MinTimeDeltaToDriverBehind",
+                "MeanTimeDeltaToDriverBehind",
+                "MinDistanceToDriverBehind",
+                "MeanDistanceToDriverBehind",
+            ]
+        )
+    return _summarize_lap_gap_behind_from_driver_ahead(
+        telemetry,
+        group_columns=group_columns,
+        time_delta_column=time_delta_column,
+        distance_delta_column=distance_delta_column,
+    )
+
+
+def _summarize_lap_gap_behind_from_driver_ahead(
+    telemetry: pd.DataFrame,
+    *,
+    group_columns: tuple[str, ...],
+    time_delta_column: str,
+    distance_delta_column: str,
+) -> pd.DataFrame:
     driver_lookup_columns = [
         column
         for column in ("Year", "Round", "SessionName", "LapNumber", "Driver", "DriverNumber")
@@ -446,6 +475,167 @@ def _summarize_lap_gap_behind(
             MinDistanceToDriverBehind=(distance_delta_column, "min"),
             MeanDistanceToDriverBehind=(distance_delta_column, "mean"),
         )
+    )
+
+
+def _summarize_lap_gap_behind_from_track_position(
+    telemetry: pd.DataFrame,
+    *,
+    group_columns: tuple[str, ...],
+) -> pd.DataFrame:
+    session_columns = [
+        column
+        for column in ("Year", "Round", "SessionName")
+        if column in group_columns and column in telemetry.columns
+    ]
+    target_columns = list(
+        dict.fromkeys([*group_columns, "DriverNumber", "SessionTime", "Distance"])
+    )
+    target_samples = (
+        telemetry.loc[:, target_columns]
+        .dropna(subset=["Driver", "DriverNumber", "SessionTime", "Distance"])
+        .copy()
+    )
+    if target_samples.empty:
+        return _empty_behind_gap_summary(group_columns)
+
+    target_samples["_TargetRowId"] = np.arange(len(target_samples))
+    target_samples["DriverNumber"] = target_samples["DriverNumber"].astype("string")
+    target_samples["_TargetDistance"] = pd.to_numeric(
+        target_samples["Distance"],
+        errors="coerce",
+    )
+    target_samples = target_samples.dropna(subset=["_TargetDistance"])
+    if target_samples.empty:
+        return _empty_behind_gap_summary(group_columns)
+
+    nearest_samples: list[pd.DataFrame] = []
+    session_groups = (
+        target_samples.groupby(session_columns, dropna=False, sort=False)
+        if session_columns
+        else [((), target_samples)]
+    )
+    for session_key, session_targets in session_groups:
+        session_telemetry = _session_slice(
+            telemetry,
+            session_columns=session_columns,
+            session_key=session_key,
+        )
+        if session_telemetry.empty:
+            continue
+
+        distance = pd.to_numeric(session_telemetry["Distance"], errors="coerce")
+        lap_distance = float(distance.max() - distance.min())
+        if not np.isfinite(lap_distance) or lap_distance <= 0:
+            continue
+
+        session_targets = session_targets.sort_values("SessionTime")
+        for other_driver, other_samples in session_telemetry.groupby("Driver", dropna=False):
+            other_samples = other_samples.loc[
+                :,
+                ["SessionTime", "Driver", "Distance", "Speed"],
+            ].copy()
+            other_samples = other_samples.dropna(
+                subset=["SessionTime", "Driver", "Distance", "Speed"]
+            )
+            if other_samples.empty:
+                continue
+            other_samples["Distance"] = pd.to_numeric(
+                other_samples["Distance"],
+                errors="coerce",
+            )
+            other_samples["Speed"] = pd.to_numeric(other_samples["Speed"], errors="coerce")
+            other_samples = other_samples.dropna(subset=["Distance", "Speed"])
+            other_samples = other_samples.loc[other_samples["Speed"] > 1.0]
+            if other_samples.empty:
+                continue
+
+            other_samples = other_samples.sort_values("SessionTime")
+            matched = pd.merge_asof(
+                session_targets,
+                other_samples.rename(
+                    columns={
+                        "Driver": "_OtherDriver",
+                        "Distance": "_OtherDistance",
+                        "Speed": "_OtherSpeedKph",
+                    }
+                ),
+                on="SessionTime",
+                direction="nearest",
+                tolerance=pd.Timedelta(milliseconds=500),
+            )
+            matched = matched.dropna(subset=["_OtherDriver", "_OtherDistance"])
+            if matched.empty:
+                continue
+            matched = matched.loc[matched["Driver"] != matched["_OtherDriver"]].copy()
+            if matched.empty:
+                continue
+
+            gap_distance = (
+                matched["_TargetDistance"].astype("float64")
+                - matched["_OtherDistance"].astype("float64")
+            ) % lap_distance
+            matched["_BehindDistance"] = gap_distance
+            matched = matched.loc[matched["_BehindDistance"] > 1.0].copy()
+            if matched.empty:
+                continue
+            matched["_BehindTimeDelta"] = matched["_BehindDistance"] / (
+                matched["_OtherSpeedKph"].astype("float64") / 3.6
+            )
+            nearest_samples.append(
+                matched.loc[
+                    :,
+                    [*group_columns, "_TargetRowId", "_BehindDistance", "_BehindTimeDelta"],
+                ]
+            )
+
+    if not nearest_samples:
+        return _empty_behind_gap_summary(group_columns)
+
+    candidate_samples = pd.concat(nearest_samples, ignore_index=True)
+    candidate_samples = candidate_samples.sort_values(
+        ["_TargetRowId", "_BehindDistance"],
+        kind="stable",
+    )
+    nearest_by_target_sample = candidate_samples.drop_duplicates(
+        subset=["_TargetRowId"],
+        keep="first",
+    )
+    return (
+        nearest_by_target_sample.groupby(list(group_columns), dropna=False, as_index=False)
+        .agg(
+            MinTimeDeltaToDriverBehind=("_BehindTimeDelta", "min"),
+            MeanTimeDeltaToDriverBehind=("_BehindTimeDelta", "mean"),
+            MinDistanceToDriverBehind=("_BehindDistance", "min"),
+            MeanDistanceToDriverBehind=("_BehindDistance", "mean"),
+        )
+    )
+
+
+def _session_slice(
+    telemetry: pd.DataFrame,
+    *,
+    session_columns: list[str],
+    session_key: object,
+) -> pd.DataFrame:
+    if not session_columns:
+        return telemetry
+    key_values = session_key if isinstance(session_key, tuple) else (session_key,)
+    mask = pd.Series(True, index=telemetry.index)
+    for column, value in zip(session_columns, key_values):
+        mask = mask & (telemetry[column] == value)
+    return telemetry.loc[mask]
+
+
+def _empty_behind_gap_summary(group_columns: tuple[str, ...]) -> pd.DataFrame:
+    return pd.DataFrame(
+        columns=[
+            *group_columns,
+            "MinTimeDeltaToDriverBehind",
+            "MeanTimeDeltaToDriverBehind",
+            "MinDistanceToDriverBehind",
+            "MeanDistanceToDriverBehind",
+        ]
     )
 
 

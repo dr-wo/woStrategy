@@ -491,8 +491,11 @@ def _prepare_laps(
         prepared["MeanTimeDeltaToDriverAhead"] > clean_mean_time_delta_seconds
     ) & prepared["IsQuickLap"] & ~prepared["IsOutLap"] & ~prepared["IsInLap"]
     if clean_mean_time_delta_behind_seconds is not None:
+        # Missing "behind" gaps usually mean no usable following-car sample for
+        # that lap; they should not invalidate an otherwise clean-air lap.
+        # Missing "ahead" gaps are still rejected by the ahead check above.
         clean_air_mask = clean_air_mask & (
-            prepared["MeanTimeDeltaToDriverBehind"]
+            prepared["MeanTimeDeltaToDriverBehind"].fillna(np.inf)
             > clean_mean_time_delta_behind_seconds
         )
     prepared["IsCleanAirLongRunLap"] = clean_air_mask

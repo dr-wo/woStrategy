@@ -1,12 +1,12 @@
 # woStrategy Code Status Quo
 
-Last reviewed: 2026-06-14
+Last reviewed: 2026-06-20
 
-This document is a compact map of the current `woStrategy` package so future coding agents can orient quickly without rereading every module. It describes the repository as observed in the working tree, including uncommitted and untracked files.
+This document is a compact map of the current `woStrategy` package so future coding agents can orient quickly without rereading every module. It describes the repository as observed at the review date above.
 
 ## Package Purpose
 
-`woStrategy` is a Python package for Formula 1 strategy analysis on top of FastF1. It wraps FastF1 session loading, adds project-specific lap enrichment, prepares long-stint, pre-season testing, push-lap, and qualifying datasets, and renders matplotlib plots for race simulations, cumulative laps, single-lap comparisons, telemetry gap maps, push-lap track development, and qualifying performance tracking.
+`woStrategy` is a Python package for Formula 1 strategy analysis on top of FastF1. It wraps FastF1 session loading, adds project-specific lap enrichment, prepares long-stint, pre-season testing, push-lap, qualifying, and race performance review datasets, runs reusable modelling/sampling algorithms, and renders matplotlib plots for race simulations, cumulative laps, single-lap comparisons, telemetry gap maps, push-lap track development, and qualifying performance tracking.
 
 The package is configured in `pyproject.toml`:
 
@@ -28,6 +28,7 @@ woStrategy/
     __init__.py                 # Public package exports
     core/                       # Session wrapper, lap loaders, telemetry cache/loaders
     model/                      # Mathematical model implementations
+    algorithm/                  # Reusable samplers and Monte Carlo algorithms
     analysis/                   # Domain analysis and dataframe aggregation
     tools/                      # Data preparation and end-to-end analysis workflows
     plots/                      # Matplotlib plot renderers and style maps
@@ -35,16 +36,19 @@ woStrategy/
   tests/
     test_clean_lap_track_development.py
     test_quali_performance_tracker.py
+    test_race_performance_review.py
+    test_sampling.py
     test_telemetry_loader.py
 ```
 
 Current intended dependency direction:
 
 ```text
-model -> analysis -> plots -> script
+model -> algorithm -> analysis -> plots -> script
 ```
 
 - `model` contains reusable math/model fitting code such as track evolution, fuel correction, and tyre degradation experiments.
+- `algorithm` contains reusable sampling/optimization algorithms that are independent of FastF1 loading, plotting, and CSV persistence.
 - `analysis` prepares and aggregates domain dataframes, calls model objects where needed, and does not render figures.
 - `plots` renders matplotlib figures from already prepared data.
 - `script` owns CLI defaults, argument parsing, session loading, output paths, printing, and figure closing.
@@ -60,6 +64,54 @@ model -> analysis -> plots -> script
 Plot functions are exposed through `wostrategy.plots`, not through the root package.
 
 `wostrategy.analysis` re-exports selected model objects for convenience, but new model implementation imports should use `wostrategy.model`.
+
+Race performance review helpers are also exported from `wostrategy.analysis`:
+
+- `MonteCarloRacePerformanceAlgorithm`
+- `MonteCarloRacePerformanceConfig`
+- `MonteCarloRacePerformanceResult`
+- `RacePerformanceReviewAlgorithm`
+- `calculate_monte_carlo_race_performance_review`
+- `summarize_monte_carlo_race_performance`
+- `wet_lap_proportion_by_driver`
+- `is_wet_race`
+
+## Algorithm Layer
+
+`src/wostrategy/algorithm/sampling.py`
+
+- Provides reusable unit-cube samplers:
+  - `random`
+  - `latin-hypercube`
+  - `halton`
+- `get_unit_cube_sampler` resolves strategy names.
+- `scale_unit_sample` maps unit samples into configured numeric bounds.
+- Latin hypercube and Halton avoid adding SciPy as a dependency.
+
+`src/wostrategy/algorithm/monte_carlo_race_performance.py`
+
+- Contains the first race performance review correction algorithm.
+- `RacePerformanceReviewAlgorithm` is a protocol so analysis code can call future algorithms through the same abstraction.
+- `MonteCarloRacePerformanceConfig` configures:
+  - sample count and sampler
+  - global fuel-rate bounds
+  - global track-evolution-rate bounds
+  - compound degradation bounds
+  - bounded team-compound degradation variation
+  - clean-lap noise sigma
+  - baseline group (`driver` or `team`)
+  - fuel, race-lap, and tyre-age references
+- `MonteCarloRacePerformanceAlgorithm.run` expects already-prepared clean laps.
+- For each sample it:
+  1. Samples global fuel and track rates.
+  2. Samples base degradation per compound.
+  3. Samples team-compound variation around each compound rate, limited by `max(team_variation_fraction * abs(compound_rate), team_variation_absolute_min)`.
+  4. Corrects each clean lap for fuel proxy, race-lap track evolution, and team-compound tyre-age degradation.
+  5. Fits corrected baseline pace as a mean per configured driver/team group.
+  6. Scores the sample by global RMSE and converts it to a Gaussian-like weight.
+  7. Stores sample parameters, compound degradation, team-compound degradation, and fitted baseline rows.
+- Progress reporting keeps cumulative weight as a running total to avoid O(sample_count^2) progress overhead.
+- Current limitation: tyre degradation slopes vary by compound/team-compound, but there is no explicit compound grip offset yet.
 
 ## Model Layer
 
@@ -226,7 +278,8 @@ Top-level telemetry helpers:
 - `load_session_telemetry`: batch loads full telemetry across sessions.
 - `load_or_cache_session_telemetry`: reads a pickle cache unless `force_refresh=True`; otherwise loads and writes a pickle. Existing cache files that are missing the current estimator output column, for example `TimeDeltaToDriverAhead`, are treated as stale and rebuilt.
 - `summarize_lap_gap_metrics`: aggregates full telemetry to per-lap min and mean time/distance gaps.
-- Behind-car gaps are derived by matching telemetry rows where another car's `DriverAhead` equals the current driver's `DriverNumber`; when this cannot be derived, the behind-gap columns are still present with missing values.
+- Behind-car gaps are preferably derived from physical track position at synchronized `SessionTime`: for each target telemetry sample, other drivers are matched at nearby session time, circular distance around the lap is used to find the nearest car physically behind, and the distance gap is converted to time with the following car's speed. This handles lapped cars that are physically behind but on a different race lap.
+- If physical track-position derivation cannot run, behind-car gaps fall back to matching telemetry rows where another car's `DriverAhead` equals the current driver's `DriverNumber`; when neither method can derive gaps, the behind-gap columns are still present with missing values.
 
 ## Tools
 
@@ -320,6 +373,27 @@ Return keys:
   - `quickest_team_laps`
 - Average mode uses one driver only if a team has one result, or if teammate delta exceeds the configured threshold.
 - Best-sector mode preserves each lap's original S1/S2/S3 ratio during correction, then builds a team lap from best corrected sector values across eligible team laps/drivers.
+
+`src/wostrategy/analysis/race_performance_review.py`
+
+- Contains the analysis wrapper for Monte Carlo race performance review.
+- Reuses existing long-run preparation and clean-air run selection:
+  - `_prepare_laps`
+  - `select_consecutive_clean_air_runs`
+- Adds a simple race-lap fuel proxy as laps remaining.
+- Requires telemetry-backed clean-air gap columns through the script layer; missing telemetry should produce an empty skipped result rather than falling back to misleading lap-time-only race analysis.
+- `wet_lap_proportion_by_driver` reports each driver's wet/intermediate lap proportion.
+- `is_wet_race` skips only when median driver wet/intermediate proportion is above the configured threshold, defaulting to more than half the race.
+- `calculate_monte_carlo_race_performance_review` returns `"Wet"` for skipped wet races or a `MonteCarloRacePerformanceResult` containing:
+  - all prepared laps
+  - selected clean laps
+  - wet lap summary
+  - sampled global parameters
+  - compound degradation samples
+  - team-compound degradation samples
+  - fitted baseline pace samples
+  - weighted P10/median/P90 summaries
+- `summarize_monte_carlo_race_performance` uses the sample weights to summarize fuel rate, track rate, degradation rates, and corrected baseline pace.
 
 ## Pre-Season Data Preparation
 
@@ -493,6 +567,38 @@ Scripts are importable modules under `src/wostrategy/script`.
 - Writes driver fit plots and an aggregate long-run performance trend plot.
 - Prints diagnostic summaries for fitted driver estimates, excluded estimates, compound coverage, and saved output paths.
 
+`race_performance_review.py`
+
+- CLI for the first Monte Carlo race performance review workflow.
+- Loads one race or a numeric race range with telemetry gap summaries.
+- Supports feature race/default race sessions through `--session`, defaulting to `R`.
+- Requires telemetry gap data for clean-air filtering; missing or empty gap columns skip the race and write an empty diagnostic CSV set.
+- Wet/intermediate usage is summarized per driver; the race is skipped only when median driver wet proportion exceeds `--wet-lap-proportion-skip-threshold`.
+- Builds `MonteCarloRacePerformanceConfig` from CLI/default settings and delegates the sample loop to `algorithm.monte_carlo_race_performance`.
+- Supports `--sampling-strategy {random,latin-hypercube,halton}`.
+- Configurable correction bounds include:
+  - `--fuel-rate-bounds`
+  - `--track-rate-bounds`
+  - `--default-compound-degradation-bounds`
+  - `--compound-degradation-bounds-json`
+  - `--team-variation-fraction`
+  - `--team-variation-absolute-min`
+- Team corrected baseline pace modes:
+  - `average-drivers`: fit driver baselines, then average teammates per sample
+  - `best-driver`: fit driver baselines, then take the faster teammate per sample
+  - `direct-team`: fit one baseline directly per team
+- Prints sample progress, clean-lap coverage, sample diagnostics, weighted parameter summaries, and team corrected baseline summaries.
+- Writes CSVs to `cache/race_performance_review/` by default:
+  - clean laps
+  - wet lap summary
+  - sample parameters
+  - compound degradation samples
+  - team-compound degradation samples
+  - baseline pace samples
+  - team baseline samples and summary
+  - weighted summary tables
+- For race ranges, also writes aggregate sample and team baseline summaries across produced race results.
+
 ## Tests
 
 Current tests:
@@ -505,8 +611,23 @@ Current tests:
   - Stale telemetry cache refresh when `TimeDeltaToDriverAhead` is missing
   - Per-lap gap summaries
   - Derived car-behind per-lap gap summaries
+  - Physical track-position behind-gap derivation for lapped cars
   - Merge of lap summaries into session laps
   - Merge of FastF1-style session result rank into lap rows
+- `tests/test_sampling.py`
+  - Seeded random sampler reproducibility
+  - Latin hypercube bin coverage per dimension
+  - Halton low-discrepancy sequence start values
+- `tests/test_race_performance_review.py`
+  - Monte Carlo result output tables
+  - Custom algorithm abstraction
+  - Driver and team baseline fitting
+  - Team-compound variation absolute minimum when base degradation is zero
+  - Sampling strategy recording
+  - Wet lap proportion and mostly-wet skip behavior
+  - Mostly-dry mixed races continuing through analysis
+  - Missing telemetry gap column detection
+  - Clean-lap selection preserving otherwise clean laps with missing behind gap
 - `tests/test_clean_lap_track_development.py`
   - Push-lap pattern recognition between out-laps and in-laps
   - Slow laps, consecutive push laps, and dirty lap rejection
@@ -550,6 +671,8 @@ Current tests:
 
 Observed verification status in this workspace:
 
+- `/Users/zhxutong/dr-wo/.venv/bin/python -m py_compile` on the Monte Carlo algorithm, sampler, analysis wrapper, and script: passed.
+- Direct invocation of no-fixture tests in `tests/test_sampling.py`, `tests/test_race_performance_review.py`, and `tests/test_telemetry_loader.py`: passed for no-fixture tests; pytest fixture tests were skipped by the ad hoc runner.
 - `../Fast-F1/.venv/bin/python -m pytest tests/test_tyre_strategy_summary.py`: passed with `5 passed, 1 warning`.
 - `../Fast-F1/.venv/bin/python -m pytest tests/test_clean_lap_track_development.py tests/test_quali_performance_tracker.py tests/test_session.py`: passed with `33 passed, 1 warning`.
 - `python3 -m compileall src tests`: passed.
@@ -568,14 +691,7 @@ Observed verification status in this workspace:
 
 ## Current Worktree Notes
 
-At review time, `woStrategy` is a git repository on branch `main` with existing modified and untracked files before this document was added. Notable changed/untracked areas include:
-
-- Modified public exports and loaders under `src/wostrategy`
-- Untracked telemetry loader and telemetry plot/script modules
-- Untracked tests
-- Modified `.gitignore`
-
-Future agents should inspect `git status --short` before editing and avoid reverting these existing changes unless explicitly asked.
+Future agents should inspect `git status --short` before editing and avoid reverting existing user changes unless explicitly asked.
 
 ## High-Risk Areas For Future Changes
 
@@ -598,9 +714,11 @@ Use these existing extension points instead of adding parallel logic:
 - Add new per-lap telemetry metrics by extending `TelemetryDataLoader` or adding aggregation beside `summarize_lap_gap_metrics`.
 - Add new modelling workflows by following the current split:
   - `model/*.py` contains mathematical model classes and pure fitting/correction routines.
+  - `algorithm/*.py` contains reusable sample generation and optimization loops.
   - `analysis/*.py` prepares dataframes, calls model classes, and returns tabular results.
   - `plots/*.py` renders matplotlib figures from analysis results.
   - `script/*.py` handles CLI defaults, argument parsing, session loading, paths, printing, and display/close behavior.
+- Add future race performance review model changes, such as compound grip offsets or additional penalties, by extending `RacePerformanceReviewAlgorithm` implementations and config rather than embedding the sample loop in the script.
 
 ## Quick Start For Future Agents
 

@@ -17,13 +17,14 @@ events and telemetry formats are supported.
 
 ## Architecture
 
-The package is split into four layers:
+The package is split into five layers:
 
 ```text
-model -> analysis -> plots -> script
+model -> algorithm -> analysis -> plots -> script
 ```
 
 - `wostrategy.model`: mathematical models such as track evolution, fuel correction, and tyre degradation experiments.
+- `wostrategy.algorithm`: reusable sampling and optimization algorithms that should not know about loading, plotting, or persistence.
 - `wostrategy.analysis`: dataframe preparation and domain aggregation.
 - `wostrategy.plots`: matplotlib figure rendering.
 - `wostrategy.script`: CLI entry points and workflow orchestration.
@@ -34,10 +35,10 @@ also writes linear comparison plots for comparison.
 
 Telemetry-backed clean-lap filtering can use both the gap to the car ahead and,
 when configured by analysis code, the gap to the car behind. The behind-car gap
-is derived from telemetry rows where another driver reports the current driver
-as `DriverAhead`, then aggregated to the same per-lap min/mean summary shape as
-the existing ahead-car metrics. Stale telemetry cache files that predate the
-derived `TimeDeltaToDriverAhead` column are rebuilt automatically.
+is preferably derived from synchronized session-time track positions so lapped
+traffic can still be detected physically; the older `DriverAhead` inversion is
+kept as a fallback. Stale telemetry cache files that predate the derived
+`TimeDeltaToDriverAhead` column are rebuilt automatically.
 
 ## Usage
 
@@ -183,3 +184,37 @@ track-evolution correction stats, team/compound reference estimates, final team
 performance CSVs, driver fit plots, and an aggregate long-run performance trend
 plot. Race tick labels include event names when FastF1 event metadata is
 available.
+
+Monte Carlo race performance review:
+
+```bash
+python -m wostrategy.script.race_performance_review \
+  --year 2026 \
+  --race 7 \
+  --session R \
+  --sample-count 50000 \
+  --sampling-strategy latin-hypercube \
+  --fuel-rate-bounds 0 0.10 \
+  --track-rate-bounds -0.05 0.05 \
+  --default-compound-degradation-bounds 0 0.50 \
+  --team-variation-fraction 0.5 \
+  --team-variation-absolute-min 0.005 \
+  --clean-lap-noise-sigma 0.5 \
+  --team-baseline-mode average-drivers
+```
+
+This workflow loads race laps with telemetry gap summaries, requires telemetry
+clean-air data, skips races only when the median driver wet/intermediate lap
+proportion exceeds the configured threshold, and runs a weighted Monte Carlo
+correction model. Each sample draws global fuel and track-evolution rates,
+compound degradation rates, and bounded team-compound degradation variation.
+Corrected clean laps are fitted to driver or team baselines, scored by global
+RMSE, and converted to Gaussian-like weights.
+
+Team corrected baseline pace can be reported by averaging driver baselines,
+taking the best corrected driver baseline, or fitting directly at team level.
+CSV outputs are written to `cache/race_performance_review/` by default,
+including clean laps, sampled parameters, degradation samples, baseline samples,
+team baseline samples, and weighted P10/median/P90 summaries. This first
+version corrects tyre-age degradation by compound/team-compound, but it does
+not yet include an explicit compound grip offset.
