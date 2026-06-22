@@ -5,17 +5,26 @@ import json
 from pathlib import Path
 from typing import Any
 
+import matplotlib.pyplot as plt
 import pandas as pd
 
 from wostrategy.algorithm.monte_carlo_race_performance import (
     MonteCarloRacePerformanceAlgorithm,
     MonteCarloRacePerformanceConfig,
 )
-from wostrategy.algorithm.sampling import RANDOM_SAMPLER, SAMPLING_STRATEGIES, LATIN_HYPERCUBE_SAMPLER, HALTON_SAMPLER
+from wostrategy.algorithm.sampling import (
+    LATIN_HYPERCUBE_SAMPLER,
+    SAMPLING_STRATEGIES,
+)
 from wostrategy.analysis.race_performance_review import (
     MonteCarloRacePerformanceResult,
     calculate_monte_carlo_race_performance_review,
     wet_lap_proportion_by_driver,
+)
+from wostrategy.plots.race_performance import (
+    RacePerformancePlotter,
+    result_output_path as race_result_output_path,
+    save_relative_team_pace_figures,
 )
 from wostrategy.tools import load_all_session_laps_with_telemetry_gap_summary
 
@@ -27,7 +36,7 @@ TEAM_MODES = (TEAM_MODE_BEST_DRIVER, TEAM_MODE_AVERAGE_DRIVERS, TEAM_MODE_DIRECT
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race": "7",
+    "race": "[1,7]",
     "session": "R",
     "sample_count": 50000,
     "sampling_strategy": LATIN_HYPERCUBE_SAMPLER,
@@ -42,6 +51,8 @@ SCRIPT_CONFIG = {
     "fuel_ref": 0.0,
     "race_lap_ref": None,
     "tyre_age_ref": 0.0,
+    "track_temperature": None,
+    "degradation_order_track_temperature": 20.0,
     "random_seed": None,
     "progress_interval": 100,
     "quick_lap_threshold": 1.10,
@@ -54,6 +65,10 @@ SCRIPT_CONFIG = {
     "telemetry_cache_dir": None,
     "force_refresh_telemetry": False,
     "test": False,
+    "reference_team": "Mercedes",
+    "plot": True,
+    "plot_output": None,
+    "show": False,
 }
 
 
@@ -75,6 +90,8 @@ def run_race_performance_review(
     fuel_ref: float,
     race_lap_ref: float | None,
     tyre_age_ref: float,
+    track_temperature: float | None,
+    degradation_order_track_temperature: float | None,
     random_seed: int | None,
     progress_interval: int | None,
     quick_lap_threshold: float,
@@ -96,6 +113,7 @@ def run_race_performance_review(
 
     saved_outputs: list[Path] = []
     race_results: dict[int, MonteCarloRacePerformanceResult] = {}
+    race_team_baseline_summaries: dict[int, pd.DataFrame] = {}
     range_sample_frames: list[pd.DataFrame] = []
     range_team_baseline_frames: list[pd.DataFrame] = []
 
@@ -120,6 +138,11 @@ def run_race_performance_review(
     print(
         f"References: fuel={fuel_ref}, "
         f"race_lap={race_lap_ref or 'mean'}, tyre_age={tyre_age_ref}"
+    )
+    print(
+        "Degradation order temperature: "
+        f"track={track_temperature or 'from data'}, "
+        f"threshold={degradation_order_track_temperature}"
     )
     print(
         "Wet-race skip threshold: "
@@ -176,6 +199,8 @@ def run_race_performance_review(
             fuel_ref=fuel_ref,
             race_lap_ref=race_lap_ref,
             tyre_age_ref=tyre_age_ref,
+            track_temperature_celsius=track_temperature,
+            degradation_order_track_temperature_celsius=degradation_order_track_temperature,
             random_seed=None if random_seed is None else random_seed + race_index,
             sampling_strategy=sampling_strategy,
         )
@@ -184,16 +209,41 @@ def run_race_performance_review(
             progress_callback=_progress_printer(race),
             progress_interval=progress_interval,
         )
-        result = calculate_monte_carlo_race_performance_review(
-            laps,
-            min_clean_air_laps=min_clean_air_laps,
-            clean_mean_time_delta_seconds=clean_mean_time_delta_seconds,
-            clean_mean_time_delta_behind_seconds=clean_mean_time_delta_behind_seconds,
-            quick_lap_threshold=quick_lap_threshold,
-            algorithm=algorithm,
-            dry_compounds=dry_compounds,
-            wet_lap_proportion_skip_threshold=wet_lap_proportion_skip_threshold,
-        )
+        try:
+            result = calculate_monte_carlo_race_performance_review(
+                laps,
+                min_clean_air_laps=min_clean_air_laps,
+                clean_mean_time_delta_seconds=clean_mean_time_delta_seconds,
+                clean_mean_time_delta_behind_seconds=clean_mean_time_delta_behind_seconds,
+                quick_lap_threshold=quick_lap_threshold,
+                algorithm=algorithm,
+                dry_compounds=dry_compounds,
+                wet_lap_proportion_skip_threshold=wet_lap_proportion_skip_threshold,
+            )
+        except ValueError as exc:
+            if not is_no_clean_laps_error(exc):
+                raise
+            skipped_paths = save_empty_race_outputs(
+                year=year,
+                race=race,
+                session=session,
+                output_dir=output_dir,
+                reason="no consecutive clean-air race laps matched filters",
+                details=(
+                    f"min_clean_air_laps={min_clean_air_laps}, "
+                    f"clean_mean_time_delta_seconds={clean_mean_time_delta_seconds}, "
+                    "clean_mean_time_delta_behind_seconds="
+                    f"{clean_mean_time_delta_behind_seconds}, "
+                    f"quick_lap_threshold={quick_lap_threshold}"
+                ),
+                wet_lap_summary=wet_lap_summary,
+            )
+            saved_outputs.extend(skipped_paths)
+            print(
+                f"{year} race {race} {session}: no consecutive clean-air laps "
+                "matched the configured filters; skipping Monte Carlo."
+            )
+            continue
         if result == "Wet":
             skipped_paths = save_empty_race_outputs(
                 year=year,
@@ -221,6 +271,7 @@ def run_race_performance_review(
             team_baseline_mode=team_baseline_mode,
         )
         team_baseline_summary = weighted_team_baseline_summary(team_baseline_samples)
+        race_team_baseline_summaries[race] = team_baseline_summary
         print("\nTeam corrected baseline pace summary")
         print(team_baseline_summary.to_string(index=False))
 
@@ -250,6 +301,7 @@ def run_race_performance_review(
             print(f"  {path}")
         return {
             "race_results": race_results,
+            "team_baseline_summaries": race_team_baseline_summaries,
             "saved_outputs": saved_outputs,
         }
 
@@ -278,6 +330,7 @@ def run_race_performance_review(
 
     return {
         "race_results": race_results,
+        "team_baseline_summaries": race_team_baseline_summaries,
         "saved_outputs": saved_outputs,
     }
 
@@ -333,6 +386,125 @@ def weighted_team_baseline_summary(team_baseline_samples: pd.DataFrame) -> pd.Da
             }
         )
     return pd.DataFrame(rows).sort_values(["Median", "Team"]).reset_index(drop=True)
+
+
+def relative_team_pace_rows(
+    *,
+    result: MonteCarloRacePerformanceResult,
+    team_baseline_summary: pd.DataFrame,
+    year: int,
+    race: int,
+    reference_team: str,
+) -> list[dict[str, object]]:
+    reference_row = team_baseline_summary.loc[
+        team_baseline_summary["Team"] == reference_team
+    ]
+    if reference_row.empty:
+        available = ", ".join(sorted(team_baseline_summary["Team"].dropna().unique()))
+        raise ValueError(
+            f"Reference team {reference_team!r} not found in race {race}. "
+            f"Available teams: {available}"
+        )
+
+    reference_seconds = float(reference_row["Median"].iloc[0])
+    event_name = event_name_from_laps(result.all_laps)
+    records: list[dict[str, object]] = []
+    for _, row in team_baseline_summary.iterrows():
+        median = float(row["Median"])
+        p10 = float(row["P10"])
+        p90 = float(row["P90"])
+        records.append(
+            {
+                "Year": year,
+                "Race": race,
+                "EventName": event_name,
+                "Team": row["Team"],
+                "ReferenceTeam": reference_team,
+                "TeamBaselineMode": row["TeamBaselineMode"],
+                "CorrectedBaselinePaceSeconds": median,
+                "P10": p10,
+                "Median": median,
+                "P90": p90,
+                "PercentageToReferenceTeam": median / reference_seconds * 100.0,
+                "P10PercentageToReferenceTeam": p10 / reference_seconds * 100.0,
+                "P90PercentageToReferenceTeam": p90 / reference_seconds * 100.0,
+                "SampleCount": row["SampleCount"],
+                "WeightSum": row["WeightSum"],
+                "MeanRMSESeconds": row["MeanRMSESeconds"],
+            }
+        )
+    return records
+
+
+def plot_race_performance_results(
+    *,
+    race_results: dict[int, MonteCarloRacePerformanceResult],
+    team_baseline_summaries: dict[int, pd.DataFrame],
+    year: int,
+    reference_team: str,
+    output_path: str | Path | None,
+) -> tuple[pd.DataFrame, dict[str, tuple[plt.Figure, plt.Axes]]]:
+    records: list[dict[str, object]] = []
+    for race, result in sorted(race_results.items()):
+        if race not in team_baseline_summaries:
+            continue
+        records.extend(
+            relative_team_pace_rows(
+                result=result,
+                team_baseline_summary=team_baseline_summaries[race],
+                year=year,
+                race=race,
+                reference_team=reference_team,
+            )
+        )
+
+    if not records:
+        raise ValueError("No race performance results available for plotting.")
+
+    summary = pd.DataFrame(records)
+    figures = RacePerformancePlotter(reference_team=reference_team).plot_relative_team_pace(
+        summary
+    )
+    if output_path is not None:
+        save_relative_team_pace_figures(figures, output_path)
+        save_relative_plot_csv(summary, output_path)
+
+    print_relative_plot_summary(summary)
+    return summary, figures
+
+
+def print_relative_plot_summary(summary: pd.DataFrame) -> None:
+    print("\nRace performance plot rows")
+    print("=" * 26)
+    columns = [
+        "Race",
+        "Team",
+        "CorrectedBaselinePaceSeconds",
+        "PercentageToReferenceTeam",
+    ]
+    print(summary.sort_values(["Race", "PercentageToReferenceTeam"])[columns].to_string(index=False))
+
+
+def relative_plot_csv_path(output_path: str | Path) -> Path:
+    output_path = Path(output_path)
+    return output_path.with_name(f"{output_path.stem}_relative_pace.csv")
+
+
+def save_relative_plot_csv(summary: pd.DataFrame, output_path: str | Path) -> Path:
+    output_file = relative_plot_csv_path(output_path)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    summary.to_csv(output_file, index=False)
+    return output_file
+
+
+def event_name_from_laps(laps: pd.DataFrame) -> str | None:
+    for column in ("EventName", "RaceName", "EventLocation", "EventCountry"):
+        if column not in laps.columns:
+            continue
+        values = laps[column].dropna().astype(str)
+        if not values.empty:
+            return values.iloc[0]
+    return None
 
 
 def weighted_quantile(values: pd.Series, weights: pd.Series, quantile: float) -> float:
@@ -427,6 +599,10 @@ def missing_clean_gap_columns(
     return missing
 
 
+def is_no_clean_laps_error(exc: ValueError) -> bool:
+    return "No consecutive clean-air race laps matched" in str(exc)
+
+
 def save_empty_race_outputs(
     *,
     year: int,
@@ -517,7 +693,7 @@ def _progress_printer(race: int):
 def main() -> None:
     args = parse_args()
     races = parse_race_selector(args.race)
-    run_race_performance_review(
+    run_result = run_race_performance_review(
         year=args.year,
         races=races,
         session=args.session,
@@ -534,6 +710,10 @@ def main() -> None:
         fuel_ref=args.fuel_ref,
         race_lap_ref=parse_optional_float(args.race_lap_ref),
         tyre_age_ref=args.tyre_age_ref,
+        track_temperature=parse_optional_float(args.track_temperature),
+        degradation_order_track_temperature=parse_optional_float(
+            args.degradation_order_track_temperature
+        ),
         random_seed=args.random_seed,
         progress_interval=parse_optional_int(args.progress_interval),
         quick_lap_threshold=args.quick_lap_threshold,
@@ -549,6 +729,32 @@ def main() -> None:
         force_refresh_telemetry=args.force_refresh_telemetry,
         test=args.test,
     )
+    if args.plot and run_result["race_results"]:
+        output_path = args.plot_output
+        if output_path is None:
+            output_path = default_plot_output_path(
+                year=args.year,
+                races=races,
+                session=args.session,
+                reference_team=args.reference_team,
+                team_baseline_mode=args.team_baseline_mode,
+            )
+        summary, figures = plot_race_performance_results(
+            race_results=run_result["race_results"],
+            team_baseline_summaries=run_result["team_baseline_summaries"],
+            year=args.year,
+            reference_team=args.reference_team,
+            output_path=output_path,
+        )
+        print("\nSaved race performance plot:")
+        print(f"  {race_result_output_path(Path(output_path))}")
+        print(f"  relative pace csv: {relative_plot_csv_path(output_path)}")
+        print(f"Rows plotted: {len(summary)}")
+        if args.show:
+            plt.show()
+        else:
+            for fig, _ in figures.values():
+                plt.close(fig)
 
 
 def parse_args() -> argparse.Namespace:
@@ -626,6 +832,22 @@ def parse_args() -> argparse.Namespace:
         help="Race lap reference, or 'none' to use mean clean race lap.",
     )
     parser.add_argument("--tyre-age-ref", type=float, default=SCRIPT_CONFIG["tyre_age_ref"])
+    parser.add_argument(
+        "--track-temperature",
+        default=SCRIPT_CONFIG["track_temperature"],
+        help=(
+            "Actual track temperature in Celsius for degradation-order gating; "
+            "use 'none' to infer from lap columns when available."
+        ),
+    )
+    parser.add_argument(
+        "--degradation-order-track-temperature",
+        default=SCRIPT_CONFIG["degradation_order_track_temperature"],
+        help=(
+            "If track temperature is above this Celsius threshold, force base "
+            "degradation order SOFT >= MEDIUM >= HARD; use 'none' to disable."
+        ),
+    )
     parser.add_argument("--random-seed", type=int, default=SCRIPT_CONFIG["random_seed"])
     parser.add_argument(
         "--progress-interval",
@@ -663,6 +885,20 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--dry-compounds", nargs="+", default=SCRIPT_CONFIG["dry_compounds"])
     parser.add_argument("--output-dir", type=Path, default=SCRIPT_CONFIG["output_dir"])
+    parser.add_argument("--reference-team", default=SCRIPT_CONFIG["reference_team"])
+    parser.add_argument(
+        "--plot",
+        action=argparse.BooleanOptionalAction,
+        default=SCRIPT_CONFIG["plot"],
+        help="Save a relative team race performance plot.",
+    )
+    parser.add_argument(
+        "--plot-output",
+        type=Path,
+        default=SCRIPT_CONFIG["plot_output"],
+        help="Plot output stem/path. Defaults to temp/race_performance_tracker_*.png.",
+    )
+    parser.add_argument("--show", action="store_true", default=SCRIPT_CONFIG["show"])
     parser.add_argument(
         "--telemetry-cache-dir",
         type=Path,
@@ -679,6 +915,14 @@ def parse_args() -> argparse.Namespace:
 
 def parse_race_selector(value: str) -> list[int]:
     text = str(value).strip()
+    if text.startswith("[") and text.endswith("]"):
+        parts = [part.strip() for part in text[1:-1].split(",")]
+        if len(parts) != 2:
+            raise ValueError("--race bracket range must look like '[<start>, <end>]'.")
+        start, end = int(parts[0]), int(parts[1])
+        if end < start:
+            raise ValueError("--race range end must be >= start.")
+        return list(range(start, end + 1))
     if "-" in text:
         start_text, end_text = text.split("-", maxsplit=1)
         start, end = int(start_text), int(end_text)
@@ -729,6 +973,24 @@ def race_range_label(races: list[int]) -> str:
     if len(races) == 1:
         return str(races[0])
     return f"{min(races)}-{max(races)}"
+
+
+def default_plot_output_path(
+    *,
+    year: int,
+    races: list[int],
+    session: str,
+    reference_team: str,
+    team_baseline_mode: str,
+) -> Path:
+    return Path("temp") / (
+        f"race_performance_tracker_{year}_{race_range_label(races)}_{session}_"
+        f"{safe_name(reference_team)}_{team_baseline_mode}.png"
+    )
+
+
+def safe_name(value: str) -> str:
+    return "".join(char if char.isalnum() or char in ("-", ".") else "-" for char in value)
 
 
 if __name__ == "__main__":

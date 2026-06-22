@@ -52,6 +52,7 @@ def load_session_laps(
             session_laps["SessionName"] = session_name
             session_laps = _add_session_event_metadata(session_laps, session)
             session_laps = _add_session_result_rank(session_laps, session)
+            session_laps = _add_lap_weather_data(session_laps, session)
             all_laps.append(session_laps)
 
     if all_laps:
@@ -105,6 +106,7 @@ def load_session_laps_with_telemetry_gap_summary(
             session_laps["SessionName"] = session_name
             session_laps = _add_session_event_metadata(session_laps, session)
             session_laps = _add_session_result_rank(session_laps, session)
+            session_laps = _add_lap_weather_data(session_laps, session)
 
             try:
                 telemetry = load_or_cache_session_telemetry(
@@ -203,6 +205,30 @@ def _add_session_result_rank(session_laps: pd.DataFrame, session: object) -> pd.
         keep="first",
     )
     return session_laps.merge(result_rank, on="Driver", how="left")
+
+
+def _add_lap_weather_data(session_laps: pd.DataFrame, session: object) -> pd.DataFrame:
+    laps = getattr(session, "laps", None)
+    get_weather_data = getattr(laps, "get_weather_data", None)
+    if get_weather_data is None:
+        return session_laps
+    try:
+        weather = get_weather_data()
+    except Exception:
+        return session_laps
+    if weather is None or weather.empty:
+        return session_laps
+
+    weather = weather.reset_index(drop=True)
+    weather = weather.loc[:, [column for column in weather.columns if column != "Time"]]
+    if weather.empty or len(weather) != len(session_laps):
+        return session_laps
+
+    output = session_laps.reset_index(drop=True).copy()
+    for column in weather.columns:
+        if column not in output.columns:
+            output[column] = weather[column].to_numpy()
+    return output
 
 
 def _first_existing_column(data: pd.DataFrame, candidates: tuple[str, ...]) -> str | None:

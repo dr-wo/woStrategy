@@ -211,6 +211,13 @@ compound degradation rates, and bounded team-compound degradation variation.
 Corrected clean laps are fitted to driver or team baselines, scored by global
 RMSE, and converted to Gaussian-like weights.
 
+Clean-air filtering uses telemetry-derived gap summaries. When physical track
+position samples are available, both ahead and behind gaps are derived from
+same-session-time car distances so lapping scenarios are handled consistently;
+otherwise the workflow falls back to the existing FastF1 driver-ahead stream.
+`--min-clean-air-laps` is interpreted as an inclusive minimum, so a four-lap
+block is accepted when the value is `4`.
+
 Team corrected baseline pace can be reported by averaging driver baselines,
 taking the best corrected driver baseline, or fitting directly at team level.
 CSV outputs are written to `cache/race_performance_review/` by default,
@@ -218,3 +225,21 @@ including clean laps, sampled parameters, degradation samples, baseline samples,
 team baseline samples, and weighted P10/median/P90 summaries. This first
 version corrects tyre-age degradation by compound/team-compound, but it does
 not yet include an explicit compound grip offset.
+
+When track temperature is above `--degradation-order-track-temperature`
+(`20` Celsius by default), the base compound degradation sampler enforces
+`SOFT >= MEDIUM >= HARD`. Use `--track-temperature` to provide the actual
+track temperature when the loaded lap dataframe does not contain a track
+temperature column.
+
+The same script also saves a race performance tracker plot to `temp/` by
+default. It plots each team's weighted median corrected race baseline as a
+percentage of `--reference-team`, using F1 team colors:
+
+```bash
+python -m wostrategy.script.race_performance_review \
+  --year 2026 \
+  --race "[1, 7]" \
+  --reference-team Mercedes \
+  --plot-output temp/race_performance_tracker_2026_1-7_mercedes.png
+```

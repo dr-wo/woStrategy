@@ -200,6 +200,44 @@ def test_load_or_cache_session_telemetry_refreshes_stale_cache_without_time_delt
     assert "TimeDeltaToDriverAhead" in refreshed.columns
 
 
+def test_load_or_cache_session_telemetry_refreshes_empty_cache_with_time_delta(tmp_path):
+    cache_path = get_session_telemetry_cache_path(
+        year=2026,
+        round_number=1,
+        session_name="R",
+        cache_dir=tmp_path,
+    )
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(columns=["TimeDeltaToDriverAhead"]).to_pickle(cache_path)
+    session = FakeSession(
+        [
+            FakeLap(
+                {"Driver": "LEC", "LapNumber": 1},
+                pd.DataFrame(
+                    {
+                        "Distance": [0.0, 100.0],
+                        "DistanceToDriverAhead": [50.0, 50.0],
+                        "Time": pd.to_timedelta([0.0, 10.0], unit="s"),
+                    }
+                ),
+            )
+        ]
+    )
+
+    result = load_or_cache_session_telemetry(
+        session,
+        year=2026,
+        round_number=1,
+        session_name="R",
+        cache_dir=tmp_path,
+    )
+    refreshed = pd.read_pickle(cache_path)
+
+    assert len(result) == 2
+    assert result["DistanceToDriverAhead"].tolist() == [50.0, 50.0]
+    assert len(refreshed) == 2
+
+
 def test_summarize_lap_gap_metrics_aggregates_by_lap():
     telemetry = pd.DataFrame(
         {
@@ -270,6 +308,33 @@ def test_summarize_lap_gap_metrics_derives_lapped_car_behind_gap_from_track_posi
     assert gas["MeanDistanceToDriverBehind"] == 110.0
     assert gas["MinTimeDeltaToDriverBehind"] == 2.0
     assert gas["MeanTimeDeltaToDriverBehind"] == 2.2
+
+
+def test_summarize_lap_gap_metrics_derives_lapped_car_ahead_gap_from_track_position():
+    telemetry = pd.DataFrame(
+        {
+            "Year": [2026, 2026, 2026],
+            "Round": [7, 7, 7],
+            "SessionName": ["R", "R", "R"],
+            "Driver": ["GAS", "VER", "BOT"],
+            "DriverNumber": ["10", "1", "77"],
+            "DriverAhead": ["", "", ""],
+            "LapNumber": [50, 51, 49],
+            "SessionTime": pd.to_timedelta([100.0, 100.0, 100.0], unit="s"),
+            "Distance": [1000.0, 1200.0, 4000.0],
+            "Speed": [180.0, 180.0, 180.0],
+            "TimeDeltaToDriverAhead": [pd.NA, pd.NA, pd.NA],
+            "DistanceToDriverAhead": [pd.NA, pd.NA, pd.NA],
+        }
+    )
+
+    result = summarize_lap_gap_metrics(telemetry)
+    gas = result.loc[result["Driver"] == "GAS"].iloc[0]
+
+    assert gas["MinDistanceToDriverAhead"] == 200.0
+    assert gas["MeanDistanceToDriverAhead"] == 200.0
+    assert gas["MinTimeDeltaToDriverAhead"] == 4.0
+    assert gas["MeanTimeDeltaToDriverAhead"] == 4.0
 
 
 def test_load_session_laps_with_telemetry_gap_summary_merges_metrics_and_caches(tmp_path):
@@ -346,6 +411,44 @@ def test_load_session_laps_with_telemetry_gap_summary_adds_session_result_rank(t
     assert ranks == {"VER": 1, "LEC": 2}
 
 
+def test_load_session_laps_with_telemetry_gap_summary_adds_lap_weather(tmp_path):
+    def session_factory(round_number, session_name):
+        assert round_number == 1
+        assert session_name == "R"
+        return FakeLapSummarySession(
+            pd.DataFrame(
+                {
+                    "Driver": ["VER", "LEC"],
+                    "LapNumber": [1, 1],
+                    "LapTime": [pd.Timedelta(seconds=80), pd.Timedelta(seconds=81)],
+                }
+            ),
+            {
+                ("VER", 1): _telemetry(),
+                ("LEC", 1): _telemetry(),
+            },
+            weather=pd.DataFrame(
+                {
+                    "Time": pd.to_timedelta([1.0, 2.0], unit="s"),
+                    "TrackTemp": [34.5, 35.0],
+                    "AirTemp": [25.0, 25.2],
+                }
+            ),
+        )
+
+    result = load_session_laps_with_telemetry_gap_summary(
+        year=2026,
+        rounds=[1],
+        session_names=["R"],
+        session_factory=session_factory,
+        telemetry_cache_dir=tmp_path,
+    )
+
+    assert result["TrackTemp"].tolist() == [34.5, 35.0]
+    assert result["AirTemp"].tolist() == [25.0, 25.2]
+    assert "Time" not in result.columns
+
+
 class FakeLap(pd.Series):
     _metadata = ["_telemetry"]
 
@@ -377,25 +480,33 @@ class FakeSession:
 
 
 class FakeLapSummaryLaps(pd.DataFrame):
-    _metadata = ["_telemetry_by_lap"]
+    _metadata = ["_telemetry_by_lap", "_weather"]
 
     @property
     def _constructor(self):
         return FakeLapSummaryLaps
 
-    def __init__(self, *args, telemetry_by_lap=None, **kwargs):
+    def __init__(self, *args, telemetry_by_lap=None, weather=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._telemetry_by_lap = telemetry_by_lap or {}
+        self._weather = weather
 
     def iterlaps(self):
         for index, row in self.iterrows():
             key = (row["Driver"], row["LapNumber"])
             yield index, FakeLap(row.to_dict(), self._telemetry_by_lap[key])
 
+    def get_weather_data(self):
+        return self._weather if self._weather is not None else pd.DataFrame()
+
 
 class FakeLapSummarySession:
-    def __init__(self, laps, telemetry_by_lap, results=None):
-        self.laps = FakeLapSummaryLaps(laps, telemetry_by_lap=telemetry_by_lap)
+    def __init__(self, laps, telemetry_by_lap, results=None, weather=None):
+        self.laps = FakeLapSummaryLaps(
+            laps,
+            telemetry_by_lap=telemetry_by_lap,
+            weather=weather,
+        )
         self.results = results if results is not None else pd.DataFrame()
 
 

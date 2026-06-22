@@ -19,6 +19,14 @@ BASELINE_GROUPS = (BASELINE_DRIVER, BASELINE_TEAM)
 
 FUEL_PROXY_LAPS_REMAINING = "FuelProxyLapsRemaining"
 CORRECTED_LAP_TIME_SECONDS = "CorrectedLapTimeSeconds"
+DEFAULT_DEGRADATION_ORDER_TRACK_TEMPERATURE_CELSIUS = 20.0
+ORDERED_DRY_COMPOUNDS = ("SOFT", "MEDIUM", "HARD")
+TRACK_TEMPERATURE_COLUMNS = (
+    "TrackTemp",
+    "TrackTemperature",
+    "TrackTempCelsius",
+    "TrackTemperatureCelsius",
+)
 
 
 @dataclass(frozen=True)
@@ -37,6 +45,10 @@ class MonteCarloRacePerformanceConfig:
     tyre_age_ref: float = 0.0
     random_seed: int | None = None
     sampling_strategy: str = RANDOM_SAMPLER
+    track_temperature_celsius: float | None = None
+    degradation_order_track_temperature_celsius: float | None = (
+        DEFAULT_DEGRADATION_ORDER_TRACK_TEMPERATURE_CELSIUS
+    )
 
 
 @dataclass(frozen=True)
@@ -105,6 +117,11 @@ class MonteCarloRacePerformanceAlgorithm:
             if config.race_lap_ref is None
             else float(config.race_lap_ref)
         )
+        track_temperature = _track_temperature_celsius(fit_laps, config)
+        enforce_degradation_order = _should_enforce_degradation_order(
+            track_temperature,
+            config,
+        )
 
         sample_rows: list[dict[str, object]] = []
         compound_rows: list[dict[str, object]] = []
@@ -145,13 +162,15 @@ class MonteCarloRacePerformanceAlgorithm:
                 config.track_rate_bounds,
             )
             dimension_index += 1
-            compound_rates: dict[str, float] = {}
+            compound_unit_samples: dict[str, float] = {}
             for compound in compounds:
-                compound_rates[compound] = scale_unit_sample(
-                    sample[dimension_index],
-                    _compound_bounds(config, compound),
-                )
+                compound_unit_samples[compound] = float(sample[dimension_index])
                 dimension_index += 1
+            compound_rates = _sample_compound_rates(
+                compound_unit_samples,
+                config=config,
+                enforce_degradation_order=enforce_degradation_order,
+            )
             team_compound_rates: dict[tuple[str, str], float] = {}
             for team, compound in team_compounds:
                 compound_rate = compound_rates[compound]
@@ -210,6 +229,11 @@ class MonteCarloRacePerformanceAlgorithm:
                     "RaceLapRef": race_lap_ref,
                     "TyreAgeRef": float(config.tyre_age_ref),
                     "SamplingStrategy": config.sampling_strategy,
+                    "TrackTemperatureCelsius": track_temperature,
+                    "DegradationOrderTrackTemperatureCelsius": (
+                        config.degradation_order_track_temperature_celsius
+                    ),
+                    "DegradationOrderEnforced": enforce_degradation_order,
                 }
             )
             for compound, rate in compound_rates.items():
@@ -310,6 +334,72 @@ def _compound_bounds(
     )
 
 
+def _sample_compound_rates(
+    unit_samples: dict[str, float],
+    *,
+    config: MonteCarloRacePerformanceConfig,
+    enforce_degradation_order: bool,
+) -> dict[str, float]:
+    if not enforce_degradation_order:
+        return {
+            compound: scale_unit_sample(unit_sample, _compound_bounds(config, compound))
+            for compound, unit_sample in unit_samples.items()
+        }
+
+    rates: dict[str, float] = {}
+    previous_rate: float | None = None
+    for compound in reversed(ORDERED_DRY_COMPOUNDS):
+        if compound not in unit_samples:
+            continue
+        lower, upper = _compound_bounds(config, compound)
+        higher_compounds = ORDERED_DRY_COMPOUNDS[
+            : ORDERED_DRY_COMPOUNDS.index(compound)
+        ]
+        upper = min(
+            [upper]
+            + [
+                _compound_bounds(config, higher_compound)[1]
+                for higher_compound in higher_compounds
+                if higher_compound in unit_samples
+            ]
+        )
+        if previous_rate is not None:
+            lower = max(lower, previous_rate)
+        rates[compound] = scale_unit_sample(unit_samples[compound], (lower, upper))
+        previous_rate = rates[compound]
+
+    for compound, unit_sample in unit_samples.items():
+        if compound in rates:
+            continue
+        rates[compound] = scale_unit_sample(unit_sample, _compound_bounds(config, compound))
+    return rates
+
+
+def _track_temperature_celsius(
+    laps: pd.DataFrame,
+    config: MonteCarloRacePerformanceConfig,
+) -> float | None:
+    if config.track_temperature_celsius is not None:
+        return float(config.track_temperature_celsius)
+    for column in TRACK_TEMPERATURE_COLUMNS:
+        if column not in laps.columns:
+            continue
+        values = pd.to_numeric(laps[column], errors="coerce").dropna()
+        if not values.empty:
+            return float(values.mean())
+    return None
+
+
+def _should_enforce_degradation_order(
+    track_temperature_celsius: float | None,
+    config: MonteCarloRacePerformanceConfig,
+) -> bool:
+    threshold = config.degradation_order_track_temperature_celsius
+    if threshold is None or track_temperature_celsius is None:
+        return False
+    return track_temperature_celsius > threshold
+
+
 def _validate_config(config: MonteCarloRacePerformanceConfig) -> None:
     if config.sample_count <= 0:
         raise ValueError("sample_count must be positive.")
@@ -319,6 +409,20 @@ def _validate_config(config: MonteCarloRacePerformanceConfig) -> None:
         raise ValueError("team_variation_fraction must be non-negative.")
     if config.team_variation_absolute_min < 0:
         raise ValueError("team_variation_absolute_min must be non-negative.")
+    if config.fuel_rate_bounds[0] < 0 or config.fuel_rate_bounds[1] < 0:
+        raise ValueError("fuel_rate_bounds must be non-negative.")
+    if (
+        config.degradation_order_track_temperature_celsius is not None
+        and not np.isfinite(config.degradation_order_track_temperature_celsius)
+    ):
+        raise ValueError(
+            "degradation_order_track_temperature_celsius must be finite or None."
+        )
+    if (
+        config.track_temperature_celsius is not None
+        and not np.isfinite(config.track_temperature_celsius)
+    ):
+        raise ValueError("track_temperature_celsius must be finite or None.")
     _validate_bounds("fuel_rate_bounds", config.fuel_rate_bounds)
     _validate_bounds("track_rate_bounds", config.track_rate_bounds)
     _validate_bounds(
@@ -327,6 +431,7 @@ def _validate_config(config: MonteCarloRacePerformanceConfig) -> None:
     )
     for compound, bounds in config.compound_degradation_bounds.items():
         _validate_bounds(f"compound_degradation_bounds[{compound!r}]", bounds)
+    _validate_degradation_order_bounds(config)
     get_unit_cube_sampler(config.sampling_strategy)
     _baseline_columns(config.baseline_group)
 
@@ -337,3 +442,23 @@ def _validate_bounds(name: str, bounds: tuple[float, float]) -> None:
     lower, upper = float(bounds[0]), float(bounds[1])
     if lower > upper:
         raise ValueError(f"{name} lower bound must be <= upper bound.")
+
+
+def _validate_degradation_order_bounds(config: MonteCarloRacePerformanceConfig) -> None:
+    if config.degradation_order_track_temperature_celsius is None:
+        return
+    hard_upper = _compound_bounds(config, "HARD")[1]
+    medium_upper = _compound_bounds(config, "MEDIUM")[1]
+    soft_upper = _compound_bounds(config, "SOFT")[1]
+    hard_lower = _compound_bounds(config, "HARD")[0]
+    medium_lower = _compound_bounds(config, "MEDIUM")[0]
+    if hard_lower > medium_upper:
+        raise ValueError(
+            "Compound degradation bounds cannot satisfy MEDIUM >= HARD "
+            "for hot-track ordering."
+        )
+    if max(medium_lower, hard_lower) > soft_upper:
+        raise ValueError(
+            "Compound degradation bounds cannot satisfy SOFT >= MEDIUM "
+            "for hot-track ordering."
+        )

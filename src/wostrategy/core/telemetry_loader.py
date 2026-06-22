@@ -282,7 +282,10 @@ def load_or_cache_session_telemetry(
     loader = telemetry_loader or TelemetryDataLoader()
     if cache_path.exists() and not force_refresh:
         telemetry = pd.read_pickle(cache_path)
-        if loader.time_delta_estimator.output_column in telemetry.columns:
+        if _is_valid_cached_telemetry(
+            telemetry,
+            required_time_delta_column=loader.time_delta_estimator.output_column,
+        ):
             return telemetry
 
     telemetry = loader.load_session(
@@ -294,6 +297,14 @@ def load_or_cache_session_telemetry(
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     telemetry.to_pickle(cache_path)
     return telemetry
+
+
+def _is_valid_cached_telemetry(
+    telemetry: pd.DataFrame,
+    *,
+    required_time_delta_column: str,
+) -> bool:
+    return not telemetry.empty and required_time_delta_column in telemetry.columns
 
 
 def get_session_telemetry_cache_path(
@@ -323,12 +334,6 @@ def summarize_lap_gap_metrics(
     distance_delta_column: str = "DistanceToDriverAhead",
 ) -> pd.DataFrame:
     """Aggregate full telemetry into per-lap front-car gap metrics."""
-    required_columns = {*group_columns, time_delta_column, distance_delta_column}
-    missing_columns = required_columns.difference(telemetry.columns)
-    if missing_columns:
-        missing = ", ".join(sorted(missing_columns))
-        raise ValueError(f"Telemetry is missing required columns: {missing}")
-
     if telemetry.empty:
         return pd.DataFrame(
             columns=[
@@ -339,6 +344,21 @@ def summarize_lap_gap_metrics(
                 "MeanDistanceToDriverAhead",
             ]
         )
+
+    physical_required = {*group_columns, "SessionTime", "Distance", "Speed"}
+    if not physical_required.difference(telemetry.columns):
+        physical_summary = _summarize_lap_gaps_from_track_position(
+            telemetry,
+            group_columns=group_columns,
+        )
+        if not physical_summary.empty:
+            return physical_summary
+
+    required_columns = {*group_columns, time_delta_column, distance_delta_column}
+    missing_columns = required_columns.difference(telemetry.columns)
+    if missing_columns:
+        missing = ", ".join(sorted(missing_columns))
+        raise ValueError(f"Telemetry is missing required columns: {missing}")
 
     summary_input = telemetry.loc[:, [*group_columns, time_delta_column, distance_delta_column]]
     ahead_summary = (
@@ -379,36 +399,11 @@ def _summarize_lap_gap_behind(
 ) -> pd.DataFrame:
     common_required = {*group_columns, "DriverNumber"}
     if common_required.difference(telemetry.columns):
-        return pd.DataFrame(
-            columns=[
-                *group_columns,
-                "MinTimeDeltaToDriverBehind",
-                "MeanTimeDeltaToDriverBehind",
-                "MinDistanceToDriverBehind",
-                "MeanDistanceToDriverBehind",
-            ]
-        )
-
-    physical_required = {"SessionTime", "Distance", "Speed"}
-    if not physical_required.difference(telemetry.columns):
-        physical_summary = _summarize_lap_gap_behind_from_track_position(
-            telemetry,
-            group_columns=group_columns,
-        )
-        if not physical_summary.empty:
-            return physical_summary
+        return _empty_behind_gap_summary(group_columns)
 
     driver_ahead_required = {"DriverAhead", time_delta_column, distance_delta_column}
     if driver_ahead_required.difference(telemetry.columns):
-        return pd.DataFrame(
-            columns=[
-                *group_columns,
-                "MinTimeDeltaToDriverBehind",
-                "MeanTimeDeltaToDriverBehind",
-                "MinDistanceToDriverBehind",
-                "MeanDistanceToDriverBehind",
-            ]
-        )
+        return _empty_behind_gap_summary(group_columns)
     return _summarize_lap_gap_behind_from_driver_ahead(
         telemetry,
         group_columns=group_columns,
@@ -478,7 +473,7 @@ def _summarize_lap_gap_behind_from_driver_ahead(
     )
 
 
-def _summarize_lap_gap_behind_from_track_position(
+def _summarize_lap_gaps_from_track_position(
     telemetry: pd.DataFrame,
     *,
     group_columns: tuple[str, ...],
@@ -489,27 +484,32 @@ def _summarize_lap_gap_behind_from_track_position(
         if column in group_columns and column in telemetry.columns
     ]
     target_columns = list(
-        dict.fromkeys([*group_columns, "DriverNumber", "SessionTime", "Distance"])
+        dict.fromkeys([*group_columns, "SessionTime", "Distance", "Speed"])
     )
     target_samples = (
         telemetry.loc[:, target_columns]
-        .dropna(subset=["Driver", "DriverNumber", "SessionTime", "Distance"])
+        .dropna(subset=["Driver", "SessionTime", "Distance", "Speed"])
         .copy()
     )
     if target_samples.empty:
-        return _empty_behind_gap_summary(group_columns)
+        return _empty_gap_summary(group_columns)
 
     target_samples["_TargetRowId"] = np.arange(len(target_samples))
-    target_samples["DriverNumber"] = target_samples["DriverNumber"].astype("string")
     target_samples["_TargetDistance"] = pd.to_numeric(
         target_samples["Distance"],
         errors="coerce",
     )
-    target_samples = target_samples.dropna(subset=["_TargetDistance"])
+    target_samples["_TargetSpeedKph"] = pd.to_numeric(
+        target_samples["Speed"],
+        errors="coerce",
+    )
+    target_samples = target_samples.dropna(subset=["_TargetDistance", "_TargetSpeedKph"])
+    target_samples = target_samples.loc[target_samples["_TargetSpeedKph"] > 1.0]
     if target_samples.empty:
-        return _empty_behind_gap_summary(group_columns)
+        return _empty_gap_summary(group_columns)
 
-    nearest_samples: list[pd.DataFrame] = []
+    nearest_ahead_samples: list[pd.DataFrame] = []
+    nearest_behind_samples: list[pd.DataFrame] = []
     session_groups = (
         target_samples.groupby(session_columns, dropna=False, sort=False)
         if session_columns
@@ -524,8 +524,7 @@ def _summarize_lap_gap_behind_from_track_position(
         if session_telemetry.empty:
             continue
 
-        distance = pd.to_numeric(session_telemetry["Distance"], errors="coerce")
-        lap_distance = float(distance.max() - distance.min())
+        lap_distance = _estimate_lap_distance(session_telemetry)
         if not np.isfinite(lap_distance) or lap_distance <= 0:
             continue
 
@@ -571,43 +570,102 @@ def _summarize_lap_gap_behind_from_track_position(
             if matched.empty:
                 continue
 
-            gap_distance = (
+            ahead_distance = (
+                matched["_OtherDistance"].astype("float64")
+                - matched["_TargetDistance"].astype("float64")
+            ) % lap_distance
+            matched["_AheadDistance"] = ahead_distance
+            ahead = matched.loc[matched["_AheadDistance"] > 1.0].copy()
+            if not ahead.empty:
+                ahead["_AheadTimeDelta"] = ahead["_AheadDistance"] / (
+                    ahead["_TargetSpeedKph"].astype("float64") / 3.6
+                )
+                nearest_ahead_samples.append(
+                    ahead.loc[
+                        :,
+                        [*group_columns, "_TargetRowId", "_AheadDistance", "_AheadTimeDelta"],
+                    ]
+                )
+
+            behind_distance = (
                 matched["_TargetDistance"].astype("float64")
                 - matched["_OtherDistance"].astype("float64")
             ) % lap_distance
-            matched["_BehindDistance"] = gap_distance
-            matched = matched.loc[matched["_BehindDistance"] > 1.0].copy()
-            if matched.empty:
-                continue
-            matched["_BehindTimeDelta"] = matched["_BehindDistance"] / (
-                matched["_OtherSpeedKph"].astype("float64") / 3.6
-            )
-            nearest_samples.append(
-                matched.loc[
-                    :,
-                    [*group_columns, "_TargetRowId", "_BehindDistance", "_BehindTimeDelta"],
-                ]
-            )
+            matched["_BehindDistance"] = behind_distance
+            behind = matched.loc[matched["_BehindDistance"] > 1.0].copy()
+            if not behind.empty:
+                behind["_BehindTimeDelta"] = behind["_BehindDistance"] / (
+                    behind["_OtherSpeedKph"].astype("float64") / 3.6
+                )
+                nearest_behind_samples.append(
+                    behind.loc[
+                        :,
+                        [
+                            *group_columns,
+                            "_TargetRowId",
+                            "_BehindDistance",
+                            "_BehindTimeDelta",
+                        ],
+                    ]
+                )
 
-    if not nearest_samples:
-        return _empty_behind_gap_summary(group_columns)
+    if not nearest_ahead_samples and not nearest_behind_samples:
+        return _empty_gap_summary(group_columns)
 
-    candidate_samples = pd.concat(nearest_samples, ignore_index=True)
-    candidate_samples = candidate_samples.sort_values(
-        ["_TargetRowId", "_BehindDistance"],
-        kind="stable",
-    )
-    nearest_by_target_sample = candidate_samples.drop_duplicates(
-        subset=["_TargetRowId"],
-        keep="first",
+    summaries: list[pd.DataFrame] = []
+    if nearest_ahead_samples:
+        summaries.append(
+            _nearest_gap_summary(
+                pd.concat(nearest_ahead_samples, ignore_index=True),
+                group_columns=group_columns,
+                distance_column="_AheadDistance",
+                time_column="_AheadTimeDelta",
+                output_prefix="Ahead",
+            )
+        )
+    if nearest_behind_samples:
+        summaries.append(
+            _nearest_gap_summary(
+                pd.concat(nearest_behind_samples, ignore_index=True),
+                group_columns=group_columns,
+                distance_column="_BehindDistance",
+                time_column="_BehindTimeDelta",
+                output_prefix="Behind",
+            )
+        )
+    summary = summaries[0]
+    for other in summaries[1:]:
+        summary = summary.merge(other, on=list(group_columns), how="outer")
+    for column in _gap_summary_columns(group_columns):
+        if column not in summary.columns:
+            summary[column] = pd.NA
+    return summary.loc[:, [*group_columns, *_gap_summary_columns(group_columns)]]
+
+
+def _nearest_gap_summary(
+    candidate_samples: pd.DataFrame,
+    *,
+    group_columns: tuple[str, ...],
+    distance_column: str,
+    time_column: str,
+    output_prefix: str,
+) -> pd.DataFrame:
+    nearest_by_target_sample = (
+        candidate_samples.sort_values(
+            ["_TargetRowId", distance_column],
+            kind="stable",
+        )
+        .drop_duplicates(subset=["_TargetRowId"], keep="first")
     )
     return (
         nearest_by_target_sample.groupby(list(group_columns), dropna=False, as_index=False)
         .agg(
-            MinTimeDeltaToDriverBehind=("_BehindTimeDelta", "min"),
-            MeanTimeDeltaToDriverBehind=("_BehindTimeDelta", "mean"),
-            MinDistanceToDriverBehind=("_BehindDistance", "min"),
-            MeanDistanceToDriverBehind=("_BehindDistance", "mean"),
+            **{
+                f"MinTimeDeltaToDriver{output_prefix}": (time_column, "min"),
+                f"MeanTimeDeltaToDriver{output_prefix}": (time_column, "mean"),
+                f"MinDistanceToDriver{output_prefix}": (distance_column, "min"),
+                f"MeanDistanceToDriver{output_prefix}": (distance_column, "mean"),
+            }
         )
     )
 
@@ -627,6 +685,32 @@ def _session_slice(
     return telemetry.loc[mask]
 
 
+def _estimate_lap_distance(telemetry: pd.DataFrame) -> float:
+    distance = pd.to_numeric(telemetry["Distance"], errors="coerce")
+    global_span = float(distance.max() - distance.min())
+    if {"Driver", "LapNumber"}.difference(telemetry.columns):
+        return global_span
+
+    lap_spans = (
+        telemetry.assign(_Distance=distance)
+        .dropna(subset=["Driver", "LapNumber", "_Distance"])
+        .groupby(["Driver", "LapNumber"], dropna=False)["_Distance"]
+        .agg(lambda values: float(values.max() - values.min()))
+    )
+    lap_spans = lap_spans.loc[np.isfinite(lap_spans) & (lap_spans > 1000.0)]
+    if lap_spans.empty:
+        return global_span
+
+    median_span = float(lap_spans.median())
+    plausible_spans = lap_spans.loc[
+        (lap_spans > median_span * 0.75)
+        & (lap_spans < median_span * 1.25)
+    ]
+    if plausible_spans.empty:
+        return median_span
+    return float(plausible_spans.median())
+
+
 def _empty_behind_gap_summary(group_columns: tuple[str, ...]) -> pd.DataFrame:
     return pd.DataFrame(
         columns=[
@@ -637,6 +721,23 @@ def _empty_behind_gap_summary(group_columns: tuple[str, ...]) -> pd.DataFrame:
             "MeanDistanceToDriverBehind",
         ]
     )
+
+
+def _empty_gap_summary(group_columns: tuple[str, ...]) -> pd.DataFrame:
+    return pd.DataFrame(columns=[*group_columns, *_gap_summary_columns(group_columns)])
+
+
+def _gap_summary_columns(group_columns: tuple[str, ...]) -> list[str]:
+    return [
+        "MinTimeDeltaToDriverAhead",
+        "MeanTimeDeltaToDriverAhead",
+        "MinDistanceToDriverAhead",
+        "MeanDistanceToDriverAhead",
+        "MinTimeDeltaToDriverBehind",
+        "MeanTimeDeltaToDriverBehind",
+        "MinDistanceToDriverBehind",
+        "MeanDistanceToDriverBehind",
+    ]
 
 
 def _safe_cache_part(value: object) -> str:

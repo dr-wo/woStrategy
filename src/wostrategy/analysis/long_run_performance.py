@@ -248,7 +248,7 @@ def select_consecutive_clean_air_runs(
         clean = group["IsCleanAirLongRunLap"].fillna(False).astype(bool)
         block_id = clean.ne(clean.shift(fill_value=False)).cumsum()
         for _, block in group.loc[clean].groupby(block_id.loc[clean], sort=False):
-            if len(block) <= min_clean_air_laps:
+            if len(block) < min_clean_air_laps:
                 continue
             run_number += 1
             selected.loc[block.index, "LongRunId"] = run_number
@@ -487,19 +487,48 @@ def _prepare_laps(
         prepared["LapNumber"],
         errors="coerce",
     )
+    has_gap_summary = _has_any_gap_summary(prepared)
+    ahead_gap = prepared["MeanTimeDeltaToDriverAhead"].where(
+        prepared["MeanTimeDeltaToDriverAhead"].notna(),
+        np.where(has_gap_summary, np.inf, np.nan),
+    )
     clean_air_mask = (
-        prepared["MeanTimeDeltaToDriverAhead"] > clean_mean_time_delta_seconds
+        ahead_gap > clean_mean_time_delta_seconds
     ) & prepared["IsQuickLap"] & ~prepared["IsOutLap"] & ~prepared["IsInLap"]
     if clean_mean_time_delta_behind_seconds is not None:
-        # Missing "behind" gaps usually mean no usable following-car sample for
-        # that lap; they should not invalidate an otherwise clean-air lap.
-        # Missing "ahead" gaps are still rejected by the ahead check above.
+        # Missing per-lap gap values can mean there was no relevant car ahead or
+        # behind, which is clean air. Only allow that interpretation when some
+        # telemetry gap summary exists for the lap, so unmerged/no-telemetry laps
+        # do not pass the clean-air filter.
+        behind_gap = prepared["MeanTimeDeltaToDriverBehind"].where(
+            prepared["MeanTimeDeltaToDriverBehind"].notna(),
+            np.where(has_gap_summary, np.inf, np.nan),
+        )
         clean_air_mask = clean_air_mask & (
-            prepared["MeanTimeDeltaToDriverBehind"].fillna(np.inf)
-            > clean_mean_time_delta_behind_seconds
+            behind_gap > clean_mean_time_delta_behind_seconds
         )
     prepared["IsCleanAirLongRunLap"] = clean_air_mask
     return prepared
+
+
+def _has_any_gap_summary(laps: pd.DataFrame) -> pd.Series:
+    gap_columns = [
+        column
+        for column in (
+            "MinTimeDeltaToDriverAhead",
+            "MeanTimeDeltaToDriverAhead",
+            "MinDistanceToDriverAhead",
+            "MeanDistanceToDriverAhead",
+            "MinTimeDeltaToDriverBehind",
+            "MeanTimeDeltaToDriverBehind",
+            "MinDistanceToDriverBehind",
+            "MeanDistanceToDriverBehind",
+        )
+        if column in laps.columns
+    ]
+    if not gap_columns:
+        return pd.Series(False, index=laps.index)
+    return laps.loc[:, gap_columns].notna().any(axis=1)
 
 
 def _add_long_run_ids_to_all_laps(

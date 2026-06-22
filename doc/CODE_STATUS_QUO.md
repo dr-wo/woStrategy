@@ -101,6 +101,9 @@ Race performance review helpers are also exported from `wostrategy.analysis`:
   - clean-lap noise sigma
   - baseline group (`driver` or `team`)
   - fuel, race-lap, and tyre-age references
+- It can enforce hot-track base degradation ordering `SOFT >= MEDIUM >= HARD`
+  when the configured or inferred track temperature is above the configured
+  threshold, defaulting to 20C.
 - `MonteCarloRacePerformanceAlgorithm.run` expects already-prepared clean laps.
 - For each sample it:
   1. Samples global fuel and track rates.
@@ -482,6 +485,13 @@ Return keys:
   - `average`
   - `best_sectors`
 
+`src/wostrategy/plots/race_performance.py`
+
+- Contains race performance tracker plotting for Monte Carlo race review outputs.
+- `RacePerformancePlotter` renders each team's weighted median corrected race baseline pace as a percentage of a configurable reference team.
+- Uses `plots.style_maps.F1_TEAM_COLORS` and event-aware race tick labels.
+- Includes a light P10/P90 uncertainty band when those relative columns are available.
+
 ## Scripts
 
 Scripts are importable modules under `src/wostrategy/script`.
@@ -573,6 +583,8 @@ Scripts are importable modules under `src/wostrategy/script`.
 - Loads one race or a numeric race range with telemetry gap summaries.
 - Supports feature race/default race sessions through `--session`, defaulting to `R`.
 - Requires telemetry gap data for clean-air filtering; missing or empty gap columns skip the race and write an empty diagnostic CSV set.
+- Telemetry gap summaries prefer physical same-session-time track-position distances for both ahead and behind gaps, which keeps lapped-car scenarios symmetric; the older FastF1 driver-ahead stream remains a fallback.
+- Consecutive clean-air selection treats `--min-clean-air-laps` as an inclusive minimum.
 - Wet/intermediate usage is summarized per driver; the race is skipped only when median driver wet proportion exceeds `--wet-lap-proportion-skip-threshold`.
 - Builds `MonteCarloRacePerformanceConfig` from CLI/default settings and delegates the sample loop to `algorithm.monte_carlo_race_performance`.
 - Supports `--sampling-strategy {random,latin-hypercube,halton}`.
@@ -583,11 +595,16 @@ Scripts are importable modules under `src/wostrategy/script`.
   - `--compound-degradation-bounds-json`
   - `--team-variation-fraction`
   - `--team-variation-absolute-min`
+- Track-temperature degradation ordering controls:
+  - `--track-temperature`
+  - `--degradation-order-track-temperature`
 - Team corrected baseline pace modes:
   - `average-drivers`: fit driver baselines, then average teammates per sample
   - `best-driver`: fit driver baselines, then take the faster teammate per sample
   - `direct-team`: fit one baseline directly per team
 - Prints sample progress, clean-lap coverage, sample diagnostics, weighted parameter summaries, and team corrected baseline summaries.
+- Saves a relative team race performance tracker plot to `temp/` by default, with `--reference-team`, `--plot-output`, `--plot` / `--no-plot`, and `--show` controls.
+- Plot rows use each team's weighted median corrected baseline pace divided by the reference team's weighted median pace for the same race.
 - Writes CSVs to `cache/race_performance_review/` by default:
   - clean laps
   - wet lap summary
