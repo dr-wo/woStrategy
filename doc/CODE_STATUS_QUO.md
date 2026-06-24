@@ -97,24 +97,31 @@ Race performance review helpers are also exported from `wostrategy.analysis`:
   - global fuel-rate bounds
   - global track-evolution-rate bounds
   - compound degradation bounds
+  - compound lap-time delta bounds and reference compound
   - bounded team-compound degradation variation
   - clean-lap noise sigma
+  - weight strategy (`gaussian` or `best-rmse-relative`)
+  - optional effective sample count for relative best-RMSE weighting
   - baseline group (`driver` or `team`)
   - fuel, race-lap, and tyre-age references
 - It can enforce hot-track base degradation ordering `SOFT >= MEDIUM >= HARD`
-  when the configured or inferred track temperature is above the configured
-  threshold, defaulting to 20C.
+  and compound delta ordering `SOFT <= MEDIUM <= HARD` when the configured or
+  inferred track temperature is above the configured threshold, defaulting to
+  20C. Lower compound delta means faster at the tyre-age reference.
 - `MonteCarloRacePerformanceAlgorithm.run` expects already-prepared clean laps.
 - For each sample it:
   1. Samples global fuel and track rates.
   2. Samples base degradation per compound.
-  3. Samples team-compound variation around each compound rate, limited by `max(team_variation_fraction * abs(compound_rate), team_variation_absolute_min)`.
-  4. Corrects each clean lap for fuel proxy, race-lap track evolution, and team-compound tyre-age degradation.
-  5. Fits corrected baseline pace as a mean per configured driver/team group.
-  6. Scores the sample by global RMSE and converts it to a Gaussian-like weight.
-  7. Stores sample parameters, compound degradation, team-compound degradation, and fitted baseline rows.
+  3. Samples compound lap-time deltas relative to `compound_delta_reference`, with the reference compound fixed at zero.
+  4. Samples team-compound variation around each compound rate, limited by `max(team_variation_fraction * abs(compound_rate), team_variation_absolute_min)`.
+  5. Corrects each clean lap for fuel proxy, race-lap track evolution, compound delta, and team-compound tyre-age degradation.
+  6. Fits corrected baseline pace as a mean per configured driver/team group.
+  7. Scores the sample by global RMSE and converts it to a configured weight:
+     `gaussian` keeps the original unnormalized `exp(-rmse^2 / (2 sigma^2))`
+     form, while `best-rmse-relative` uses normalized
+     `exp(-N_eff * (rmse^2 - best_rmse^2) / (2 sigma^2))`.
+  8. Stores sample parameters, compound degradation, compound delta, team-compound degradation, and fitted baseline rows.
 - Progress reporting keeps cumulative weight as a running total to avoid O(sample_count^2) progress overhead.
-- Current limitation: tyre degradation slopes vary by compound/team-compound, but there is no explicit compound grip offset yet.
 
 ## Model Layer
 
@@ -585,6 +592,9 @@ Scripts are importable modules under `src/wostrategy/script`.
 - Requires telemetry gap data for clean-air filtering; missing or empty gap columns skip the race and write an empty diagnostic CSV set.
 - Telemetry gap summaries prefer physical same-session-time track-position distances for both ahead and behind gaps, which keeps lapped-car scenarios symmetric; the older FastF1 driver-ahead stream remains a fallback.
 - Consecutive clean-air selection treats `--min-clean-air-laps` as an inclusive minimum.
+- `--treat-stint-as-whole` switches clean-lap selection from consecutive chunks to one whole clean-lap group per driver/stint, using `--min-clean-air-laps` as a minimum total clean-lap count for that stint.
+- `--tyre-age-mode {stint,overall}` controls tyre-age correction input. `stint` is the default and uses `StintLapNumber - 1` or counted stint laps; `overall` uses `TyreLife - 1`.
+- `--limit-negative-track-correction` clamps sampled track-evolution rates to non-negative values so the correction cannot make later-race laps longer.
 - Wet/intermediate usage is summarized per driver; the race is skipped only when median driver wet proportion exceeds `--wet-lap-proportion-skip-threshold`.
 - Builds `MonteCarloRacePerformanceConfig` from CLI/default settings and delegates the sample loop to `algorithm.monte_carlo_race_performance`.
 - Supports `--sampling-strategy {random,latin-hypercube,halton}`.
@@ -593,8 +603,14 @@ Scripts are importable modules under `src/wostrategy/script`.
   - `--track-rate-bounds`
   - `--default-compound-degradation-bounds`
   - `--compound-degradation-bounds-json`
+  - `--tyre-delta-bounds`
+  - `--compound-delta-bounds-json`
+  - `--compound-delta-reference`
   - `--team-variation-fraction`
   - `--team-variation-absolute-min`
+- Weighting controls:
+  - `--weight-strategy`
+  - `--weight-effective-sample-count`
 - Track-temperature degradation ordering controls:
   - `--track-temperature`
   - `--degradation-order-track-temperature`
@@ -603,16 +619,23 @@ Scripts are importable modules under `src/wostrategy/script`.
   - `best-driver`: fit driver baselines, then take the faster teammate per sample
   - `direct-team`: fit one baseline directly per team
 - Prints sample progress, clean-lap coverage, sample diagnostics, weighted parameter summaries, and team corrected baseline summaries.
-- Saves a relative team race performance tracker plot to `temp/` by default, with `--reference-team`, `--plot-output`, `--plot` / `--no-plot`, and `--show` controls.
+- Saves `*_sample_diagnostics.csv` with best RMSE, weighted RMSE, RMSE quantiles, weight sum, effective sample size/fraction, and top-1% weight share.
+- `--use-cached-monte-carlo` loads existing per-race Monte Carlo CSVs when available and calculates only missing races; `--no-use-cached-monte-carlo` forces a full recalculation.
+- Cached Monte Carlo loading rebuilds the requested `--team-baseline-mode` from `*_baseline_pace.csv` and `*_sample_parameters.csv` when available, so switching between `average-drivers` and `best-driver` can reuse driver-level Monte Carlo outputs.
+- Saves a relative team race performance tracker plot to `temp/` by default, with `--reference-team`, `--plot-output`, `--plot` / `--no-plot`, `--plot-uncertainty-band` / `--no-plot-uncertainty-band`, `--plot-rmse-background` / `--no-plot-rmse-background`, and `--show` controls.
+- Cached plotting uses the per-race `*_team_baseline_summary.csv` files and reuses event labels from cached clean-lap files when available.
+- The optional RMSE background shades each GP by `WeightedRMSESeconds`: below 0.5s is green, 0.75s is orange, and 1.0s or higher is red, with a colorbar. GPs with fewer than five teams are shown with a black striped background instead.
 - Plot rows use each team's weighted median corrected baseline pace divided by the reference team's weighted median pace for the same race.
 - Writes CSVs to `cache/race_performance_review/` by default:
   - clean laps
   - wet lap summary
   - sample parameters
   - compound degradation samples
+  - compound delta samples
   - team-compound degradation samples
   - baseline pace samples
   - team baseline samples and summary
+  - sample diagnostics
   - weighted summary tables
 - For race ranges, also writes aggregate sample and team baseline summaries across produced race results.
 

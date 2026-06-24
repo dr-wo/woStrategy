@@ -12,8 +12,10 @@ from wostrategy.algorithm.monte_carlo_race_performance import (
     RacePerformanceReviewAlgorithm,
 )
 from wostrategy.analysis.long_run_performance import (
+    TYRE_AGE_MODE_STINT,
     WET_COMPOUNDS,
     _prepare_laps,
+    select_clean_air_stints_as_whole,
     select_consecutive_clean_air_runs,
 )
 from wostrategy.model.fuel_consumption import FUEL_LAP_NUMBER_COLUMN
@@ -26,6 +28,7 @@ class MonteCarloRacePerformanceResult:
     wet_lap_summary: pd.DataFrame
     sample_parameters: pd.DataFrame
     compound_degradation: pd.DataFrame
+    compound_delta: pd.DataFrame
     team_compound_degradation: pd.DataFrame
     baseline_pace: pd.DataFrame
     summaries: dict[str, pd.DataFrame]
@@ -38,6 +41,8 @@ def calculate_monte_carlo_race_performance_review(
     clean_mean_time_delta_seconds: float,
     clean_mean_time_delta_behind_seconds: float | None,
     quick_lap_threshold: float,
+    treat_stint_as_whole: bool = False,
+    tyre_age_mode: str = TYRE_AGE_MODE_STINT,
     config: MonteCarloRacePerformanceConfig | None = None,
     algorithm: RacePerformanceReviewAlgorithm | None = None,
     dry_compounds: tuple[str, ...] = ("SOFT", "MEDIUM", "HARD"),
@@ -67,9 +72,15 @@ def calculate_monte_carlo_race_performance_review(
         clean_mean_time_delta_behind_seconds=clean_mean_time_delta_behind_seconds,
         quick_lap_threshold=quick_lap_threshold,
         dry_compounds=dry_compounds,
+        tyre_age_mode=tyre_age_mode,
     )
     prepared = _add_race_fuel_proxy(prepared)
-    clean_laps = select_consecutive_clean_air_runs(
+    selector = (
+        select_clean_air_stints_as_whole
+        if treat_stint_as_whole
+        else select_consecutive_clean_air_runs
+    )
+    clean_laps = selector(
         prepared,
         min_clean_air_laps=min_clean_air_laps,
     )
@@ -79,11 +90,13 @@ def calculate_monte_carlo_race_performance_review(
     algorithm_result = algorithm.run(clean_laps)
     sample_parameters = algorithm_result.sample_parameters
     compound_degradation = algorithm_result.compound_degradation
+    compound_delta = algorithm_result.compound_delta
     team_compound_degradation = algorithm_result.team_compound_degradation
     baseline_pace = algorithm_result.baseline_pace
     summaries = summarize_monte_carlo_race_performance(
         sample_parameters=sample_parameters,
         compound_degradation=compound_degradation,
+        compound_delta=compound_delta,
         team_compound_degradation=team_compound_degradation,
         baseline_pace=baseline_pace,
     )
@@ -94,6 +107,7 @@ def calculate_monte_carlo_race_performance_review(
         wet_lap_summary=wet_lap_summary,
         sample_parameters=sample_parameters,
         compound_degradation=compound_degradation,
+        compound_delta=compound_delta,
         team_compound_degradation=team_compound_degradation,
         baseline_pace=baseline_pace,
         summaries=summaries,
@@ -153,6 +167,7 @@ def summarize_monte_carlo_race_performance(
     *,
     sample_parameters: pd.DataFrame,
     compound_degradation: pd.DataFrame,
+    compound_delta: pd.DataFrame,
     team_compound_degradation: pd.DataFrame,
     baseline_pace: pd.DataFrame,
 ) -> dict[str, pd.DataFrame]:
@@ -173,6 +188,12 @@ def summarize_monte_carlo_race_performance(
             value_column="CompoundDegSecondsPerLap",
             weight_column="Weight",
             group_columns=("Compound",),
+        ),
+        "compound_delta": _weighted_summary(
+            compound_delta.merge(weights, on="SampleId", how="left"),
+            value_column="CompoundDeltaSeconds",
+            weight_column="Weight",
+            group_columns=("Compound", "CompoundDeltaReference"),
         ),
         "team_compound_degradation": _weighted_summary(
             team_compound_degradation.merge(weights, on="SampleId", how="left"),

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,8 @@ import pandas as pd
 from wostrategy.algorithm.monte_carlo_race_performance import (
     MonteCarloRacePerformanceAlgorithm,
     MonteCarloRacePerformanceConfig,
+    WEIGHT_STRATEGIES,
+    WEIGHT_STRATEGY_GAUSSIAN,
 )
 from wostrategy.algorithm.sampling import (
     LATIN_HYPERCUBE_SAMPLER,
@@ -20,6 +23,10 @@ from wostrategy.analysis.race_performance_review import (
     MonteCarloRacePerformanceResult,
     calculate_monte_carlo_race_performance_review,
     wet_lap_proportion_by_driver,
+)
+from wostrategy.analysis.long_run_performance import (
+    TYRE_AGE_MODE_STINT,
+    TYRE_AGE_MODES,
 )
 from wostrategy.plots.race_performance import (
     RacePerformancePlotter,
@@ -38,25 +45,33 @@ SCRIPT_CONFIG = {
     "year": 2026,
     "race": "[1,7]",
     "session": "R",
-    "sample_count": 50000,
+    "sample_count": 80000,
     "sampling_strategy": LATIN_HYPERCUBE_SAMPLER,
     "fuel_rate_bounds": (0.0, 0.1),
     "track_rate_bounds": (-0.05, 0.05),
+    "limit_negative_track_correction": True,
     "default_compound_degradation_bounds": (0.0, 0.5),
     "compound_degradation_bounds_json": None,
+    "default_compound_delta_bounds": (-1.2, 0.5),
+    "compound_delta_bounds_json": None,
+    "compound_delta_reference": "HARD",
     "team_variation_fraction": 0.5,
     "team_variation_absolute_min": 0.005,
     "clean_lap_noise_sigma": 0.5,
+    "weight_strategy": WEIGHT_STRATEGY_GAUSSIAN,
+    "weight_effective_sample_count": 20,
     "team_baseline_mode": TEAM_MODE_AVERAGE_DRIVERS,
     "fuel_ref": 0.0,
     "race_lap_ref": None,
     "tyre_age_ref": 0.0,
+    "tyre_age_mode": TYRE_AGE_MODE_STINT,
     "track_temperature": None,
-    "degradation_order_track_temperature": 20.0,
+    "degradation_order_track_temperature": 15.0,
     "random_seed": None,
-    "progress_interval": 100,
+    "progress_interval": 10000,
     "quick_lap_threshold": 1.10,
-    "min_clean_air_laps": 4,
+    "min_clean_air_laps": 3,
+    "treat_stint_as_whole": False,
     "clean_mean_time_delta_seconds": 2.5,
     "clean_mean_time_delta_behind_seconds": 1.0,
     "wet_lap_proportion_skip_threshold": 0.5,
@@ -64,9 +79,12 @@ SCRIPT_CONFIG = {
     "output_dir": "cache/race_performance_review",
     "telemetry_cache_dir": None,
     "force_refresh_telemetry": False,
+    "use_cached_monte_carlo": False,
     "test": False,
     "reference_team": "Mercedes",
     "plot": True,
+    "plot_uncertainty_band": False,
+    "plot_rmse_background": False,
     "plot_output": None,
     "show": False,
 }
@@ -81,21 +99,29 @@ def run_race_performance_review(
     sampling_strategy: str,
     fuel_rate_bounds: tuple[float, float],
     track_rate_bounds: tuple[float, float],
+    limit_negative_track_correction: bool,
     default_compound_degradation_bounds: tuple[float, float],
     compound_degradation_bounds: dict[str, tuple[float, float]],
+    default_compound_delta_bounds: tuple[float, float],
+    compound_delta_bounds: dict[str, tuple[float, float]],
+    compound_delta_reference: str,
     team_variation_fraction: float,
     team_variation_absolute_min: float,
     clean_lap_noise_sigma: float,
+    weight_strategy: str,
+    weight_effective_sample_count: float | None,
     team_baseline_mode: str,
     fuel_ref: float,
     race_lap_ref: float | None,
     tyre_age_ref: float,
+    tyre_age_mode: str,
     track_temperature: float | None,
     degradation_order_track_temperature: float | None,
     random_seed: int | None,
     progress_interval: int | None,
     quick_lap_threshold: float,
     min_clean_air_laps: int,
+    treat_stint_as_whole: bool,
     clean_mean_time_delta_seconds: float,
     clean_mean_time_delta_behind_seconds: float | None,
     wet_lap_proportion_skip_threshold: float,
@@ -103,6 +129,7 @@ def run_race_performance_review(
     output_dir: str | Path,
     telemetry_cache_dir: str | Path | None,
     force_refresh_telemetry: bool,
+    use_cached_monte_carlo: bool,
     test: bool,
 ) -> dict[str, object]:
     if team_baseline_mode not in TEAM_MODES:
@@ -114,8 +141,12 @@ def run_race_performance_review(
     saved_outputs: list[Path] = []
     race_results: dict[int, MonteCarloRacePerformanceResult] = {}
     race_team_baseline_summaries: dict[int, pd.DataFrame] = {}
+    race_team_baseline_samples: dict[int, pd.DataFrame] = {}
+    race_event_names: dict[int, str | None] = {}
+    race_sample_diagnostics: dict[int, pd.DataFrame] = {}
     range_sample_frames: list[pd.DataFrame] = []
     range_team_baseline_frames: list[pd.DataFrame] = []
+    range_sample_diagnostic_frames: list[pd.DataFrame] = []
 
     baseline_group = "team" if team_baseline_mode == TEAM_MODE_DIRECT_TEAM else "driver"
     print("Monte Carlo race performance review")
@@ -126,19 +157,32 @@ def run_race_performance_review(
     print(f"Sampling strategy: {sampling_strategy}")
     print(f"Fuel rate bounds: {fuel_rate_bounds} s/lap-proxy")
     print(f"Track rate bounds: {track_rate_bounds} s/race-lap")
+    print(f"Limit negative track correction: {limit_negative_track_correction}")
     print(f"Default compound degradation bounds: {default_compound_degradation_bounds} s/lap")
     if compound_degradation_bounds:
         print(f"Compound-specific degradation bounds: {compound_degradation_bounds}")
+    print(
+        "Default compound delta bounds: "
+        f"{default_compound_delta_bounds} s vs {compound_delta_reference.upper()}"
+    )
+    if compound_delta_bounds:
+        print(f"Compound-specific delta bounds: {compound_delta_bounds}")
     print(
         "Team variation: "
         f"fraction={team_variation_fraction}, absolute_min={team_variation_absolute_min} s/lap"
     )
     print(f"Noise sigma: {clean_lap_noise_sigma} s")
+    print(
+        "Weighting: "
+        f"strategy={weight_strategy}, "
+        f"N_eff={weight_effective_sample_count or 'clean lap count'}"
+    )
     print(f"Team baseline mode: {team_baseline_mode} (algorithm baseline={baseline_group})")
     print(
         f"References: fuel={fuel_ref}, "
         f"race_lap={race_lap_ref or 'mean'}, tyre_age={tyre_age_ref}"
     )
+    print(f"Tyre age mode: {tyre_age_mode}")
     print(
         "Degradation order temperature: "
         f"track={track_temperature or 'from data'}, "
@@ -148,9 +192,43 @@ def run_race_performance_review(
         "Wet-race skip threshold: "
         f"median driver wet proportion > {wet_lap_proportion_skip_threshold}"
     )
+    clean_lap_mode = "whole stint" if treat_stint_as_whole else "consecutive chunks"
+    print(f"Clean-lap selection mode: {clean_lap_mode}")
+    print(f"Use cached Monte Carlo results: {use_cached_monte_carlo}")
     print("Missing telemetry gap columns: skip race and save empty diagnostic result")
 
     for race_index, race in enumerate(races):
+        if use_cached_monte_carlo:
+            cached = load_cached_monte_carlo_outputs(
+                year=year,
+                race=race,
+                session=session,
+                output_dir=output_dir,
+                team_baseline_mode=team_baseline_mode,
+            )
+            if cached is not None:
+                race_team_baseline_summaries[race] = cached["team_baseline_summary"]
+                race_event_names[race] = cached["event_name"]
+                saved_outputs.extend(cached["paths"])
+                if cached["team_baseline_samples"] is not None:
+                    team_baseline_samples = cached["team_baseline_samples"].copy()
+                    race_team_baseline_samples[race] = team_baseline_samples
+                    team_baseline_samples["Round"] = race
+                    range_team_baseline_frames.append(team_baseline_samples)
+                if cached["sample_diagnostics"] is not None:
+                    diagnostics = cached["sample_diagnostics"].copy()
+                    race_sample_diagnostics[race] = diagnostics
+                    diagnostics["Round"] = race
+                    range_sample_diagnostic_frames.append(diagnostics)
+                    print("\nCached Monte Carlo sample diagnostics")
+                    print(diagnostics.to_string(index=False))
+                print(
+                    f"\nUsing cached Monte Carlo result for "
+                    f"{year} race={race} session={session}"
+                )
+                print(cached["team_baseline_summary"].to_string(index=False))
+                continue
+
         print(f"\nLoading {year} race={race} session={session}")
         laps = load_all_session_laps_with_telemetry_gap_summary(
             year=year,
@@ -190,11 +268,17 @@ def run_race_performance_review(
             sample_count=sample_count,
             fuel_rate_bounds=fuel_rate_bounds,
             track_rate_bounds=track_rate_bounds,
+            limit_negative_track_correction=limit_negative_track_correction,
             compound_degradation_bounds=compound_degradation_bounds,
             default_compound_degradation_bounds=default_compound_degradation_bounds,
+            compound_delta_bounds=compound_delta_bounds,
+            default_compound_delta_bounds=default_compound_delta_bounds,
+            compound_delta_reference=compound_delta_reference,
             team_variation_fraction=team_variation_fraction,
             team_variation_absolute_min=team_variation_absolute_min,
             clean_lap_noise_sigma=clean_lap_noise_sigma,
+            weight_strategy=weight_strategy,
+            weight_effective_sample_count=weight_effective_sample_count,
             baseline_group=baseline_group,
             fuel_ref=fuel_ref,
             race_lap_ref=race_lap_ref,
@@ -216,6 +300,8 @@ def run_race_performance_review(
                 clean_mean_time_delta_seconds=clean_mean_time_delta_seconds,
                 clean_mean_time_delta_behind_seconds=clean_mean_time_delta_behind_seconds,
                 quick_lap_threshold=quick_lap_threshold,
+                treat_stint_as_whole=treat_stint_as_whole,
+                tyre_age_mode=tyre_age_mode,
                 algorithm=algorithm,
                 dry_compounds=dry_compounds,
                 wet_lap_proportion_skip_threshold=wet_lap_proportion_skip_threshold,
@@ -234,7 +320,8 @@ def run_race_performance_review(
                     f"clean_mean_time_delta_seconds={clean_mean_time_delta_seconds}, "
                     "clean_mean_time_delta_behind_seconds="
                     f"{clean_mean_time_delta_behind_seconds}, "
-                    f"quick_lap_threshold={quick_lap_threshold}"
+                    f"quick_lap_threshold={quick_lap_threshold}, "
+                    f"treat_stint_as_whole={treat_stint_as_whole}"
                 ),
                 wet_lap_summary=wet_lap_summary,
             )
@@ -262,14 +349,18 @@ def run_race_performance_review(
             continue
 
         race_results[race] = result
+        race_event_names[race] = event_name_from_laps(result.all_laps)
         print_clean_lap_summary(result.clean_laps)
-        print_sample_diagnostics(result.sample_parameters)
+        sample_diagnostics = sample_diagnostics_summary(result.sample_parameters)
+        race_sample_diagnostics[race] = sample_diagnostics
+        print_sample_diagnostics(result.sample_parameters, sample_diagnostics)
         print_parameter_summaries(result)
 
         team_baseline_samples = team_baseline_samples_from_result(
             result,
             team_baseline_mode=team_baseline_mode,
         )
+        race_team_baseline_samples[race] = team_baseline_samples
         team_baseline_summary = weighted_team_baseline_summary(team_baseline_samples)
         race_team_baseline_summaries[race] = team_baseline_summary
         print("\nTeam corrected baseline pace summary")
@@ -280,6 +371,7 @@ def run_race_performance_review(
                 result=result,
                 team_baseline_samples=team_baseline_samples,
                 team_baseline_summary=team_baseline_summary,
+                sample_diagnostics=sample_diagnostics,
                 year=year,
                 race=race,
                 session=session,
@@ -293,8 +385,11 @@ def run_race_performance_review(
         team_baseline_samples = team_baseline_samples.copy()
         team_baseline_samples["Round"] = race
         range_team_baseline_frames.append(team_baseline_samples)
+        sample_diagnostics = sample_diagnostics.copy()
+        sample_diagnostics["Round"] = race
+        range_sample_diagnostic_frames.append(sample_diagnostics)
 
-    if not race_results:
+    if not race_team_baseline_summaries:
         print("\nNo Monte Carlo results were produced for the requested races.")
         print("Saved CSV outputs:")
         for path in saved_outputs:
@@ -302,25 +397,42 @@ def run_race_performance_review(
         return {
             "race_results": race_results,
             "team_baseline_summaries": race_team_baseline_summaries,
+            "team_baseline_samples": race_team_baseline_samples,
+            "race_event_names": race_event_names,
+            "race_sample_diagnostics": race_sample_diagnostics,
             "saved_outputs": saved_outputs,
         }
 
-    if len(race_results) > 1:
+    if len(race_team_baseline_summaries) > 1 and range_team_baseline_frames:
         range_label = race_range_label(races)
-        all_samples = pd.concat(range_sample_frames, ignore_index=True)
         all_team_baselines = pd.concat(range_team_baseline_frames, ignore_index=True)
         all_team_summary = weighted_team_baseline_summary(all_team_baselines)
-        sample_path = output_dir / f"race_performance_samples_{year}_{range_label}_{session}.csv"
         team_path = output_dir / (
             f"race_performance_team_baselines_{year}_{range_label}_{session}.csv"
         )
         summary_path = output_dir / (
             f"race_performance_team_summary_{year}_{range_label}_{session}.csv"
         )
-        all_samples.to_csv(sample_path, index=False)
         all_team_baselines.to_csv(team_path, index=False)
         all_team_summary.to_csv(summary_path, index=False)
-        saved_outputs.extend([sample_path, team_path, summary_path])
+        saved_outputs.extend([team_path, summary_path])
+        if range_sample_frames:
+            all_samples = pd.concat(range_sample_frames, ignore_index=True)
+            sample_path = output_dir / (
+                f"race_performance_samples_{year}_{range_label}_{session}.csv"
+            )
+            all_samples.to_csv(sample_path, index=False)
+            saved_outputs.append(sample_path)
+        if range_sample_diagnostic_frames:
+            all_diagnostics = pd.concat(
+                range_sample_diagnostic_frames,
+                ignore_index=True,
+            )
+            diagnostics_path = output_dir / (
+                f"race_performance_sample_diagnostics_{year}_{range_label}_{session}.csv"
+            )
+            all_diagnostics.to_csv(diagnostics_path, index=False)
+            saved_outputs.append(diagnostics_path)
         print(f"\nAggregate team corrected baseline pace summary ({range_label})")
         print(all_team_summary.to_string(index=False))
 
@@ -331,6 +443,9 @@ def run_race_performance_review(
     return {
         "race_results": race_results,
         "team_baseline_summaries": race_team_baseline_summaries,
+        "team_baseline_samples": race_team_baseline_samples,
+        "race_event_names": race_event_names,
+        "race_sample_diagnostics": race_sample_diagnostics,
         "saved_outputs": saved_outputs,
     }
 
@@ -340,8 +455,21 @@ def team_baseline_samples_from_result(
     *,
     team_baseline_mode: str,
 ) -> pd.DataFrame:
-    baselines = result.baseline_pace.copy()
-    weights = result.sample_parameters[["SampleId", "Weight", "RMSESeconds"]]
+    return team_baseline_samples_from_baselines(
+        baseline_pace=result.baseline_pace,
+        sample_parameters=result.sample_parameters,
+        team_baseline_mode=team_baseline_mode,
+    )
+
+
+def team_baseline_samples_from_baselines(
+    *,
+    baseline_pace: pd.DataFrame,
+    sample_parameters: pd.DataFrame,
+    team_baseline_mode: str,
+) -> pd.DataFrame:
+    baselines = baseline_pace.copy()
+    weights = sample_parameters[["SampleId", "Weight", "RMSESeconds"]]
     if team_baseline_mode == TEAM_MODE_DIRECT_TEAM:
         team_samples = baselines.loc[
             :, ["SampleId", "Team", "CorrectedBaselinePaceSeconds"]
@@ -388,14 +516,213 @@ def weighted_team_baseline_summary(team_baseline_samples: pd.DataFrame) -> pd.Da
     return pd.DataFrame(rows).sort_values(["Median", "Team"]).reset_index(drop=True)
 
 
+def sample_diagnostics_summary(sample_parameters: pd.DataFrame) -> pd.DataFrame:
+    clean = sample_parameters.dropna(subset=["RMSESeconds", "Weight"]).copy()
+    sample_count = int(len(sample_parameters))
+    if clean.empty:
+        return pd.DataFrame(
+            [
+                {
+                    "SampleCount": sample_count,
+                    "BestRMSESeconds": math.nan,
+                    "WeightedRMSESeconds": math.nan,
+                    "MedianRMSESeconds": math.nan,
+                    "P10RMSESeconds": math.nan,
+                    "P90RMSESeconds": math.nan,
+                    "WeightSum": 0.0,
+                    "EffectiveSampleSize": 0.0,
+                    "EffectiveSampleFraction": 0.0,
+                    "Top1PctWeightShare": math.nan,
+                }
+            ]
+        )
+
+    rmse = clean["RMSESeconds"].astype(float)
+    weights = clean["Weight"].astype(float)
+    positive_weights = weights.loc[weights > 0]
+    weight_sum = float(positive_weights.sum())
+    if weight_sum > 0:
+        weighted_rmse = math.sqrt(
+            float(((rmse.loc[positive_weights.index] ** 2) * positive_weights).sum())
+            / weight_sum
+        )
+        effective_sample_size = float(weight_sum**2 / (positive_weights**2).sum())
+        effective_sample_fraction = effective_sample_size / sample_count
+        top_count = max(1, math.ceil(sample_count * 0.01))
+        top_weight_share = float(
+            positive_weights.sort_values(ascending=False).head(top_count).sum()
+            / weight_sum
+        )
+    else:
+        weighted_rmse = math.nan
+        effective_sample_size = 0.0
+        effective_sample_fraction = 0.0
+        top_weight_share = math.nan
+
+    return pd.DataFrame(
+        [
+            {
+                "SampleCount": sample_count,
+                "BestRMSESeconds": float(rmse.min()),
+                "WeightedRMSESeconds": weighted_rmse,
+                "MedianRMSESeconds": float(rmse.median()),
+                "P10RMSESeconds": float(rmse.quantile(0.10)),
+                "P90RMSESeconds": float(rmse.quantile(0.90)),
+                "WeightSum": weight_sum,
+                "EffectiveSampleSize": effective_sample_size,
+                "EffectiveSampleFraction": effective_sample_fraction,
+                "Top1PctWeightShare": top_weight_share,
+            }
+        ]
+    )
+
+
+def cached_output_path(
+    *,
+    output_dir: Path,
+    year: int,
+    race: int,
+    session: str,
+    suffix: str,
+) -> Path:
+    return output_dir / f"race_performance_{year}_{race}_{session}_{suffix}.csv"
+
+
+def load_cached_monte_carlo_outputs(
+    *,
+    year: int,
+    race: int,
+    session: str,
+    output_dir: Path,
+    team_baseline_mode: str,
+) -> dict[str, object] | None:
+    team_summary_path = cached_output_path(
+        output_dir=output_dir,
+        year=year,
+        race=race,
+        session=session,
+        suffix="team_baseline_summary",
+    )
+    if not team_summary_path.exists():
+        return None
+
+    team_baseline_summary = pd.read_csv(team_summary_path)
+    if team_baseline_summary.empty:
+        return None
+
+    baseline_pace_path = cached_output_path(
+        output_dir=output_dir,
+        year=year,
+        race=race,
+        session=session,
+        suffix="baseline_pace",
+    )
+    sample_parameters_path = cached_output_path(
+        output_dir=output_dir,
+        year=year,
+        race=race,
+        session=session,
+        suffix="sample_parameters",
+    )
+    team_baseline_samples_path = cached_output_path(
+        output_dir=output_dir,
+        year=year,
+        race=race,
+        session=session,
+        suffix="team_baseline_samples",
+    )
+    sample_diagnostics_path = cached_output_path(
+        output_dir=output_dir,
+        year=year,
+        race=race,
+        session=session,
+        suffix="sample_diagnostics",
+    )
+    clean_laps_path = cached_output_path(
+        output_dir=output_dir,
+        year=year,
+        race=race,
+        session=session,
+        suffix="clean_laps",
+    )
+
+    paths = [team_summary_path]
+    team_baseline_samples = None
+    if baseline_pace_path.exists() and sample_parameters_path.exists():
+        baseline_pace = pd.read_csv(baseline_pace_path)
+        sample_parameters = pd.read_csv(sample_parameters_path)
+        try:
+            team_baseline_samples = team_baseline_samples_from_baselines(
+                baseline_pace=baseline_pace,
+                sample_parameters=sample_parameters,
+                team_baseline_mode=team_baseline_mode,
+            )
+        except ValueError:
+            return None
+        team_baseline_summary = weighted_team_baseline_summary(team_baseline_samples)
+        paths.extend([baseline_pace_path, sample_parameters_path])
+    elif team_baseline_samples_path.exists():
+        team_baseline_samples = pd.read_csv(team_baseline_samples_path)
+        cached_mode = (
+            team_baseline_samples["TeamBaselineMode"].iloc[0]
+            if "TeamBaselineMode" in team_baseline_samples.columns
+            and not team_baseline_samples.empty
+            else None
+        )
+        if cached_mode != team_baseline_mode:
+            return None
+        paths.append(team_baseline_samples_path)
+    else:
+        cached_mode = (
+            team_baseline_summary["TeamBaselineMode"].iloc[0]
+            if "TeamBaselineMode" in team_baseline_summary.columns
+            and not team_baseline_summary.empty
+            else None
+        )
+        if cached_mode != team_baseline_mode:
+            return None
+
+    sample_diagnostics = None
+    if sample_diagnostics_path.exists():
+        sample_diagnostics = pd.read_csv(sample_diagnostics_path)
+        paths.append(sample_diagnostics_path)
+
+    event_name = None
+    if clean_laps_path.exists():
+        clean_laps = pd.read_csv(clean_laps_path)
+        event_name = event_name_from_laps(clean_laps)
+        paths.append(clean_laps_path)
+
+    return {
+        "team_baseline_summary": team_baseline_summary,
+        "team_baseline_samples": team_baseline_samples,
+        "sample_diagnostics": sample_diagnostics,
+        "event_name": event_name,
+        "paths": paths,
+    }
+
+
 def relative_team_pace_rows(
     *,
-    result: MonteCarloRacePerformanceResult,
     team_baseline_summary: pd.DataFrame,
+    team_baseline_samples: pd.DataFrame | None = None,
     year: int,
     race: int,
     reference_team: str,
+    event_name: str | None,
+    sample_diagnostics: pd.DataFrame | None = None,
 ) -> list[dict[str, object]]:
+    if team_baseline_samples is not None and not team_baseline_samples.empty:
+        return relative_team_pace_rows_from_samples(
+            team_baseline_summary=team_baseline_summary,
+            team_baseline_samples=team_baseline_samples,
+            year=year,
+            race=race,
+            reference_team=reference_team,
+            event_name=event_name,
+            sample_diagnostics=sample_diagnostics,
+        )
+
     reference_row = team_baseline_summary.loc[
         team_baseline_summary["Team"] == reference_team
     ]
@@ -407,7 +734,8 @@ def relative_team_pace_rows(
         )
 
     reference_seconds = float(reference_row["Median"].iloc[0])
-    event_name = event_name_from_laps(result.all_laps)
+    weighted_rmse = weighted_rmse_from_diagnostics(sample_diagnostics)
+    race_team_count = int(team_baseline_summary["Team"].nunique())
     records: list[dict[str, object]] = []
     for _, row in team_baseline_summary.iterrows():
         median = float(row["Median"])
@@ -431,30 +759,192 @@ def relative_team_pace_rows(
                 "SampleCount": row["SampleCount"],
                 "WeightSum": row["WeightSum"],
                 "MeanRMSESeconds": row["MeanRMSESeconds"],
+                "WeightedRMSESeconds": weighted_rmse,
+                "RaceTeamCount": race_team_count,
             }
         )
     return records
 
 
+def relative_team_pace_rows_from_samples(
+    *,
+    team_baseline_summary: pd.DataFrame,
+    team_baseline_samples: pd.DataFrame,
+    year: int,
+    race: int,
+    reference_team: str,
+    event_name: str | None,
+    sample_diagnostics: pd.DataFrame | None = None,
+) -> list[dict[str, object]]:
+    required = {"SampleId", "Team", "CorrectedBaselinePaceSeconds", "Weight"}
+    missing = required.difference(team_baseline_samples.columns)
+    if missing:
+        return relative_team_pace_rows(
+            team_baseline_summary=team_baseline_summary,
+            team_baseline_samples=None,
+            year=year,
+            race=race,
+            reference_team=reference_team,
+            event_name=event_name,
+            sample_diagnostics=sample_diagnostics,
+        )
+
+    reference_samples = team_baseline_samples.loc[
+        team_baseline_samples["Team"] == reference_team,
+        ["SampleId", "CorrectedBaselinePaceSeconds"],
+    ].rename(columns={"CorrectedBaselinePaceSeconds": "ReferenceBaselinePaceSeconds"})
+    if reference_samples.empty:
+        available = ", ".join(sorted(team_baseline_summary["Team"].dropna().unique()))
+        raise ValueError(
+            f"Reference team {reference_team!r} not found in race {race}. "
+            f"Available teams: {available}"
+        )
+
+    summary_by_team = team_baseline_summary.set_index("Team", drop=False)
+    weighted_rmse = weighted_rmse_from_diagnostics(sample_diagnostics)
+    race_team_count = int(team_baseline_summary["Team"].nunique())
+    records: list[dict[str, object]] = []
+
+    for team, team_samples in team_baseline_samples.groupby("Team", sort=True):
+        paired = team_samples.merge(reference_samples, on="SampleId", how="inner")
+        paired = paired.dropna(
+            subset=[
+                "CorrectedBaselinePaceSeconds",
+                "ReferenceBaselinePaceSeconds",
+                "Weight",
+            ]
+        )
+        paired = paired.loc[paired["Weight"] > 0]
+        if paired.empty:
+            continue
+
+        relative_seconds = (
+            paired["CorrectedBaselinePaceSeconds"]
+            - paired["ReferenceBaselinePaceSeconds"]
+        )
+        percentage = (
+            paired["CorrectedBaselinePaceSeconds"]
+            / paired["ReferenceBaselinePaceSeconds"]
+            * 100.0
+        )
+        summary_row = summary_by_team.loc[team] if team in summary_by_team.index else None
+        median = weighted_quantile(
+            paired["CorrectedBaselinePaceSeconds"],
+            paired["Weight"],
+            0.50,
+        )
+        p10 = weighted_quantile(
+            paired["CorrectedBaselinePaceSeconds"],
+            paired["Weight"],
+            0.10,
+        )
+        p90 = weighted_quantile(
+            paired["CorrectedBaselinePaceSeconds"],
+            paired["Weight"],
+            0.90,
+        )
+        records.append(
+            {
+                "Year": year,
+                "Race": race,
+                "EventName": event_name,
+                "Team": team,
+                "ReferenceTeam": reference_team,
+                "TeamBaselineMode": (
+                    summary_row["TeamBaselineMode"]
+                    if summary_row is not None and "TeamBaselineMode" in summary_row
+                    else pd.NA
+                ),
+                "CorrectedBaselinePaceSeconds": median,
+                "P10": p10,
+                "Median": median,
+                "P90": p90,
+                "RelativeToReferenceSeconds": weighted_quantile(
+                    relative_seconds,
+                    paired["Weight"],
+                    0.50,
+                ),
+                "P10RelativeToReferenceSeconds": weighted_quantile(
+                    relative_seconds,
+                    paired["Weight"],
+                    0.10,
+                ),
+                "P90RelativeToReferenceSeconds": weighted_quantile(
+                    relative_seconds,
+                    paired["Weight"],
+                    0.90,
+                ),
+                "PercentageToReferenceTeam": weighted_quantile(
+                    percentage,
+                    paired["Weight"],
+                    0.50,
+                ),
+                "P10PercentageToReferenceTeam": weighted_quantile(
+                    percentage,
+                    paired["Weight"],
+                    0.10,
+                ),
+                "P90PercentageToReferenceTeam": weighted_quantile(
+                    percentage,
+                    paired["Weight"],
+                    0.90,
+                ),
+                "SampleCount": int(len(paired)),
+                "WeightSum": float(paired["Weight"].sum()),
+                "MeanRMSESeconds": (
+                    summary_row["MeanRMSESeconds"]
+                    if summary_row is not None and "MeanRMSESeconds" in summary_row
+                    else pd.NA
+                ),
+                "WeightedRMSESeconds": weighted_rmse,
+                "RaceTeamCount": race_team_count,
+            }
+        )
+    return records
+
+
+def weighted_rmse_from_diagnostics(sample_diagnostics: pd.DataFrame | None) -> float:
+    if sample_diagnostics is None or sample_diagnostics.empty:
+        return math.nan
+    if "WeightedRMSESeconds" not in sample_diagnostics.columns:
+        return math.nan
+    values = pd.to_numeric(
+        sample_diagnostics["WeightedRMSESeconds"],
+        errors="coerce",
+    ).dropna()
+    if values.empty:
+        return math.nan
+    return float(values.iloc[0])
+
+
 def plot_race_performance_results(
     *,
-    race_results: dict[int, MonteCarloRacePerformanceResult],
     team_baseline_summaries: dict[int, pd.DataFrame],
+    team_baseline_samples: dict[int, pd.DataFrame] | None = None,
+    race_event_names: dict[int, str | None] | None,
+    race_sample_diagnostics: dict[int, pd.DataFrame] | None,
     year: int,
     reference_team: str,
     output_path: str | Path | None,
+    plot_uncertainty_band: bool = False,
+    plot_rmse_background: bool = False,
 ) -> tuple[pd.DataFrame, dict[str, tuple[plt.Figure, plt.Axes]]]:
     records: list[dict[str, object]] = []
-    for race, result in sorted(race_results.items()):
-        if race not in team_baseline_summaries:
+    team_baseline_samples = team_baseline_samples or {}
+    race_event_names = race_event_names or {}
+    race_sample_diagnostics = race_sample_diagnostics or {}
+    for race, team_baseline_summary in sorted(team_baseline_summaries.items()):
+        if team_baseline_summary.empty:
             continue
         records.extend(
             relative_team_pace_rows(
-                result=result,
-                team_baseline_summary=team_baseline_summaries[race],
+                team_baseline_summary=team_baseline_summary,
+                team_baseline_samples=team_baseline_samples.get(race),
                 year=year,
                 race=race,
                 reference_team=reference_team,
+                event_name=race_event_names.get(race),
+                sample_diagnostics=race_sample_diagnostics.get(race),
             )
         )
 
@@ -462,9 +952,11 @@ def plot_race_performance_results(
         raise ValueError("No race performance results available for plotting.")
 
     summary = pd.DataFrame(records)
-    figures = RacePerformancePlotter(reference_team=reference_team).plot_relative_team_pace(
-        summary
-    )
+    figures = RacePerformancePlotter(
+        reference_team=reference_team,
+        plot_uncertainty_band=plot_uncertainty_band,
+        plot_rmse_background=plot_rmse_background,
+    ).plot_relative_team_pace(summary)
     if output_path is not None:
         save_relative_team_pace_figures(figures, output_path)
         save_relative_plot_csv(summary, output_path)
@@ -525,6 +1017,7 @@ def save_race_outputs(
     result: MonteCarloRacePerformanceResult,
     team_baseline_samples: pd.DataFrame,
     team_baseline_summary: pd.DataFrame,
+    sample_diagnostics: pd.DataFrame,
     year: int,
     race: int,
     session: str,
@@ -536,10 +1029,12 @@ def save_race_outputs(
         f"{prefix}_wet_lap_summary.csv": result.wet_lap_summary,
         f"{prefix}_sample_parameters.csv": result.sample_parameters,
         f"{prefix}_compound_degradation.csv": result.compound_degradation,
+        f"{prefix}_compound_delta.csv": result.compound_delta,
         f"{prefix}_team_compound_degradation.csv": result.team_compound_degradation,
         f"{prefix}_baseline_pace.csv": result.baseline_pace,
         f"{prefix}_team_baseline_samples.csv": team_baseline_samples,
         f"{prefix}_team_baseline_summary.csv": team_baseline_summary,
+        f"{prefix}_sample_diagnostics.csv": sample_diagnostics,
     }
     outputs.update(
         {
@@ -649,10 +1144,16 @@ def save_empty_race_outputs(
     return paths
 
 
-def print_sample_diagnostics(sample_parameters: pd.DataFrame) -> None:
+def print_sample_diagnostics(
+    sample_parameters: pd.DataFrame,
+    diagnostics: pd.DataFrame,
+) -> None:
     best = sample_parameters.nsmallest(5, "RMSESeconds")
     weight_sum = float(sample_parameters["Weight"].sum())
     print(f"\nWeight sum: {weight_sum:.6f}")
+    print(format_effective_sample_size(diagnostics))
+    print("\nMonte Carlo sample diagnostics")
+    print(diagnostics.to_string(index=False))
     print("Best RMSE samples")
     print(
         best[
@@ -667,6 +1168,22 @@ def print_sample_diagnostics(sample_parameters: pd.DataFrame) -> None:
     )
 
 
+def format_effective_sample_size(diagnostics: pd.DataFrame) -> str:
+    if diagnostics.empty:
+        return "Effective sample size: unavailable"
+    row = diagnostics.iloc[0]
+    ess = row.get("EffectiveSampleSize", pd.NA)
+    ess_fraction = row.get("EffectiveSampleFraction", pd.NA)
+    if pd.isna(ess):
+        return "Effective sample size: unavailable"
+    if pd.isna(ess_fraction):
+        return f"Effective sample size: ESS={float(ess):.2f}"
+    return (
+        "Effective sample size: "
+        f"ESS={float(ess):.2f}, fraction={float(ess_fraction):.3f}"
+    )
+
+
 def print_parameter_summaries(result: MonteCarloRacePerformanceResult) -> None:
     print("\nFuel correction summary")
     print(result.summaries["fuel_rate"].to_string(index=False))
@@ -674,6 +1191,8 @@ def print_parameter_summaries(result: MonteCarloRacePerformanceResult) -> None:
     print(result.summaries["track_rate"].to_string(index=False))
     print("\nCompound degradation summary")
     print(result.summaries["compound_degradation"].to_string(index=False))
+    print("\nCompound delta summary")
+    print(result.summaries["compound_delta"].to_string(index=False))
     print("\nTeam-compound degradation summary")
     print(result.summaries["team_compound_degradation"].to_string(index=False))
 
@@ -701,15 +1220,24 @@ def main() -> None:
         sampling_strategy=args.sampling_strategy,
         fuel_rate_bounds=parse_bounds(args.fuel_rate_bounds),
         track_rate_bounds=parse_bounds(args.track_rate_bounds),
+        limit_negative_track_correction=args.limit_negative_track_correction,
         default_compound_degradation_bounds=parse_bounds(args.tyre_deg_bounds),
         compound_degradation_bounds=parse_compound_bounds(args.compound_deg_bounds_json),
+        default_compound_delta_bounds=parse_bounds(args.tyre_delta_bounds),
+        compound_delta_bounds=parse_compound_bounds(args.compound_delta_bounds_json),
+        compound_delta_reference=args.compound_delta_reference,
         team_variation_fraction=args.team_variation_fraction,
         team_variation_absolute_min=args.team_variation_absolute_min,
         clean_lap_noise_sigma=args.clean_lap_noise_sigma,
+        weight_strategy=args.weight_strategy,
+        weight_effective_sample_count=parse_optional_float(
+            args.weight_effective_sample_count
+        ),
         team_baseline_mode=args.team_baseline_mode,
         fuel_ref=args.fuel_ref,
         race_lap_ref=parse_optional_float(args.race_lap_ref),
         tyre_age_ref=args.tyre_age_ref,
+        tyre_age_mode=args.tyre_age_mode,
         track_temperature=parse_optional_float(args.track_temperature),
         degradation_order_track_temperature=parse_optional_float(
             args.degradation_order_track_temperature
@@ -718,6 +1246,7 @@ def main() -> None:
         progress_interval=parse_optional_int(args.progress_interval),
         quick_lap_threshold=args.quick_lap_threshold,
         min_clean_air_laps=args.min_clean_air_laps,
+        treat_stint_as_whole=args.treat_stint_as_whole,
         clean_mean_time_delta_seconds=args.clean_mean_time_delta_seconds,
         clean_mean_time_delta_behind_seconds=parse_optional_float(
             args.clean_mean_time_delta_behind_seconds
@@ -727,9 +1256,10 @@ def main() -> None:
         output_dir=args.output_dir,
         telemetry_cache_dir=args.telemetry_cache_dir,
         force_refresh_telemetry=args.force_refresh_telemetry,
+        use_cached_monte_carlo=args.use_cached_monte_carlo,
         test=args.test,
     )
-    if args.plot and run_result["race_results"]:
+    if args.plot and run_result["team_baseline_summaries"]:
         output_path = args.plot_output
         if output_path is None:
             output_path = default_plot_output_path(
@@ -740,11 +1270,15 @@ def main() -> None:
                 team_baseline_mode=args.team_baseline_mode,
             )
         summary, figures = plot_race_performance_results(
-            race_results=run_result["race_results"],
             team_baseline_summaries=run_result["team_baseline_summaries"],
+            team_baseline_samples=run_result["team_baseline_samples"],
+            race_event_names=run_result["race_event_names"],
+            race_sample_diagnostics=run_result["race_sample_diagnostics"],
             year=args.year,
             reference_team=args.reference_team,
             output_path=output_path,
+            plot_uncertainty_band=args.plot_uncertainty_band,
+            plot_rmse_background=args.plot_rmse_background,
         )
         print("\nSaved race performance plot:")
         print(f"  {race_result_output_path(Path(output_path))}")
@@ -791,6 +1325,15 @@ def parse_args() -> argparse.Namespace:
         help="Lower and upper track evolution correction rate bounds.",
     )
     parser.add_argument(
+        "--limit-negative-track-correction",
+        action=argparse.BooleanOptionalAction,
+        default=SCRIPT_CONFIG["limit_negative_track_correction"],
+        help=(
+            "Clamp sampled track correction rates to be non-negative. This "
+            "prevents the correction from making later-race laps longer."
+        ),
+    )
+    parser.add_argument(
         "--tyre-deg-bounds",
         nargs=2,
         default=SCRIPT_CONFIG["default_compound_degradation_bounds"],
@@ -800,6 +1343,25 @@ def parse_args() -> argparse.Namespace:
         "--compound-deg-bounds-json",
         default=SCRIPT_CONFIG["compound_degradation_bounds_json"],
         help='Optional JSON, e.g. \'{"SOFT":[0.02,0.10],"HARD":[0.0,0.05]}\'',
+    )
+    parser.add_argument(
+        "--tyre-delta-bounds",
+        nargs=2,
+        default=SCRIPT_CONFIG["default_compound_delta_bounds"],
+        help=(
+            "Default lower and upper compound lap-time delta bounds in seconds "
+            "relative to --compound-delta-reference."
+        ),
+    )
+    parser.add_argument(
+        "--compound-delta-bounds-json",
+        default=SCRIPT_CONFIG["compound_delta_bounds_json"],
+        help='Optional JSON, e.g. \'{"SOFT":[-1.0,-0.1],"MEDIUM":[-0.5,0.2]}\'',
+    )
+    parser.add_argument(
+        "--compound-delta-reference",
+        default=SCRIPT_CONFIG["compound_delta_reference"],
+        help="Compound whose sampled lap-time delta is fixed at zero.",
     )
     parser.add_argument(
         "--team-variation-fraction",
@@ -817,6 +1379,24 @@ def parse_args() -> argparse.Namespace:
         default=SCRIPT_CONFIG["clean_lap_noise_sigma"],
     )
     parser.add_argument(
+        "--weight-strategy",
+        choices=WEIGHT_STRATEGIES,
+        default=SCRIPT_CONFIG["weight_strategy"],
+        help=(
+            "gaussian uses exp(-rmse^2 / (2 sigma^2)); "
+            "best-rmse-relative uses normalized exp(-N_eff * "
+            "(rmse^2 - best_rmse^2) / (2 sigma^2))."
+        ),
+    )
+    parser.add_argument(
+        "--weight-effective-sample-count",
+        default=SCRIPT_CONFIG["weight_effective_sample_count"],
+        help=(
+            "N_eff for best-rmse-relative weighting. Use 'none' to use the "
+            "clean lap count."
+        ),
+    )
+    parser.add_argument(
         "--team-baseline-mode",
         choices=TEAM_MODES,
         default=SCRIPT_CONFIG["team_baseline_mode"],
@@ -832,6 +1412,15 @@ def parse_args() -> argparse.Namespace:
         help="Race lap reference, or 'none' to use mean clean race lap.",
     )
     parser.add_argument("--tyre-age-ref", type=float, default=SCRIPT_CONFIG["tyre_age_ref"])
+    parser.add_argument(
+        "--tyre-age-mode",
+        choices=TYRE_AGE_MODES,
+        default=SCRIPT_CONFIG["tyre_age_mode"],
+        help=(
+            "stint uses StintLapNumber/counted laps within the stint; overall "
+            "uses TyreLife from the session data."
+        ),
+    )
     parser.add_argument(
         "--track-temperature",
         default=SCRIPT_CONFIG["track_temperature"],
@@ -865,6 +1454,15 @@ def parse_args() -> argparse.Namespace:
         default=SCRIPT_CONFIG["min_clean_air_laps"],
     )
     parser.add_argument(
+        "--treat-stint-as-whole",
+        action=argparse.BooleanOptionalAction,
+        default=SCRIPT_CONFIG["treat_stint_as_whole"],
+        help=(
+            "Group all clean laps from the same driver/stint into one run. "
+            "When disabled, only consecutive clean-air chunks are selected."
+        ),
+    )
+    parser.add_argument(
         "--clean-mean-time-delta-seconds",
         type=float,
         default=SCRIPT_CONFIG["clean_mean_time_delta_seconds"],
@@ -893,6 +1491,21 @@ def parse_args() -> argparse.Namespace:
         help="Save a relative team race performance plot.",
     )
     parser.add_argument(
+        "--plot-uncertainty-band",
+        action=argparse.BooleanOptionalAction,
+        default=SCRIPT_CONFIG["plot_uncertainty_band"],
+        help="Draw the P10/P90 uncertainty band around each team line.",
+    )
+    parser.add_argument(
+        "--plot-rmse-background",
+        action=argparse.BooleanOptionalAction,
+        default=SCRIPT_CONFIG["plot_rmse_background"],
+        help=(
+            "Shade each race by weighted RMSE. Races with fewer than five teams "
+            "are marked with a black striped background."
+        ),
+    )
+    parser.add_argument(
         "--plot-output",
         type=Path,
         default=SCRIPT_CONFIG["plot_output"],
@@ -908,6 +1521,15 @@ def parse_args() -> argparse.Namespace:
         "--force-refresh-telemetry",
         action="store_true",
         default=SCRIPT_CONFIG["force_refresh_telemetry"],
+    )
+    parser.add_argument(
+        "--use-cached-monte-carlo",
+        action=argparse.BooleanOptionalAction,
+        default=SCRIPT_CONFIG["use_cached_monte_carlo"],
+        help=(
+            "Reuse cached per-race Monte Carlo CSVs when available and only "
+            "calculate missing races. Disable to rerun all requested races."
+        ),
     )
     parser.add_argument("--test", action="store_true", default=SCRIPT_CONFIG["test"])
     return parser.parse_args()

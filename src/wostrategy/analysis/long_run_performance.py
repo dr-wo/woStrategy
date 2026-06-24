@@ -16,6 +16,9 @@ from wostrategy.model.tyre_degragation import TYRE_AGE_LAPS_COLUMN
 LONG_RUN_MODEL_LINEAR_COMPONENTS = str(DEFAULT_LONG_RUN_MODEL_CONFIG["name"])
 LONG_RUN_MODEL_EXPONENTIAL_TRACK = str(EXPONENTIAL_TRACK_LONG_RUN_MODEL_CONFIG["name"])
 WET_COMPOUNDS = {"WET", "INTERMEDIATE", "INTER", "INTERS"}
+TYRE_AGE_MODE_STINT = "stint"
+TYRE_AGE_MODE_OVERALL = "overall"
+TYRE_AGE_MODES = (TYRE_AGE_MODE_STINT, TYRE_AGE_MODE_OVERALL)
 
 
 @dataclass(frozen=True)
@@ -261,6 +264,49 @@ def select_consecutive_clean_air_runs(
     return output
 
 
+def select_clean_air_stints_as_whole(
+    laps: pd.DataFrame,
+    *,
+    min_clean_air_laps: int,
+) -> pd.DataFrame:
+    if min_clean_air_laps <= 0:
+        raise ValueError("min_clean_air_laps must be positive.")
+
+    required = {"Driver", "Stint", "LapNumber", "IsCleanAirLongRunLap"}
+    missing = required.difference(laps.columns)
+    if missing:
+        raise ValueError(f"Laps are missing required columns: {sorted(missing)}")
+
+    selected = laps.copy()
+    selected["LongRunId"] = pd.NA
+    selected["LongRunLapNumber"] = pd.NA
+    group_columns = ["Year", "Round", "SessionName", "Driver", "Stint"]
+    group_columns = [column for column in group_columns if column in selected.columns]
+    run_number = 0
+    selected_indices: list[int] = []
+
+    for _, group in selected.sort_values(group_columns + ["LapNumber"]).groupby(
+        group_columns, dropna=False, sort=False
+    ):
+        clean_stint_laps = group.loc[
+            group["IsCleanAirLongRunLap"].fillna(False).astype(bool)
+        ]
+        if len(clean_stint_laps) < min_clean_air_laps:
+            continue
+        run_number += 1
+        selected.loc[clean_stint_laps.index, "LongRunId"] = run_number
+        selected.loc[clean_stint_laps.index, "LongRunLapNumber"] = range(
+            1,
+            len(clean_stint_laps) + 1,
+        )
+        selected_indices.extend(clean_stint_laps.index.tolist())
+
+    output = selected.loc[selected_indices].copy()
+    output["LongRunId"] = pd.to_numeric(output["LongRunId"], errors="coerce")
+    output["LongRunLapNumber"] = pd.to_numeric(output["LongRunLapNumber"], errors="coerce")
+    return output
+
+
 def fit_long_run_components(
     laps: pd.DataFrame,
     *,
@@ -424,9 +470,13 @@ def _prepare_laps(
     clean_mean_time_delta_behind_seconds: float | None,
     quick_lap_threshold: float,
     dry_compounds: tuple[str, ...],
+    tyre_age_mode: str = TYRE_AGE_MODE_STINT,
 ) -> pd.DataFrame:
     if quick_lap_threshold <= 0:
         raise ValueError("quick_lap_threshold must be positive.")
+    if tyre_age_mode not in TYRE_AGE_MODES:
+        options = ", ".join(TYRE_AGE_MODES)
+        raise ValueError(f"Unknown tyre_age_mode {tyre_age_mode!r}. Options: {options}.")
 
     required = {
         "Driver",
@@ -469,13 +519,15 @@ def _prepare_laps(
         prepared["LapTimeSeconds"]
         <= quick_lap_threshold * prepared["DriverFastestRaceLapSeconds"]
     )
-    if "StintLapNumber" in prepared.columns:
-        prepared[TYRE_AGE_LAPS_COLUMN] = (
-            pd.to_numeric(prepared["StintLapNumber"], errors="coerce") - 1
-        )
-    elif "TyreLife" in prepared.columns:
+    if tyre_age_mode == TYRE_AGE_MODE_OVERALL:
+        if "TyreLife" not in prepared.columns:
+            raise ValueError("tyre_age_mode='overall' requires a TyreLife column.")
         prepared[TYRE_AGE_LAPS_COLUMN] = (
             pd.to_numeric(prepared["TyreLife"], errors="coerce") - 1
+        )
+    elif "StintLapNumber" in prepared.columns:
+        prepared[TYRE_AGE_LAPS_COLUMN] = (
+            pd.to_numeric(prepared["StintLapNumber"], errors="coerce") - 1
         )
     else:
         prepared[TYRE_AGE_LAPS_COLUMN] = (
@@ -838,6 +890,9 @@ def _join_strings(values: pd.Series) -> str:
 __all__ = [
     "LONG_RUN_MODEL_EXPONENTIAL_TRACK",
     "LONG_RUN_MODEL_LINEAR_COMPONENTS",
+    "TYRE_AGE_MODE_OVERALL",
+    "TYRE_AGE_MODE_STINT",
+    "TYRE_AGE_MODES",
     "WET_COMPOUNDS",
     "LinearLapTimeFit",
     "LongRunFit",
@@ -845,5 +900,6 @@ __all__ = [
     "add_fitted_lap_times",
     "calculate_long_run_performance",
     "fit_long_run_components",
+    "select_clean_air_stints_as_whole",
     "select_consecutive_clean_air_runs",
 ]

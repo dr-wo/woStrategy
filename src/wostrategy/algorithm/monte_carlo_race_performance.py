@@ -27,6 +27,12 @@ TRACK_TEMPERATURE_COLUMNS = (
     "TrackTempCelsius",
     "TrackTemperatureCelsius",
 )
+WEIGHT_STRATEGY_GAUSSIAN = "gaussian"
+WEIGHT_STRATEGY_BEST_RMSE_RELATIVE = "best-rmse-relative"
+WEIGHT_STRATEGIES = (
+    WEIGHT_STRATEGY_GAUSSIAN,
+    WEIGHT_STRATEGY_BEST_RMSE_RELATIVE,
+)
 
 
 @dataclass(frozen=True)
@@ -34,11 +40,17 @@ class MonteCarloRacePerformanceConfig:
     sample_count: int = 1000
     fuel_rate_bounds: tuple[float, float] = (0.0, 0.08)
     track_rate_bounds: tuple[float, float] = (-0.05, 0.05)
+    limit_negative_track_correction: bool = False
     compound_degradation_bounds: dict[str, tuple[float, float]] = field(default_factory=dict)
     default_compound_degradation_bounds: tuple[float, float] = (0.0, 0.08)
+    compound_delta_bounds: dict[str, tuple[float, float]] = field(default_factory=dict)
+    default_compound_delta_bounds: tuple[float, float] = (-1.0, 1.0)
+    compound_delta_reference: str = "HARD"
     team_variation_fraction: float = 0.5
     team_variation_absolute_min: float = 0.005
     clean_lap_noise_sigma: float = 0.15
+    weight_strategy: str = WEIGHT_STRATEGY_GAUSSIAN
+    weight_effective_sample_count: float | None = None
     baseline_group: Literal["driver", "team"] = BASELINE_DRIVER
     fuel_ref: float = 0.0
     race_lap_ref: float | None = None
@@ -55,6 +67,7 @@ class MonteCarloRacePerformanceConfig:
 class RacePerformanceAlgorithmResult:
     sample_parameters: pd.DataFrame
     compound_degradation: pd.DataFrame
+    compound_delta: pd.DataFrame
     team_compound_degradation: pd.DataFrame
     baseline_pace: pd.DataFrame
 
@@ -125,9 +138,19 @@ class MonteCarloRacePerformanceAlgorithm:
 
         sample_rows: list[dict[str, object]] = []
         compound_rows: list[dict[str, object]] = []
+        compound_delta_rows: list[dict[str, object]] = []
         team_compound_rows: list[dict[str, object]] = []
         baseline_rows: list[dict[str, object]] = []
-        dimension_count = 2 + len(compounds) + len(team_compounds)
+        compound_delta_reference = config.compound_delta_reference.upper()
+        compound_delta_compounds = tuple(
+            compound for compound in compounds if compound != compound_delta_reference
+        )
+        dimension_count = (
+            2
+            + len(compounds)
+            + len(compound_delta_compounds)
+            + len(team_compounds)
+        )
         unit_samples = get_unit_cube_sampler(config.sampling_strategy).sample(
             sample_count=config.sample_count,
             dimension_count=dimension_count,
@@ -147,7 +170,16 @@ class MonteCarloRacePerformanceAlgorithm:
         group_labels = _baseline_labels(fit_laps, baseline_columns)
         team_compound_index = pd.MultiIndex.from_frame(fit_laps[["Team", "Compound"]])
         best_rmse = float("inf")
-        weight_sum = 0.0
+        weight_sum = (
+            0.0
+            if config.weight_strategy == WEIGHT_STRATEGY_GAUSSIAN
+            else float("nan")
+        )
+        rmse_values: list[float] = []
+        effective_sample_count = _weight_effective_sample_count(
+            config,
+            lap_count=len(fit_laps),
+        )
 
         for sample_id in range(config.sample_count):
             sample = unit_samples[sample_id]
@@ -159,7 +191,7 @@ class MonteCarloRacePerformanceAlgorithm:
             dimension_index += 1
             track_rate = scale_unit_sample(
                 sample[dimension_index],
-                config.track_rate_bounds,
+                _effective_track_rate_bounds(config),
             )
             dimension_index += 1
             compound_unit_samples: dict[str, float] = {}
@@ -170,6 +202,17 @@ class MonteCarloRacePerformanceAlgorithm:
                 compound_unit_samples,
                 config=config,
                 enforce_degradation_order=enforce_degradation_order,
+            )
+            compound_delta_unit_samples: dict[str, float] = {}
+            for compound in compound_delta_compounds:
+                compound_delta_unit_samples[compound] = float(sample[dimension_index])
+                dimension_index += 1
+            compound_deltas = _sample_compound_deltas(
+                compounds,
+                compound_delta_unit_samples,
+                config=config,
+                enforce_delta_order=enforce_degradation_order,
+                reference_compound=compound_delta_reference,
             )
             team_compound_rates: dict[tuple[str, str], float] = {}
             for team, compound in team_compounds:
@@ -193,11 +236,17 @@ class MonteCarloRacePerformanceAlgorithm:
                 dtype="float64",
                 count=len(fit_laps),
             )
+            compound_delta = np.fromiter(
+                (compound_deltas[str(compound)] for compound in fit_laps["Compound"]),
+                dtype="float64",
+                count=len(fit_laps),
+            )
             corrected = (
                 lap_time
                 - (fuel_rate * fuel_proxy_delta)
                 - (track_rate * track_delta)
                 - (tyre_rate * tyre_age_delta)
+                - compound_delta
             )
             baselines = (
                 pd.DataFrame(
@@ -211,15 +260,19 @@ class MonteCarloRacePerformanceAlgorithm:
             )
             fitted = np.array([baselines[label] for label in group_labels], dtype="float64")
             rmse = float(np.sqrt(np.mean((corrected - fitted) ** 2)))
-            weight = float(np.exp(-((rmse**2) / (2 * config.clean_lap_noise_sigma**2))))
+            rmse_values.append(rmse)
+            weight = float("nan")
             best_rmse = min(best_rmse, rmse)
-            weight_sum += weight
+            if config.weight_strategy == WEIGHT_STRATEGY_GAUSSIAN:
+                weight = _gaussian_weight(rmse, sigma=config.clean_lap_noise_sigma)
+                weight_sum += weight
 
             sample_rows.append(
                 {
                     "SampleId": sample_id,
                     "FuelRateSecondsPerLap": fuel_rate,
                     "TrackRateSecondsPerLap": track_rate,
+                    "LimitNegativeTrackCorrection": config.limit_negative_track_correction,
                     "RMSESeconds": rmse,
                     "Score": rmse,
                     "Weight": weight,
@@ -229,6 +282,9 @@ class MonteCarloRacePerformanceAlgorithm:
                     "RaceLapRef": race_lap_ref,
                     "TyreAgeRef": float(config.tyre_age_ref),
                     "SamplingStrategy": config.sampling_strategy,
+                    "WeightStrategy": config.weight_strategy,
+                    "WeightEffectiveSampleCount": effective_sample_count,
+                    "CompoundDeltaReference": compound_delta_reference,
                     "TrackTemperatureCelsius": track_temperature,
                     "DegradationOrderTrackTemperatureCelsius": (
                         config.degradation_order_track_temperature_celsius
@@ -244,6 +300,19 @@ class MonteCarloRacePerformanceAlgorithm:
                         "CompoundDegSecondsPerLap": rate,
                     }
                 )
+            for compound, delta in compound_deltas.items():
+                if compound not in compounds:
+                    continue
+                compound_rows_for_delta = {
+                    "SampleId": sample_id,
+                    "Compound": compound,
+                    "CompoundDeltaSeconds": delta,
+                    "CompoundDeltaReference": compound_delta_reference,
+                }
+                compound_rows_for_delta["IsCompoundDeltaReference"] = (
+                    compound == compound_delta_reference
+                )
+                compound_delta_rows.append(compound_rows_for_delta)
             for (team, compound), rate in team_compound_rates.items():
                 compound_rate = compound_rates[compound]
                 team_compound_rows.append(
@@ -272,9 +341,18 @@ class MonteCarloRacePerformanceAlgorithm:
                 weight_sum=weight_sum,
             )
 
+        weights = _sample_weights(
+            np.asarray(rmse_values, dtype="float64"),
+            config=config,
+            lap_count=len(fit_laps),
+        )
+        for row, weight in zip(sample_rows, weights):
+            row["Weight"] = float(weight)
+
         return RacePerformanceAlgorithmResult(
             sample_parameters=pd.DataFrame(sample_rows),
             compound_degradation=pd.DataFrame(compound_rows),
+            compound_delta=pd.DataFrame(compound_delta_rows),
             team_compound_degradation=pd.DataFrame(team_compound_rows),
             baseline_pace=pd.DataFrame(baseline_rows),
         )
@@ -324,6 +402,43 @@ def _split_baseline_key(key: str, columns: tuple[str, ...]) -> dict[str, str]:
     return dict(zip(columns, key.split("||")))
 
 
+def _sample_weights(
+    rmse_values: np.ndarray,
+    *,
+    config: MonteCarloRacePerformanceConfig,
+    lap_count: int,
+) -> np.ndarray:
+    if config.weight_strategy == WEIGHT_STRATEGY_GAUSSIAN:
+        return np.exp(-((rmse_values**2) / (2 * config.clean_lap_noise_sigma**2)))
+    if config.weight_strategy == WEIGHT_STRATEGY_BEST_RMSE_RELATIVE:
+        best_rmse = float(np.min(rmse_values))
+        n_eff = _weight_effective_sample_count(config, lap_count=lap_count)
+        exponent = -n_eff * (rmse_values**2 - best_rmse**2) / (
+            2 * config.clean_lap_noise_sigma**2
+        )
+        exponent = exponent - float(np.max(exponent))
+        weights = np.exp(exponent)
+        weight_sum = float(weights.sum())
+        if weight_sum <= 0:
+            return np.full_like(weights, 1.0 / len(weights), dtype="float64")
+        return weights / weight_sum
+    raise ValueError(f"Unknown weight_strategy {config.weight_strategy!r}.")
+
+
+def _gaussian_weight(rmse: float, *, sigma: float) -> float:
+    return float(np.exp(-((rmse**2) / (2 * sigma**2))))
+
+
+def _weight_effective_sample_count(
+    config: MonteCarloRacePerformanceConfig,
+    *,
+    lap_count: int,
+) -> float:
+    if config.weight_effective_sample_count is None:
+        return float(lap_count)
+    return float(config.weight_effective_sample_count)
+
+
 def _compound_bounds(
     config: MonteCarloRacePerformanceConfig,
     compound: str,
@@ -332,6 +447,25 @@ def _compound_bounds(
         compound,
         config.default_compound_degradation_bounds,
     )
+
+
+def _compound_delta_bounds(
+    config: MonteCarloRacePerformanceConfig,
+    compound: str,
+) -> tuple[float, float]:
+    return config.compound_delta_bounds.get(
+        compound,
+        config.default_compound_delta_bounds,
+    )
+
+
+def _effective_track_rate_bounds(
+    config: MonteCarloRacePerformanceConfig,
+) -> tuple[float, float]:
+    lower, upper = config.track_rate_bounds
+    if not config.limit_negative_track_correction:
+        return lower, upper
+    return max(0.0, lower), upper
 
 
 def _sample_compound_rates(
@@ -375,6 +509,70 @@ def _sample_compound_rates(
     return rates
 
 
+def _sample_compound_deltas(
+    compounds: tuple[str, ...],
+    unit_samples: dict[str, float],
+    *,
+    config: MonteCarloRacePerformanceConfig,
+    enforce_delta_order: bool,
+    reference_compound: str,
+) -> dict[str, float]:
+    if not enforce_delta_order:
+        return {
+            compound: 0.0
+            if compound == reference_compound
+            else scale_unit_sample(unit_samples[compound], _compound_delta_bounds(config, compound))
+            for compound in compounds
+        }
+
+    compound_set = set(compounds)
+    deltas: dict[str, float] = {}
+    previous_delta: float | None = None
+    reference_index = (
+        ORDERED_DRY_COMPOUNDS.index(reference_compound)
+        if reference_compound in ORDERED_DRY_COMPOUNDS
+        else None
+    )
+
+    for compound_index, compound in enumerate(ORDERED_DRY_COMPOUNDS):
+        if compound not in compound_set:
+            continue
+        if compound == reference_compound:
+            delta = 0.0
+        else:
+            lower, upper = _compound_delta_bounds(config, compound)
+            if reference_index is not None:
+                if compound_index < reference_index:
+                    upper = min(upper, 0.0)
+                elif compound_index > reference_index:
+                    lower = max(lower, 0.0)
+            if previous_delta is not None:
+                lower = max(lower, previous_delta)
+            if lower > upper:
+                raise ValueError(
+                    "Compound delta bounds cannot satisfy hot-track ordering "
+                    "SOFT <= MEDIUM <= HARD."
+                )
+            delta = scale_unit_sample(unit_samples[compound], (lower, upper))
+        if previous_delta is not None and delta < previous_delta:
+            raise ValueError(
+                "Compound delta bounds cannot satisfy hot-track ordering "
+                "SOFT <= MEDIUM <= HARD."
+            )
+        deltas[compound] = delta
+        previous_delta = delta
+
+    for compound in compounds:
+        if compound in deltas:
+            continue
+        deltas[compound] = (
+            0.0
+            if compound == reference_compound
+            else scale_unit_sample(unit_samples[compound], _compound_delta_bounds(config, compound))
+        )
+    return deltas
+
+
 def _track_temperature_celsius(
     laps: pd.DataFrame,
     config: MonteCarloRacePerformanceConfig,
@@ -405,12 +603,25 @@ def _validate_config(config: MonteCarloRacePerformanceConfig) -> None:
         raise ValueError("sample_count must be positive.")
     if config.clean_lap_noise_sigma <= 0:
         raise ValueError("clean_lap_noise_sigma must be positive.")
+    if config.weight_strategy not in WEIGHT_STRATEGIES:
+        options = ", ".join(WEIGHT_STRATEGIES)
+        raise ValueError(f"Unknown weight_strategy {config.weight_strategy!r}. Options: {options}.")
+    if (
+        config.weight_effective_sample_count is not None
+        and config.weight_effective_sample_count <= 0
+    ):
+        raise ValueError("weight_effective_sample_count must be positive or None.")
     if config.team_variation_fraction < 0:
         raise ValueError("team_variation_fraction must be non-negative.")
     if config.team_variation_absolute_min < 0:
         raise ValueError("team_variation_absolute_min must be non-negative.")
     if config.fuel_rate_bounds[0] < 0 or config.fuel_rate_bounds[1] < 0:
         raise ValueError("fuel_rate_bounds must be non-negative.")
+    if config.limit_negative_track_correction and config.track_rate_bounds[1] < 0:
+        raise ValueError(
+            "track_rate_bounds upper bound must be non-negative when "
+            "limit_negative_track_correction is enabled."
+        )
     if (
         config.degradation_order_track_temperature_celsius is not None
         and not np.isfinite(config.degradation_order_track_temperature_celsius)
@@ -425,12 +636,21 @@ def _validate_config(config: MonteCarloRacePerformanceConfig) -> None:
         raise ValueError("track_temperature_celsius must be finite or None.")
     _validate_bounds("fuel_rate_bounds", config.fuel_rate_bounds)
     _validate_bounds("track_rate_bounds", config.track_rate_bounds)
+    _validate_bounds("effective_track_rate_bounds", _effective_track_rate_bounds(config))
     _validate_bounds(
         "default_compound_degradation_bounds",
         config.default_compound_degradation_bounds,
     )
+    _validate_bounds(
+        "default_compound_delta_bounds",
+        config.default_compound_delta_bounds,
+    )
     for compound, bounds in config.compound_degradation_bounds.items():
         _validate_bounds(f"compound_degradation_bounds[{compound!r}]", bounds)
+    for compound, bounds in config.compound_delta_bounds.items():
+        _validate_bounds(f"compound_delta_bounds[{compound!r}]", bounds)
+    if not config.compound_delta_reference:
+        raise ValueError("compound_delta_reference must not be empty.")
     _validate_degradation_order_bounds(config)
     get_unit_cube_sampler(config.sampling_strategy)
     _baseline_columns(config.baseline_group)
