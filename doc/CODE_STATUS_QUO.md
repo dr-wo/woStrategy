@@ -625,7 +625,7 @@ Scripts are importable modules under `src/wostrategy/script`.
 - Saves a relative team race performance tracker plot to `temp/` by default, with `--reference-team`, `--plot-output`, `--plot` / `--no-plot`, `--plot-uncertainty-band` / `--no-plot-uncertainty-band`, `--plot-rmse-background` / `--no-plot-rmse-background`, and `--show` controls.
 - Cached plotting uses the per-race `*_team_baseline_summary.csv` files and reuses event labels from cached clean-lap files when available.
 - The optional RMSE background shades each GP by `WeightedRMSESeconds`: below 0.5s is green, 0.75s is orange, and 1.0s or higher is red, with a colorbar. GPs with fewer than five teams are shown with a black striped background instead.
-- Plot rows use each team's weighted median corrected baseline pace divided by the reference team's weighted median pace for the same race.
+- Plot rows use sample-paired relative pace when cached team baseline samples are available, otherwise they fall back to each team's weighted median corrected baseline pace divided by the reference team's weighted median pace for the same race.
 - Writes CSVs to `cache/race_performance_review/` by default:
   - clean laps
   - wet lap summary
@@ -638,6 +638,16 @@ Scripts are importable modules under `src/wostrategy/script`.
   - sample diagnostics
   - weighted summary tables
 - For race ranges, also writes aggregate sample and team baseline summaries across produced race results.
+
+`race_performance_weight_predict.py`
+
+- CLI for a first-order weight sensitivity projection built from cached `race_performance_review.py` outputs.
+- Loads a race or race range, one selected team, a plot `--reference-team`, a constant `--weight-delta-kg`, and `--full-fuel-weight-kg` defaulting to 100kg.
+- Reads per-race `*_team_baseline_summary.csv`, `*_summary_fuel_rate.csv`, and `*_clean_laps.csv` from `cache/race_performance_review/` by default.
+- Estimates total race laps from `LapNumber + FuelProxyLapsRemaining` when available, falling back to max clean `LapNumber`.
+- Converts the weighted median fuel correction rate from seconds per fuel-proxy lap to seconds per kilogram via `fuel_rate / (full_fuel_weight_kg / total_race_laps)`.
+- Projects the selected team's corrected baseline pace with `baseline + seconds_per_kg * weight_delta_kg`; positive weight delta is slower, negative is faster.
+- Saves selected-team projection CSV, full plot-data CSV, and a plot in `temp/` by default, drawing all cached teams as solid lines and the selected team's weight-adjusted projection as a dashed line, all as percentages of the reference team.
 
 ## Tests
 
@@ -668,6 +678,10 @@ Current tests:
   - Mostly-dry mixed races continuing through analysis
   - Missing telemetry gap column detection
   - Clean-lap selection preserving otherwise clean laps with missing behind gap
+- `tests/test_race_performance_weight_predict.py`
+  - Race-lap total derivation from cached fuel proxy columns
+  - Conversion of fuel correction rate into seconds per kilogram
+  - Weight-delta projection of corrected baseline pace
 - `tests/test_clean_lap_track_development.py`
   - Push-lap pattern recognition between out-laps and in-laps
   - Slow laps, consecutive push laps, and dirty lap rejection

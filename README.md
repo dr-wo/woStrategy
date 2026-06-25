@@ -300,3 +300,30 @@ Add `--plot-rmse-background` to shade each GP by the Monte Carlo
 1.0s or higher is red. A colorbar is added to the plot. If fewer than five
 teams have data for a GP, that GP is marked with a black striped background
 instead.
+
+Race performance weight prediction:
+
+```bash
+python -m wostrategy.script.race_performance_weight_predict \
+  --year 2026 \
+  --race "1-7" \
+  --session R \
+  --team Mercedes \
+  --reference-team Mercedes \
+  --weight-delta-kg 5 \
+  --full-fuel-weight-kg 100
+```
+
+This script uses cached `race_performance_review` outputs. For each requested
+race, it loads the selected team's corrected baseline pace, the weighted median
+fuel correction rate, and clean-lap fuel proxy coverage. It estimates race fuel
+burn as `full_fuel_weight_kg / total_race_laps`, converts the fuel correction
+rate to seconds per kilogram, then shifts the selected team's baseline by
+`seconds_per_kg * weight_delta_kg`. Positive weight delta means more weight and
+slower projected pace; negative means less weight and faster projected pace.
+The output plot draws all cached teams as solid lines and overlays the selected
+team's weight-adjusted projection as a dashed line, all as percentages of
+`--reference-team`. If `--reference-team` is omitted it defaults to the selected
+team, so that team's solid line is 100% and the dashed line shows the isolated
+weight effect. A selected-team projection CSV and a full plot-data CSV are saved
+beside the PNG.
