@@ -28,6 +28,7 @@ DRIVER_COUNT = "DriverCount"
 TEAMMATE_DELTA_SECONDS = "TeammateDeltaSeconds"
 TEAMMATE_DELTA_PERCENT = "TeammateDeltaPercent"
 AVERAGE_MODE_NOTE = "AverageModeNote"
+QUICK_LAP_NUMBER = "QuickLapNumber"
 SECTOR_TIME_COLUMNS = {
     "S1": "Sector1Time",
     "S2": "Sector2Time",
@@ -55,6 +56,8 @@ class QualiPerformanceResult:
     evolution_rate_seconds_per_lap: float
     reference_session_lap_order: int
     evolution_drivers: list[str] | None
+    track_evolution_x_column: str = "SessionLapOrder"
+    track_evolution_slope_unit: str = "s/lap"
     lap_time_only: bool = False
 
 
@@ -71,6 +74,7 @@ class QualiPerformanceAnalyzer:
         track_evolution_fit: str,
         last_quali_part_only: bool = False,
         lap_time_only: bool = False,
+        track_evolution_quick_lap_number: bool = False,
     ) -> None:
         self.quick_lap_threshold = quick_lap_threshold
         self.clean_min_time_delta_seconds = clean_min_time_delta_seconds
@@ -81,6 +85,7 @@ class QualiPerformanceAnalyzer:
         self.top_driver_count = top_driver_count
         self.track_evolution_fit = track_evolution_fit
         self.lap_time_only = lap_time_only
+        self.track_evolution_quick_lap_number = track_evolution_quick_lap_number
 
     def calculate(self, laps: pd.DataFrame) -> QualiPerformanceResult | str:
         return calculate_quali_performance(
@@ -94,6 +99,7 @@ class QualiPerformanceAnalyzer:
             track_evolution_fit=self.track_evolution_fit,
             last_quali_part_only=self.last_quali_part_only,
             lap_time_only=self.lap_time_only,
+            track_evolution_quick_lap_number=self.track_evolution_quick_lap_number,
         )
 
 
@@ -109,6 +115,7 @@ def calculate_quali_performance(
     track_evolution_fit: str,
     last_quali_part_only: bool = False,
     lap_time_only: bool = False,
+    track_evolution_quick_lap_number: bool = False,
 ) -> QualiPerformanceResult | str:
     """Return corrected quickest quali laps, or ``Wet`` if wet/inter tyres are present."""
     _require_columns(laps, {"Team", "Driver", "LapNumber", "LapTime", "Compound"})
@@ -126,6 +133,7 @@ def calculate_quali_performance(
         clean_mean_time_delta_seconds=clean_mean_time_delta_seconds,
         lap_time_only=lap_time_only,
     )
+    prepared = add_quick_lap_numbers(prepared)
     dry_compounds = tuple(compound.upper() for compound in dry_compounds)
     push_laps = prepared.loc[
         prepared["IsPushLap"] & prepared["Compound"].isin(dry_compounds)
@@ -146,15 +154,21 @@ def calculate_quali_performance(
     if dominant is None:
         raise ValueError("No dominant compound found.")
     evolution_model = get_track_evolution_model(track_evolution_fit)
+    track_evolution_x_column = (
+        QUICK_LAP_NUMBER if track_evolution_quick_lap_number else "SessionLapOrder"
+    )
+    track_evolution_slope_unit = (
+        "s/quick lap" if track_evolution_quick_lap_number else "s/lap"
+    )
     evolution_fit = fit_compound_track_evolution(
         evolution_laps,
         compound=dominant,
         model=evolution_model,
-        x_column="SessionLapOrder",
+        x_column=track_evolution_x_column,
         y_column="LapTimeSeconds",
-        slope_unit="s/lap",
+        slope_unit=track_evolution_slope_unit,
     )
-    reference_lap_order = int(push_laps["SessionLapOrder"].max())
+    reference_lap_order = int(push_laps[track_evolution_x_column].max())
 
     prepared = add_track_evolution_correction(
         prepared,
@@ -189,6 +203,8 @@ def calculate_quali_performance(
         evolution_rate_seconds_per_lap=evolution_fit.evolution_rate_seconds_per_lap,
         reference_session_lap_order=reference_lap_order,
         evolution_drivers=evolution_drivers,
+        track_evolution_x_column=track_evolution_x_column,
+        track_evolution_slope_unit=track_evolution_slope_unit,
         lap_time_only=lap_time_only,
     )
 
@@ -272,6 +288,21 @@ def compound_evolution_rate(push_laps: pd.DataFrame, compound: str) -> float:
         slope_unit="s/lap",
     )
     return fit.evolution_rate_seconds_per_lap
+
+
+def add_quick_lap_numbers(laps: pd.DataFrame) -> pd.DataFrame:
+    _require_columns(laps, {"IsQuickLap", "SessionLapOrder"})
+    numbered = laps.copy()
+    numbered[QUICK_LAP_NUMBER] = pd.NA
+    quick_laps = numbered.loc[numbered["IsQuickLap"]].sort_values(
+        ["SessionLapOrder", "Driver"]
+    )
+    numbered.loc[quick_laps.index, QUICK_LAP_NUMBER] = range(1, len(quick_laps) + 1)
+    numbered[QUICK_LAP_NUMBER] = pd.to_numeric(
+        numbered[QUICK_LAP_NUMBER],
+        errors="coerce",
+    )
+    return numbered
 
 
 def filter_evolution_laps_by_top_drivers(

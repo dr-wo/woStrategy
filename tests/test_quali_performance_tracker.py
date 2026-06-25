@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from wostrategy.model.track_evolution import TRACK_EVOLUTION_FIT_MODEL
+from wostrategy.analysis.quali_performance import QUICK_LAP_NUMBER
 from wostrategy.script.quali_performance_tracker import (
     CORRECTED_SECTOR_SECONDS,
     EXPONENTIAL_TRACK_EVOLUTION_MODEL,
@@ -233,6 +234,38 @@ def test_calculate_quali_performance_can_use_exponential_evolution_fit():
     assert result.evolution_fit_parameters["decay_rate"] > 0
     assert set(result.laps[TRACK_EVOLUTION_FIT_MODEL]) == {EXPONENTIAL_TRACK_EVOLUTION_MODEL}
     assert result.laps[TRACK_EVO_CORRECTED_LAP_TIME_SECONDS].notna().all()
+
+
+def test_calculate_quali_performance_can_fit_evolution_by_quick_lap_number():
+    laps = pd.concat(
+        [
+            _driver_stint("Ferrari", "LEC", "SOFT", 80.0, 2, True, 1, "Q1"),
+            _slow_laps("Ferrari", "LEC", [4, 5, 6]),
+            _driver_stint("McLaren", "NOR", "SOFT", 79.0, 8, True, 2, "Q1"),
+            _slow_laps("McLaren", "NOR", [10, 11, 12]),
+            _driver_stint("Mercedes", "RUS", "SOFT", 78.0, 14, True, 3, "Q1"),
+        ],
+        ignore_index=True,
+    )
+
+    result = calculate_quali_performance(
+        laps,
+        quick_lap_threshold=1.07,
+        clean_min_time_delta_seconds=None,
+        clean_mean_time_delta_seconds=3.0,
+        top_driver_count=None,
+        track_evolution_fit=LINEAR_TRACK_EVOLUTION_MODEL,
+        track_evolution_quick_lap_number=True,
+    )
+
+    assert result != "Wet"
+    assert result.track_evolution_x_column == QUICK_LAP_NUMBER
+    assert result.reference_session_lap_order == 3
+    assert result.evolution_rate_seconds_per_lap == pytest.approx(1.0)
+    corrected_times = result.quickest_drivers[
+        TRACK_EVO_CORRECTED_LAP_TIME_SECONDS
+    ].tolist()
+    assert corrected_times == pytest.approx([78.0, 78.0, 78.0])
 
 
 def test_calculate_quali_performance_keeps_existing_qualifying_part():
@@ -465,5 +498,26 @@ def _driver_stint(
             QUALIFYING_PART: [qualifying_part] * 3,
             "MinTimeDeltaToDriverAhead": [None, 6.0, None],
             "MeanTimeDeltaToDriverAhead": [None, 6.0, None],
+        }
+    )
+
+
+def _slow_laps(team: str, driver: str, lap_numbers: list[int]) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "Team": team,
+            "Driver": driver,
+            "Stint": 1,
+            "LapNumber": lap_numbers,
+            "LapTime": pd.to_timedelta([120.0] * len(lap_numbers), unit="s"),
+            "LapStartTime": pd.to_timedelta(lap_numbers, unit="m"),
+            "PitOutTime": [pd.NaT] * len(lap_numbers),
+            "PitInTime": [pd.NaT] * len(lap_numbers),
+            "Compound": ["SOFT"] * len(lap_numbers),
+            "FreshTyre": [True] * len(lap_numbers),
+            "SessionResultRank": [pd.NA] * len(lap_numbers),
+            QUALIFYING_PART: ["Q1"] * len(lap_numbers),
+            "MinTimeDeltaToDriverAhead": [None] * len(lap_numbers),
+            "MeanTimeDeltaToDriverAhead": [6.0] * len(lap_numbers),
         }
     )

@@ -57,6 +57,7 @@ SCRIPT_CONFIG = {
     "top_driver_count": 10,
     # "track_evolution_fit": LINEAR_TRACK_EVOLUTION_MODEL,
     "track_evolution_fit": EXPONENTIAL_TRACK_EVOLUTION_MODEL,
+    "track_evolution_quick_lap_number": True,
     "teammate_delta_threshold_percent": 0.6,
     "calculate_best_sectors": True,
     "allow_lap_time_only": True,
@@ -79,6 +80,9 @@ def calculate_quali_performance(
     last_quali_part_only: bool = SCRIPT_CONFIG["last_quali_part_only"],
     top_driver_count: int | None = SCRIPT_CONFIG["top_driver_count"],
     track_evolution_fit: str = SCRIPT_CONFIG["track_evolution_fit"],
+    track_evolution_quick_lap_number: bool = SCRIPT_CONFIG[
+        "track_evolution_quick_lap_number"
+    ],
     lap_time_only: bool = False,
 ) -> QualiPerformanceResult | str:
     return analysis_calculate_quali_performance(
@@ -91,6 +95,7 @@ def calculate_quali_performance(
         last_quali_part_only=last_quali_part_only,
         top_driver_count=top_driver_count,
         track_evolution_fit=track_evolution_fit,
+        track_evolution_quick_lap_number=track_evolution_quick_lap_number,
         lap_time_only=lap_time_only,
     )
 
@@ -107,6 +112,9 @@ def run_quali_performance_tracker(
     last_quali_part_only: bool = SCRIPT_CONFIG["last_quali_part_only"],
     top_driver_count: int | None = SCRIPT_CONFIG["top_driver_count"],
     track_evolution_fit: str = SCRIPT_CONFIG["track_evolution_fit"],
+    track_evolution_quick_lap_number: bool = SCRIPT_CONFIG[
+        "track_evolution_quick_lap_number"
+    ],
     teammate_delta_threshold_percent: float | None = SCRIPT_CONFIG[
         "teammate_delta_threshold_percent"
     ],
@@ -164,6 +172,7 @@ def run_quali_performance_tracker(
         last_quali_part_only=last_quali_part_only,
         top_driver_count=top_driver_count,
         track_evolution_fit=track_evolution_fit,
+        track_evolution_quick_lap_number=track_evolution_quick_lap_number,
         lap_time_only=lap_time_only,
     )
     result = analyzer.calculate(laps)
@@ -193,6 +202,9 @@ def plot_quali_performance_range(
     last_quali_part_only: bool = SCRIPT_CONFIG["last_quali_part_only"],
     top_driver_count: int | None = SCRIPT_CONFIG["top_driver_count"],
     track_evolution_fit: str = SCRIPT_CONFIG["track_evolution_fit"],
+    track_evolution_quick_lap_number: bool = SCRIPT_CONFIG[
+        "track_evolution_quick_lap_number"
+    ],
     teammate_delta_threshold_percent: float | None = SCRIPT_CONFIG[
         "teammate_delta_threshold_percent"
     ],
@@ -218,6 +230,7 @@ def plot_quali_performance_range(
             last_quali_part_only=last_quali_part_only,
             top_driver_count=top_driver_count,
             track_evolution_fit=track_evolution_fit,
+            track_evolution_quick_lap_number=track_evolution_quick_lap_number,
             allow_lap_time_only=allow_lap_time_only,
             telemetry_cache_dir=telemetry_cache_dir,
             force_refresh_telemetry=force_refresh_telemetry,
@@ -280,8 +293,13 @@ def print_evolution_fit_summary(result: QualiPerformanceResult) -> None:
     print(f"Drivers: {driver_label}")
     print(f"Dominant compound: {result.dominant_compound}")
     print(f"Fit model: {result.evolution_fit_model}")
+    print(f"Fit x-axis: {result.track_evolution_x_column}")
     if result.evolution_fit_model == LINEAR_TRACK_EVOLUTION_MODEL:
-        print(f"Evolution rate: {result.evolution_rate_seconds_per_lap:.4f} s/lap")
+        print(
+            "Evolution rate: "
+            f"{result.evolution_rate_seconds_per_lap:.4f} "
+            f"{result.track_evolution_slope_unit}"
+        )
     else:
         params = result.evolution_fit_parameters
         print(
@@ -291,7 +309,10 @@ def print_evolution_fit_summary(result: QualiPerformanceResult) -> None:
             f"B={params['offset_seconds']:.3f}, "
             f"rmse={params['rmse_seconds']:.3f}s"
         )
-    print(f"Reference session lap order: {result.reference_session_lap_order}")
+    print(
+        f"Reference {result.track_evolution_x_column}: "
+        f"{result.reference_session_lap_order}"
+    )
 
 
 def print_relative_usage_summary(summary: pd.DataFrame) -> None:
@@ -414,6 +435,7 @@ def main() -> None:
             last_quali_part_only=args.last_quali_part_only,
             top_driver_count=args.top_driver_count,
             track_evolution_fit=fit_model_name,
+            track_evolution_quick_lap_number=args.track_evolution_quick_lap_number,
             teammate_delta_threshold_percent=args.teammate_delta_threshold_percent,
             calculate_best_sectors=args.calculate_best_sectors,
             allow_lap_time_only=args.allow_lap_time_only,
@@ -502,6 +524,15 @@ def _parse_args() -> argparse.Namespace:
         help=(
             "Track evolution fit used for correction. Selecting exponential also writes "
             "linear comparison plots."
+        ),
+    )
+    parser.add_argument(
+        "--track-evolution-quick-lap-number",
+        action=argparse.BooleanOptionalAction,
+        default=SCRIPT_CONFIG["track_evolution_quick_lap_number"],
+        help=(
+            "Fit track evolution against sequential quick-lap number instead of "
+            "session lap order."
         ),
     )
     parser.add_argument(
