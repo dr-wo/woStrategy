@@ -830,6 +830,73 @@ def test_load_cached_monte_carlo_outputs_reads_team_summary_and_diagnostics(tmp_
     assert cached["event_name"] == "Example GP"
 
 
+def test_load_cached_monte_carlo_outputs_reads_degradation_outputs(tmp_path):
+    prefix = tmp_path / "race_performance_2026_3_R"
+    pd.DataFrame(
+        [
+            {
+                "Team": "Alfa",
+                "P10": 89.5,
+                "Median": 90.0,
+                "P90": 90.5,
+                "SampleCount": 10,
+                "WeightSum": 4.0,
+                "MeanRMSESeconds": 0.2,
+                "TeamBaselineMode": "average-drivers",
+            }
+        ]
+    ).to_csv(f"{prefix}_team_baseline_summary.csv", index=False)
+    pd.DataFrame(
+        [{"SampleId": 0, "Compound": "MEDIUM", "CompoundDegSecondsPerLap": 0.04}]
+    ).to_csv(f"{prefix}_compound_degradation.csv", index=False)
+    pd.DataFrame(
+        [{"SampleId": 0, "Compound": "MEDIUM", "CompoundDeltaSeconds": -0.2}]
+    ).to_csv(f"{prefix}_compound_delta.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "SampleId": 0,
+                "Team": "Alfa",
+                "Compound": "MEDIUM",
+                "TeamCompoundDegSecondsPerLap": 0.05,
+            }
+        ]
+    ).to_csv(f"{prefix}_team_compound_degradation.csv", index=False)
+    pd.DataFrame(
+        [{"Compound": "MEDIUM", "Median": 0.04, "SampleCount": 1, "WeightSum": 1.0}]
+    ).to_csv(f"{prefix}_summary_compound_degradation.csv", index=False)
+    pd.DataFrame(
+        [{"Compound": "MEDIUM", "Median": -0.2, "SampleCount": 1, "WeightSum": 1.0}]
+    ).to_csv(f"{prefix}_summary_compound_delta.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "Team": "Alfa",
+                "Compound": "MEDIUM",
+                "Median": 0.05,
+                "SampleCount": 1,
+                "WeightSum": 1.0,
+            }
+        ]
+    ).to_csv(f"{prefix}_summary_team_compound_degradation.csv", index=False)
+
+    cached = load_cached_monte_carlo_outputs(
+        year=2026,
+        race=3,
+        session="R",
+        output_dir=tmp_path,
+        team_baseline_mode="average-drivers",
+    )
+
+    assert cached is not None
+    assert cached["compound_degradation"]["CompoundDegSecondsPerLap"].tolist() == [0.04]
+    assert cached["compound_delta"]["CompoundDeltaSeconds"].tolist() == [-0.2]
+    assert cached["team_compound_degradation"]["Team"].tolist() == ["Alfa"]
+    assert cached["summary_compound_degradation"]["Median"].tolist() == [0.04]
+    assert cached["summary_compound_delta"]["Median"].tolist() == [-0.2]
+    assert cached["summary_team_compound_degradation"]["Median"].tolist() == [0.05]
+
+
 def test_load_cached_monte_carlo_outputs_rebuilds_best_driver_from_driver_baselines(tmp_path):
     prefix = tmp_path / "race_performance_2026_3_R"
     pd.DataFrame(

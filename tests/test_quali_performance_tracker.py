@@ -366,6 +366,62 @@ def test_last_quali_part_uses_latest_entered_part_even_without_push_lap():
     ) == {"Q3"}
 
 
+def test_last_quali_part_caps_split_labels_by_session_result_rank():
+    laps = pd.concat(
+        [
+            _driver_stint("Cadillac", "PER", "SOFT", 80.0, 2, True, 19, "Q1"),
+            _driver_stint("Cadillac", "PER", "SOFT", 79.0, 5, True, 19, "Q2"),
+            _driver_stint("Ferrari", "LEC", "SOFT", 78.0, 8, True, 1, "Q3"),
+        ],
+        ignore_index=True,
+    )
+    laps.loc[
+        (laps["Driver"] == "PER")
+        & (laps[QUALIFYING_PART] == "Q2")
+        & (laps["LapTime"] == pd.Timedelta(seconds=79.0)),
+        "MeanTimeDeltaToDriverAhead",
+    ] = 2.0
+
+    result = calculate_quali_performance(
+        laps,
+        quick_lap_threshold=1.20,
+        clean_min_time_delta_seconds=None,
+        clean_mean_time_delta_seconds=3.0,
+        last_quali_part_only=True,
+        track_evolution_fit=LINEAR_TRACK_EVOLUTION_MODEL,
+    )
+
+    assert result != "Wet"
+    per = result.quickest_drivers.loc[result.quickest_drivers["Driver"] == "PER"].iloc[0]
+    assert per[QUALIFYING_PART] == "Q1"
+    assert int(per["LapNumber"]) == 2
+
+
+def test_last_quali_part_clamps_over_ranked_laps_instead_of_dropping_them():
+    laps = pd.concat(
+        [
+            _driver_stint("Haas F1 Team", "BEA", "SOFT", 80.0, 2, True, 13, "Q2"),
+            _driver_stint("Haas F1 Team", "BEA", "SOFT", 79.0, 5, True, 13, "Q3"),
+            _driver_stint("Ferrari", "LEC", "SOFT", 78.0, 8, True, 1, "Q3"),
+        ],
+        ignore_index=True,
+    )
+
+    result = calculate_quali_performance(
+        laps,
+        quick_lap_threshold=1.20,
+        clean_min_time_delta_seconds=None,
+        clean_mean_time_delta_seconds=3.0,
+        last_quali_part_only=True,
+        track_evolution_fit=LINEAR_TRACK_EVOLUTION_MODEL,
+    )
+
+    assert result != "Wet"
+    bea = result.quickest_drivers.loc[result.quickest_drivers["Driver"] == "BEA"].iloc[0]
+    assert bea[QUALIFYING_PART] == "Q2"
+    assert int(bea["LapNumber"]) == 5
+
+
 def test_team_fastest_and_average_rows_uses_two_driver_mean_or_single_result():
     quickest_drivers = pd.DataFrame(
         {

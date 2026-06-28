@@ -454,7 +454,7 @@ def latest_qualifying_part_laps(
         if reference_laps is not None
         else None
     )
-    part_rank = push_laps[QUALIFYING_PART].map(qualifying_part_rank)
+    part_rank = capped_qualifying_part_ranks(push_laps, reference_laps=reference_laps)
     filtered_indexes = []
     for _, driver_laps in push_laps.assign(_QualifyingPartRank=part_rank).groupby(
         ["Team", "Driver"], sort=False
@@ -483,7 +483,13 @@ def latest_qualifying_part_laps(
             ranked_laps.loc[ranked_laps["_QualifyingPartRank"] == latest_rank].index.tolist()
         )
 
-    return push_laps.loc[filtered_indexes].copy()
+    filtered = push_laps.loc[filtered_indexes].copy()
+    filtered_part_rank = capped_qualifying_part_ranks(
+        filtered,
+        reference_laps=reference_laps,
+    )
+    filtered[QUALIFYING_PART] = filtered_part_rank.map(qualifying_part_label)
+    return filtered
 
 
 def latest_qualifying_parts_by_driver(laps: pd.DataFrame) -> dict[tuple[object, object], float]:
@@ -500,11 +506,80 @@ def latest_qualifying_parts_by_driver(laps: pd.DataFrame) -> dict[tuple[object, 
     if ranked.empty:
         return {}
 
-    return (
+    latest_parts = (
         ranked.groupby(["Team", "Driver"], dropna=False)["_QualifyingPartRank"]
         .max()
         .to_dict()
     )
+    result_rank_limits = latest_qualifying_part_limits_from_result_rank(laps)
+    for driver_key, rank_limit in result_rank_limits.items():
+        if driver_key not in latest_parts:
+            continue
+        latest_parts[driver_key] = min(latest_parts[driver_key], rank_limit)
+    return latest_parts
+
+
+def capped_qualifying_part_ranks(
+    laps: pd.DataFrame,
+    *,
+    reference_laps: pd.DataFrame | None = None,
+) -> pd.Series:
+    part_rank = laps[QUALIFYING_PART].map(qualifying_part_rank)
+    rank_limits = latest_qualifying_part_limits_from_result_rank(
+        reference_laps if reference_laps is not None else laps
+    )
+    if not rank_limits:
+        return part_rank
+
+    capped = part_rank.copy()
+    for driver_key, rank_limit in rank_limits.items():
+        team, driver = driver_key
+        mask = laps["Team"].eq(team) & laps["Driver"].eq(driver) & capped.notna()
+        capped.loc[mask] = capped.loc[mask].clip(upper=rank_limit)
+    return capped
+
+
+def latest_qualifying_part_limits_from_result_rank(
+    laps: pd.DataFrame,
+) -> dict[tuple[object, object], float]:
+    required_columns = {"Team", "Driver", "SessionResultRank"}
+    if required_columns.difference(laps.columns):
+        return {}
+
+    ranked = laps.loc[:, ["Team", "Driver", "SessionResultRank"]].copy()
+    ranked["SessionResultRank"] = pd.to_numeric(
+        ranked["SessionResultRank"],
+        errors="coerce",
+    )
+    ranked = ranked.dropna(subset=["Driver", "SessionResultRank"])
+    if ranked.empty:
+        return {}
+
+    ranked = (
+        ranked.sort_values("SessionResultRank")
+        .drop_duplicates(subset=["Team", "Driver"], keep="first")
+        .copy()
+    )
+    ranked["_QualifyingPartRankLimit"] = ranked["SessionResultRank"].map(
+        qualifying_part_rank_limit_from_result_rank
+    )
+    ranked = ranked.dropna(subset=["_QualifyingPartRankLimit"])
+    return (
+        ranked.set_index(["Team", "Driver"])["_QualifyingPartRankLimit"]
+        .astype(float)
+        .to_dict()
+    )
+
+
+def qualifying_part_rank_limit_from_result_rank(rank: object) -> float:
+    if pd.isna(rank):
+        return float("nan")
+    numeric_rank = float(rank)
+    if numeric_rank <= 10:
+        return 3.0
+    if numeric_rank <= 15:
+        return 2.0
+    return 1.0
 
 
 def qualifying_part_rank(value: object) -> float:
@@ -518,6 +593,19 @@ def qualifying_part_rank(value: object) -> float:
     if normalized in {"Q3", "3"}:
         return 3.0
     return float("nan")
+
+
+def qualifying_part_label(rank: object) -> str | pd.NA:
+    if pd.isna(rank):
+        return pd.NA
+    numeric_rank = int(float(rank))
+    if numeric_rank == 1:
+        return "Q1"
+    if numeric_rank == 2:
+        return "Q2"
+    if numeric_rank == 3:
+        return "Q3"
+    return pd.NA
 
 
 def quickest_team_laps(quickest_drivers: pd.DataFrame) -> pd.DataFrame:

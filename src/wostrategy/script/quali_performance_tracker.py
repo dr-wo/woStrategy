@@ -46,7 +46,7 @@ LAP_TIME_ONLY = "LapTimeOnly"
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race_range": [1, 7],
+    "race_range": [1, 8],
     "target_team": "Mercedes",
     "quick_lap_threshold": 1.07,
     "clean_min_time_delta_seconds": None,

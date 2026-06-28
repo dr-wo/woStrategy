@@ -43,7 +43,7 @@ TEAM_MODES = (TEAM_MODE_BEST_DRIVER, TEAM_MODE_AVERAGE_DRIVERS, TEAM_MODE_DIRECT
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race": "[1,7]",
+    "race": "8",
     "session": "R",
     "sample_count": 80000,
     "sampling_strategy": LATIN_HYPERCUBE_SAMPLER,
@@ -147,6 +147,12 @@ def run_race_performance_review(
     range_sample_frames: list[pd.DataFrame] = []
     range_team_baseline_frames: list[pd.DataFrame] = []
     range_sample_diagnostic_frames: list[pd.DataFrame] = []
+    range_compound_degradation_frames: list[pd.DataFrame] = []
+    range_compound_delta_frames: list[pd.DataFrame] = []
+    range_team_compound_degradation_frames: list[pd.DataFrame] = []
+    range_summary_compound_degradation_frames: list[pd.DataFrame] = []
+    range_summary_compound_delta_frames: list[pd.DataFrame] = []
+    range_summary_team_compound_degradation_frames: list[pd.DataFrame] = []
 
     baseline_group = "team" if team_baseline_mode == TEAM_MODE_DIRECT_TEAM else "driver"
     print("Monte Carlo race performance review")
@@ -222,6 +228,22 @@ def run_race_performance_review(
                     range_sample_diagnostic_frames.append(diagnostics)
                     print("\nCached Monte Carlo sample diagnostics")
                     print(diagnostics.to_string(index=False))
+                append_cached_degradation_frames(
+                    cached,
+                    race=race,
+                    range_compound_degradation_frames=range_compound_degradation_frames,
+                    range_compound_delta_frames=range_compound_delta_frames,
+                    range_team_compound_degradation_frames=(
+                        range_team_compound_degradation_frames
+                    ),
+                    range_summary_compound_degradation_frames=(
+                        range_summary_compound_degradation_frames
+                    ),
+                    range_summary_compound_delta_frames=range_summary_compound_delta_frames,
+                    range_summary_team_compound_degradation_frames=(
+                        range_summary_team_compound_degradation_frames
+                    ),
+                )
                 print(
                     f"\nUsing cached Monte Carlo result for "
                     f"{year} race={race} session={session}"
@@ -388,6 +410,20 @@ def run_race_performance_review(
         sample_diagnostics = sample_diagnostics.copy()
         sample_diagnostics["Round"] = race
         range_sample_diagnostic_frames.append(sample_diagnostics)
+        append_result_degradation_frames(
+            result,
+            race=race,
+            range_compound_degradation_frames=range_compound_degradation_frames,
+            range_compound_delta_frames=range_compound_delta_frames,
+            range_team_compound_degradation_frames=range_team_compound_degradation_frames,
+            range_summary_compound_degradation_frames=(
+                range_summary_compound_degradation_frames
+            ),
+            range_summary_compound_delta_frames=range_summary_compound_delta_frames,
+            range_summary_team_compound_degradation_frames=(
+                range_summary_team_compound_degradation_frames
+            ),
+        )
 
     if not race_team_baseline_summaries:
         print("\nNo Monte Carlo results were produced for the requested races.")
@@ -433,6 +469,24 @@ def run_race_performance_review(
             )
             all_diagnostics.to_csv(diagnostics_path, index=False)
             saved_outputs.append(diagnostics_path)
+        saved_outputs.extend(
+            save_range_degradation_outputs(
+                year=year,
+                races=races,
+                session=session,
+                output_dir=output_dir,
+                compound_degradation_frames=range_compound_degradation_frames,
+                compound_delta_frames=range_compound_delta_frames,
+                team_compound_degradation_frames=range_team_compound_degradation_frames,
+                summary_compound_degradation_frames=(
+                    range_summary_compound_degradation_frames
+                ),
+                summary_compound_delta_frames=range_summary_compound_delta_frames,
+                summary_team_compound_degradation_frames=(
+                    range_summary_team_compound_degradation_frames
+                ),
+            )
+        )
         print(f"\nAggregate team corrected baseline pace summary ({range_label})")
         print(all_team_summary.to_string(index=False))
 
@@ -577,6 +631,146 @@ def sample_diagnostics_summary(sample_parameters: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def append_result_degradation_frames(
+    result: MonteCarloRacePerformanceResult,
+    *,
+    race: int,
+    range_compound_degradation_frames: list[pd.DataFrame],
+    range_compound_delta_frames: list[pd.DataFrame],
+    range_team_compound_degradation_frames: list[pd.DataFrame],
+    range_summary_compound_degradation_frames: list[pd.DataFrame],
+    range_summary_compound_delta_frames: list[pd.DataFrame],
+    range_summary_team_compound_degradation_frames: list[pd.DataFrame],
+) -> None:
+    _append_round_frame(
+        range_compound_degradation_frames,
+        result.compound_degradation,
+        race=race,
+    )
+    _append_round_frame(range_compound_delta_frames, result.compound_delta, race=race)
+    _append_round_frame(
+        range_team_compound_degradation_frames,
+        result.team_compound_degradation,
+        race=race,
+    )
+    _append_round_frame(
+        range_summary_compound_degradation_frames,
+        result.summaries["compound_degradation"],
+        race=race,
+    )
+    _append_round_frame(
+        range_summary_compound_delta_frames,
+        result.summaries["compound_delta"],
+        race=race,
+    )
+    _append_round_frame(
+        range_summary_team_compound_degradation_frames,
+        result.summaries["team_compound_degradation"],
+        race=race,
+    )
+
+
+def append_cached_degradation_frames(
+    cached: dict[str, object],
+    *,
+    race: int,
+    range_compound_degradation_frames: list[pd.DataFrame],
+    range_compound_delta_frames: list[pd.DataFrame],
+    range_team_compound_degradation_frames: list[pd.DataFrame],
+    range_summary_compound_degradation_frames: list[pd.DataFrame],
+    range_summary_compound_delta_frames: list[pd.DataFrame],
+    range_summary_team_compound_degradation_frames: list[pd.DataFrame],
+) -> None:
+    _append_round_frame(
+        range_compound_degradation_frames,
+        cached.get("compound_degradation"),
+        race=race,
+    )
+    _append_round_frame(
+        range_compound_delta_frames,
+        cached.get("compound_delta"),
+        race=race,
+    )
+    _append_round_frame(
+        range_team_compound_degradation_frames,
+        cached.get("team_compound_degradation"),
+        race=race,
+    )
+    _append_round_frame(
+        range_summary_compound_degradation_frames,
+        cached.get("summary_compound_degradation"),
+        race=race,
+    )
+    _append_round_frame(
+        range_summary_compound_delta_frames,
+        cached.get("summary_compound_delta"),
+        race=race,
+    )
+    _append_round_frame(
+        range_summary_team_compound_degradation_frames,
+        cached.get("summary_team_compound_degradation"),
+        race=race,
+    )
+
+
+def _append_round_frame(
+    frames: list[pd.DataFrame],
+    frame: object,
+    *,
+    race: int,
+) -> None:
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        return
+    output = frame.copy()
+    output["Round"] = race
+    frames.append(output)
+
+
+def save_range_degradation_outputs(
+    *,
+    year: int,
+    races: list[int],
+    session: str,
+    output_dir: Path,
+    compound_degradation_frames: list[pd.DataFrame],
+    compound_delta_frames: list[pd.DataFrame],
+    team_compound_degradation_frames: list[pd.DataFrame],
+    summary_compound_degradation_frames: list[pd.DataFrame],
+    summary_compound_delta_frames: list[pd.DataFrame],
+    summary_team_compound_degradation_frames: list[pd.DataFrame],
+) -> list[Path]:
+    range_label = race_range_label(races)
+    outputs = {
+        f"race_performance_compound_degradation_{year}_{range_label}_{session}.csv": (
+            compound_degradation_frames
+        ),
+        f"race_performance_compound_delta_{year}_{range_label}_{session}.csv": (
+            compound_delta_frames
+        ),
+        f"race_performance_team_compound_degradation_{year}_{range_label}_{session}.csv": (
+            team_compound_degradation_frames
+        ),
+        f"race_performance_summary_compound_degradation_{year}_{range_label}_{session}.csv": (
+            summary_compound_degradation_frames
+        ),
+        f"race_performance_summary_compound_delta_{year}_{range_label}_{session}.csv": (
+            summary_compound_delta_frames
+        ),
+        f"race_performance_summary_team_compound_degradation_{year}_{range_label}_{session}.csv": (
+            summary_team_compound_degradation_frames
+        ),
+    }
+
+    paths: list[Path] = []
+    for filename, frames in outputs.items():
+        if not frames:
+            continue
+        path = output_dir / filename
+        pd.concat(frames, ignore_index=True).to_csv(path, index=False)
+        paths.append(path)
+    return paths
+
+
 def cached_output_path(
     *,
     output_dir: Path,
@@ -645,6 +839,50 @@ def load_cached_monte_carlo_outputs(
         session=session,
         suffix="clean_laps",
     )
+    degradation_paths = {
+        "compound_degradation": cached_output_path(
+            output_dir=output_dir,
+            year=year,
+            race=race,
+            session=session,
+            suffix="compound_degradation",
+        ),
+        "compound_delta": cached_output_path(
+            output_dir=output_dir,
+            year=year,
+            race=race,
+            session=session,
+            suffix="compound_delta",
+        ),
+        "team_compound_degradation": cached_output_path(
+            output_dir=output_dir,
+            year=year,
+            race=race,
+            session=session,
+            suffix="team_compound_degradation",
+        ),
+        "summary_compound_degradation": cached_output_path(
+            output_dir=output_dir,
+            year=year,
+            race=race,
+            session=session,
+            suffix="summary_compound_degradation",
+        ),
+        "summary_compound_delta": cached_output_path(
+            output_dir=output_dir,
+            year=year,
+            race=race,
+            session=session,
+            suffix="summary_compound_delta",
+        ),
+        "summary_team_compound_degradation": cached_output_path(
+            output_dir=output_dir,
+            year=year,
+            race=race,
+            session=session,
+            suffix="summary_team_compound_degradation",
+        ),
+    }
 
     paths = [team_summary_path]
     team_baseline_samples = None
@@ -693,12 +931,21 @@ def load_cached_monte_carlo_outputs(
         event_name = event_name_from_laps(clean_laps)
         paths.append(clean_laps_path)
 
+    degradation_outputs = {}
+    for name, path in degradation_paths.items():
+        if not path.exists():
+            degradation_outputs[name] = None
+            continue
+        degradation_outputs[name] = pd.read_csv(path)
+        paths.append(path)
+
     return {
         "team_baseline_summary": team_baseline_summary,
         "team_baseline_samples": team_baseline_samples,
         "sample_diagnostics": sample_diagnostics,
         "event_name": event_name,
         "paths": paths,
+        **degradation_outputs,
     }
 
 
