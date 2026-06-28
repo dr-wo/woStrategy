@@ -1,0 +1,75 @@
+Year,Race,Session,EventName,Team,ReferenceTeam,Series,BaselineSeconds,PercentageToReference,WeightDeltaKg
+2026,1,R,Australian Grand Prix,Alpine,Mercedes,actual,82.35209852953179,102.38312227140747,0.0
+2026,1,R,Australian Grand Prix,Aston Martin,Mercedes,actual,84.14332682782742,104.61004240040263,0.0
+2026,1,R,Australian Grand Prix,Audi,Mercedes,actual,82.01223653798695,101.96059349002783,0.0
+2026,1,R,Australian Grand Prix,Cadillac,Mercedes,actual,85.14464868842666,105.8549221340988,0.0
+2026,1,R,Australian Grand Prix,Ferrari,Mercedes,actual,80.72690752073967,100.36262573593805,0.0
+2026,1,R,Australian Grand Prix,Haas F1 Team,Mercedes,actual,82.26372405190742,102.2732519085406,0.0
+2026,1,R,Australian Grand Prix,McLaren,Mercedes,actual,81.19488152064262,100.94442802279444,0.0
+2026,1,R,Australian Grand Prix,Mercedes,Mercedes,actual,80.43522868078253,100.0,0.0
+2026,1,R,Australian Grand Prix,Mercedes,Mercedes,projected,80.63440929052847,100.24762857396279,5.0
+2026,1,R,Australian Grand Prix,Racing Bulls,Mercedes,actual,81.8862958397352,101.8040194361993,0.0
+2026,1,R,Australian Grand Prix,Red Bull Racing,Mercedes,actual,81.29336913417166,101.06687140381581,0.0
+2026,1,R,Australian Grand Prix,Williams,Mercedes,actual,82.59890174993436,102.68995700595151,0.0
+2026,2,R,Chinese Grand Prix,Alpine,Mercedes,actual,94.87454986152628,101.2773112717638,0.0
+2026,2,R,Chinese Grand Prix,Aston Martin,Mercedes,actual,98.59688354069242,105.25085261907465,0.0
+2026,2,R,Chinese Grand Prix,Audi,Mercedes,actual,94.35192629858489,100.71941761809981,0.0
+2026,2,R,Chinese Grand Prix,Cadillac,Mercedes,actual,97.4481077077073,104.02454980353006,0.0
+2026,2,R,Chinese Grand Prix,Ferrari,Mercedes,actual,94.15526895771416,100.50948854065689,0.0
+2026,2,R,Chinese Grand Prix,Haas F1 Team,Mercedes,actual,94.90195989534234,101.30657111574526,0.0
+2026,2,R,Chinese Grand Prix,Mercedes,Mercedes,actual,93.67799033185568,100.0,0.0
+2026,2,R,Chinese Grand Prix,Mercedes,Mercedes,projected,93.86686341590439,100.20161948754411,5.0
+2026,2,R,Chinese Grand Prix,Racing Bulls,Mercedes,actual,95.090787622811,101.50814218574766,0.0
+2026,2,R,Chinese Grand Prix,Red Bull Racing,Mercedes,actual,95.36302447882252,101.79875138332663,0.0
+2026,2,R,Chinese Grand Prix,Williams,Mercedes,actual,96.0837006436361,102.56806353686511,0.0
+2026,3,R,Japanese Grand Prix,Alpine,Mercedes,actual,94.26969626520903,103.3133885209901,0.0
+2026,3,R,Japanese Grand Prix,Aston Martin,Mercedes,actual,94.88328711625844,103.98584374784319,0.0
+2026,3,R,Japanese Grand Prix,Audi,Mercedes,actual,91.9065833533762,100.72357215314787,0.0
+2026,3,R,Japanese Grand Prix,Cadillac,Mercedes,actual,94.59008286709069,103.66451117003308,0.0
+2026,3,R,Japanese Grand Prix,Ferrari,Mercedes,actual,91.92314803128,100.7417259509408,0.0
+2026,3,R,Japanese Grand Prix,Haas F1 Team,Mercedes,actual,93.1631573883969,102.1006946710804,0.0
+2026,3,R,Japanese Grand Prix,McLaren,Mercedes,actual,91.34206284132222,100.10489479127516,0.0
+2026,3,R,Japanese Grand Prix,Mercedes,Mercedes,actual,91.2463501727623,100.0,0.0
+2026,3,R,Japanese Grand Prix,Mercedes,Mercedes,projected,91.43700732032426,100.20894769730621,5.0
+2026,3,R,Japanese Grand Prix,Racing Bulls,Mercedes,actual,92.24701914560926,101.09666739650662,0.0
+2026,3,R,Japanese Grand Prix,Red Bull Racing,Mercedes,actual,92.10983989655728,100.94632795959517,0.0
+2026,3,R,Japanese Grand Prix,Williams,Mercedes,actual,93.11392676749806,102.04674114767303,0.0
+2026,4,R,Miami Grand Prix,Alpine,Mercedes,actual,91.8132820024832,101.02406296462141,0.0
+2026,4,R,Miami Grand Prix,Aston Martin,Mercedes,actual,93.08919940399431,102.42798140753719,0.0
+2026,4,R,Miami Grand Prix,Audi,Mercedes,actual,92.26316822893298,101.51908213261662,0.0
+2026,4,R,Miami Grand Prix,Cadillac,Mercedes,actual,95.37132698725856,104.93905383231721,0.0
+2026,4,R,Miami Grand Prix,Ferrari,Mercedes,actual,91.4751008909794,100.65195525692525,0.0
+2026,4,R,Miami Grand Prix,Haas F1 Team,Mercedes,actual,93.04463711745925,102.37894859722286,0.0
+2026,4,R,Miami Grand Prix,McLaren,Mercedes,actual,90.5181738553338,99.59902854530856,0.0
+2026,4,R,Miami Grand Prix,Mercedes,Mercedes,actual,90.8825870868371,100.0,0.0
+2026,4,R,Miami Grand Prix,Mercedes,Mercedes,projected,91.03299446722794,100.16549636757932,5.0
+2026,4,R,Miami Grand Prix,Racing Bulls,Mercedes,actual,93.17996680353497,102.5278546642854,0.0
+2026,4,R,Miami Grand Prix,Red Bull Racing,Mercedes,actual,90.99395213558132,100.12253727838734,0.0
+2026,4,R,Miami Grand Prix,Williams,Mercedes,actual,92.50020376752016,101.77989726363911,0.0
+2026,5,R,Canadian Grand Prix,Alpine,Mercedes,actual,73.89284267354537,102.54249887270058,0.0
+2026,5,R,Canadian Grand Prix,Aston Martin,Mercedes,actual,75.98136044720027,105.44077458793835,0.0
+2026,5,R,Canadian Grand Prix,Audi,Mercedes,actual,73.76458751488931,102.36451675716592,0.0
+2026,5,R,Canadian Grand Prix,Cadillac,Mercedes,actual,76.33022491783969,105.92490042872258,0.0
+2026,5,R,Canadian Grand Prix,Ferrari,Mercedes,actual,72.66587262319976,100.8398092690504,0.0
+2026,5,R,Canadian Grand Prix,Haas F1 Team,Mercedes,actual,73.89807348281776,102.54975776591012,0.0
+2026,5,R,Canadian Grand Prix,McLaren,Mercedes,actual,73.36793290995502,101.81407164086389,0.0
+2026,5,R,Canadian Grand Prix,Mercedes,Mercedes,actual,72.0607001837143,100.0,0.0
+2026,5,R,Canadian Grand Prix,Mercedes,Mercedes,projected,72.29989134440625,100.33193010903605,5.0
+2026,5,R,Canadian Grand Prix,Racing Bulls,Mercedes,actual,73.61639334698694,102.15886490043324,0.0
+2026,5,R,Canadian Grand Prix,Red Bull Racing,Mercedes,actual,72.64895192577683,100.81632809640043,0.0
+2026,5,R,Canadian Grand Prix,Williams,Mercedes,actual,73.67588311913472,102.24141998523831,0.0
+2026,6,R,Monaco Grand Prix,McLaren,Mercedes,actual,74.88691931522601,102.32811965909005,0.0
+2026,6,R,Monaco Grand Prix,Mercedes,Mercedes,actual,73.18312851317367,100.0,0.0
+2026,6,R,Monaco Grand Prix,Mercedes,Mercedes,projected,73.390023092788,100.28270802822688,5.0
+2026,7,R,Barcelona Grand Prix,Alpine,Mercedes,actual,80.6688889428232,102.55503808169124,0.0
+2026,7,R,Barcelona Grand Prix,Aston Martin,Mercedes,actual,82.84619052337273,105.32305992300914,0.0
+2026,7,R,Barcelona Grand Prix,Audi,Mercedes,actual,80.79890769200124,102.72033201282171,0.0
+2026,7,R,Barcelona Grand Prix,Cadillac,Mercedes,actual,82.07839554122323,104.3469556941647,0.0
+2026,7,R,Barcelona Grand Prix,Ferrari,Mercedes,actual,78.62973526761343,99.96264483621361,0.0
+2026,7,R,Barcelona Grand Prix,Haas F1 Team,Mercedes,actual,80.78470967887304,102.70228195912532,0.0
+2026,7,R,Barcelona Grand Prix,McLaren,Mercedes,actual,79.1376286833798,100.60833401425944,0.0
+2026,7,R,Barcelona Grand Prix,Mercedes,Mercedes,actual,78.65911851016583,100.0,0.0
+2026,7,R,Barcelona Grand Prix,Mercedes,Mercedes,projected,78.87419482321904,100.27342832862462,5.0
+2026,7,R,Barcelona Grand Prix,Racing Bulls,Mercedes,actual,80.80675883059237,102.73031323145196,0.0
+2026,7,R,Barcelona Grand Prix,Red Bull Racing,Mercedes,actual,79.05889812502426,100.50824319218219,0.0
+2026,7,R,Barcelona Grand Prix,Williams,Mercedes,actual,81.28201617019982,103.33451189094501,0.0

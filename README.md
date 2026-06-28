@@ -6,16 +6,148 @@ This repository contains the strategy-analysis code that was previously living
 inside a Fast-F1 fork: session wrappers, long-stint preparation, pre-season test
 analysis, and plotting utilities.
 
-## Install
+## 0. Examples
+
+### 0.1 Qualifying performance tracker
+
+```bash
+python -m wostrategy.script.quali_performance_tracker \
+  --year 2026 \
+  --race-range "[1, 7]" \
+  --target-team Mercedes \
+  --new-tyre-only \
+  --last-quali-part-only \
+  --allow-lap-time-only \
+  --track-evolution-fit exponential \
+  --output doc/assets/quali_performance_tracker_2026_1-7_mercedes.png
+```
+
+This command writes one plot per result type:
+
+<p>
+  <img src="doc/assets/quali_performance_tracker_2026_1-7_mercedes_exponential_fastest.png" alt="Qualifying performance fastest tracker example" width="32%">
+  <img src="doc/assets/quali_performance_tracker_2026_1-7_mercedes_exponential_average.png" alt="Qualifying performance average tracker example" width="32%">
+  <img src="doc/assets/quali_performance_tracker_2026_1-7_mercedes_exponential_best_sectors.png" alt="Qualifying performance best sectors tracker example" width="32%">
+</p>
+
+### 0.2 Race performance tracker
+
+```bash
+python -m wostrategy.script.race_performance_review \
+  --year 2026 \
+  --race "[1, 7]" \
+  --session R \
+  --sample-count 5000 \
+  --sampling-strategy latin-hypercube \
+  --fuel-rate-bounds 0 0.10 \
+  --track-rate-bounds -0.05 0.05 \
+  --limit-negative-track-correction \
+  --tyre-deg-bounds 0 0.50 \
+  --tyre-delta-bounds -1.0 1.0 \
+  --compound-delta-reference HARD \
+  --team-variation-fraction 0.5 \
+  --team-variation-absolute-min 0.005 \
+  --clean-lap-noise-sigma 0.5 \
+  --team-baseline-mode average-drivers \
+  --reference-team Mercedes \
+  --plot-output doc/assets/race_performance_tracker_2026_1-7_mercedes.png
+```
+
+This command writes the final team-baseline tracker plot:
+
+<p>
+  <img src="doc/assets/race_performance_tracker_2026_1-7_mercedes_team_baseline.png" alt="Race performance baseline tracker example" width="70%">
+</p>
+
+### 0.3 Pure lap-time trace
+
+```bash
+python -m wostrategy.script.pure_lap_time_trace \
+  --year 2026 \
+  --race 7 \
+  --session R \
+  --traces-json '{"RUS": {"lap": ["37-61"], "off-set": 0.12}, "HAM": {"lap": ["41-61"], "off-set": 0}}' \
+  --delta-traces-json '{"RUS vs HAM": {"trace_a": "RUS", "trace_b": "HAM", "lap": ["7-21"]}}' \
+  --y-range 80 83 \
+  --output doc/assets/pure_lap_time_trace_2026_7_R.png
+```
+
+<p>
+  <img src="doc/assets/pure_lap_time_trace_2026_7_R.png" alt="Pure lap-time trace example" width="70%">
+</p>
+
+### 0.4 Race performance weight prediction
+
+```bash
+python -m wostrategy.script.race_performance_weight_predict \
+  --year 2026 \
+  --race "1-7" \
+  --session R \
+  --team Mercedes \
+  --reference-team Mercedes \
+  --weight-delta-kg 5 \
+  --full-fuel-weight-kg 100 \
+  --output doc/assets/race_performance_weight_predict_2026_1-7_mercedes_plus5kg.png
+```
+
+<p>
+  <img src="doc/assets/race_performance_weight_predict_2026_1-7_mercedes_plus5kg.png" alt="Race performance weight prediction example" width="70%">
+</p>
+
+### 0.5 Tyre strategy summary
+
+```bash
+python -m wostrategy.script.tyre_strategy_summary \
+  --year 2026 \
+  --race 6 \
+  --output doc/assets/tyre_strategy_summary_2026_6_R
+```
+
+This writes CSV tables and can be rendered as a compact table for review:
+
+<p>
+  <img src="doc/assets/tyre_strategy_summary_2026_6_R_english.png" alt="Tyre strategy summary table example" width="55%">
+</p>
+
+### 0.6 Pre-season analysis
+
+```bash
+python -m wostrategy.script.pre_season_analysis
+```
+
+This script writes pre-season plots to `temp/` by default. Example outputs are
+shown from `doc/assets`:
+
+<p>
+  <img src="doc/assets/cumulative_laps_by_day_drivers.png" alt="Pre-season cumulative driver laps example" width="32%">
+  <img src="doc/assets/cumulative_laps_by_day_teams.png" alt="Pre-season cumulative team laps example" width="32%">
+</p>
+
+<p>
+  <img src="doc/assets/r2s2_r2s3_race_sim_uncorrected.png" alt="Pre-season race simulation uncorrected example" width="32%">
+  <img src="doc/assets/r2s2_r2s3_race_sim_corrected.png" alt="Pre-season race simulation corrected example" width="32%">
+  <img src="doc/assets/single_lap_comparison.png" alt="Pre-season single-lap comparison example" width="32%">
+</p>
+
+## 1. Code
+
+### 1.1 Install
 
 ```bash
 python -m pip install -e .
 ```
 
-The package depends on `fastf1`. Your installed FastF1 version determines which
-events and telemetry formats are supported.
+The package depends on `fastf1`, `pandas`, `numpy`, and `matplotlib`. Your
+installed FastF1 version determines which events, timing columns, and telemetry
+formats are supported.
 
-## Architecture
+For development and regression checks:
+
+```bash
+python -m pytest
+```
+
+### 1.2 Architecture
 
 The package is split into five layers:
 
@@ -23,24 +155,22 @@ The package is split into five layers:
 model -> algorithm -> analysis -> plots -> script
 ```
 
-- `wostrategy.model`: mathematical models such as track evolution, fuel correction, and tyre degradation experiments.
-- `wostrategy.algorithm`: reusable sampling and optimization algorithms that should not know about loading, plotting, or persistence.
-- `wostrategy.analysis`: dataframe preparation and domain aggregation.
+- `wostrategy.model`: small mathematical models and constants, including track
+  evolution, fuel proxy columns, tyre-age columns, and long-run model
+  experiments.
+- `wostrategy.algorithm`: reusable algorithms that should not know about
+  FastF1 loading, plotting, or persistence. The Monte Carlo race-performance
+  sampler lives here.
+- `wostrategy.analysis`: dataframe preparation and domain aggregation. This is
+  where push laps, qualifying performance, long-run performance, and race
+  performance reviews are calculated.
 - `wostrategy.plots`: matplotlib figure rendering.
 - `wostrategy.script`: CLI entry points and workflow orchestration.
+- `wostrategy.core` and `wostrategy.tools`: session wrappers, FastF1 loading,
+  telemetry enrichment, cache handling, and convenience loaders used by the
+  analysis scripts.
 
-Track evolution supports both `linear` and `exponential` fits. The exponential
-fit uses `y = A * e^(-kx) + B`. Selecting `--track-evolution-fit exponential`
-also writes linear comparison plots for comparison.
-
-Telemetry-backed clean-lap filtering can use both the gap to the car ahead and,
-when configured by analysis code, the gap to the car behind. The behind-car gap
-is preferably derived from synchronized session-time track positions so lapped
-traffic can still be detected physically; the older `DriverAhead` inversion is
-kept as a fallback. Stale telemetry cache files that predate the derived
-`TimeDeltaToDriverAhead` column are rebuilt automatically.
-
-## Usage
+Example API usage:
 
 ```python
 from wostrategy import Session, run_two_day_benchmark_race_sim
@@ -59,66 +189,102 @@ result = run_two_day_benchmark_race_sim(
 )
 ```
 
-You can also run the pre-season analysis example with:
+## 2. Workflows
 
-```bash
-python -m wostrategy.script.pre_season_analysis
-```
+### 2.0 Pre-process
 
-Push-lap track development:
+The loading layer wraps FastF1 sessions and normalizes the data needed by the
+analysis scripts.
 
-```bash
-python -m wostrategy.script.push_lap_track_development \
-  --year 2026 \
-  --race 7 \
-  --section Q \
-  --new-tyre-only \
-  --allow-lap-time-only \
-  --track-evolution-fit exponential
-```
+- `load_session_laps` loads laps for one or more events and appends `Year`,
+  `Round`, `SessionName`, event metadata, session result rank, and per-lap
+  weather columns when FastF1 exposes them.
+- `load_session_laps_with_telemetry_gap_summary` additionally loads full
+  per-lap telemetry, caches it under `cache/telemetry/` by default, and merges
+  per-lap clean-air gap metrics back onto the lap dataframe.
+- Telemetry cache files are rebuilt automatically when they are empty or miss
+  the derived `TimeDeltaToDriverAhead` column.
+- Clean-air summaries include min/mean time and distance gaps to cars ahead and
+  behind when the data are available.
 
-The script prefers telemetry gap summaries for clean-lap selection. If telemetry
-is unavailable or does not contain the requested gap column, `--allow-lap-time-only`
-falls back to lap-time-only push-lap selection and prints
-`Lap-time-only mode: True`.
+#### 2.0.1 Distance delta to time delta using interpolation
 
-Tyre strategy summary for one feature race:
+`DistanceInterpolationTimeDeltaEstimator` converts FastF1's
+`DistanceToDriverAhead` telemetry into `TimeDeltaToDriverAhead`.
 
-```bash
-python -m wostrategy.script.tyre_strategy_summary \
-  --year 2026 \
-  --race 6
-```
+For each telemetry sample it:
 
-This prints Chinese and English two-column strategy tables ordered by finishing
-position, and writes CSVs to `temp/` by default:
+1. Takes the current lap-distance trace: `Distance` versus `Time`.
+2. Adds `DistanceToDriverAhead` to the current car distance to get the target
+   distance.
+3. Wraps targets beyond the lap end and offsets by the lap time.
+4. Interpolates the target distance on the current lap trace to estimate when
+   the current car would arrive there.
+5. Stores the non-negative time difference in seconds.
 
-```text
-temp/tyre_strategy_summary_2026_6_R_chinese.csv
-temp/tyre_strategy_summary_2026_6_R_english.csv
-```
+When synchronized `SessionTime`, `Distance`, and `Speed` samples are available,
+gap summaries prefer physical same-session-time car positions. That path derives
+nearest cars ahead and behind by circular track distance, which handles lapped
+traffic more consistently than inverting `DriverAhead`. If physical samples are
+not available, the older `DriverAhead`-based behind-gap fallback is still used.
 
-Pure lap-time trace comparison:
+#### 2.0.2 Other data clean tools
 
-```bash
-python -m wostrategy.script.pure_lap_time_trace \
-  --year 2026 \
-  --race 7 \
-  --session R \
-  --traces-json '{"RUS": {"lap": ["37-61"], "off-set": 0.12}, "HAM": {"lap": ["41-61"], "off-set": 0}}' \
-  --delta-traces-json '{"RUS vs HAM": {"trace_a": "RUS", "trace_b": "HAM", "lap": ["7-21"]}}' \
-  --y-range 80 83
-```
+- Push-lap filtering rejects out laps, in laps, non-quick laps, non-clean laps,
+  wet/intermediate sessions, and optionally used tyres.
+- Race and long-run filtering keeps dry compounds only, removes out/in laps,
+  applies driver-relative quick-lap thresholds, and selects clean-air laps by
+  front and optional rear mean time gaps.
+- Race clean-air selection can use consecutive clean-air chunks or, with
+  `--treat-stint-as-whole`, all clean laps in a stint once the stint has enough
+  clean laps in total.
+- Tyre age can be stint-relative (`--tyre-age-mode stint`, default) or FastF1
+  session `TyreLife` based (`--tyre-age-mode overall`).
+- Long-run fitting removes obvious lap-time residual outliers inside a stint and
+  can remove field-level tyre-slope outliers before team aggregation.
+- Wet race/session guards skip workflows when wet/intermediate tyres exceed the
+  configured policy.
 
-The script first collects laps from `traces`, plots each trace against collected
-lap number, then optionally computes accumulated deltas from that collected
-plot data. Delta trace `lap` values are collected lap numbers, not real race
-lap numbers. In the example above, collected lap 7 for `RUS` is compared with
-collected lap 7 for `HAM`, even if those are different real race laps. The
-accumulated delta is drawn as a black line on the right-hand axis. Positive
-delta means `trace_a` lost time to `trace_b`.
+### 2.1 Quali performance tracker
 
-Qualifying performance tracking:
+Qualifying performance estimates team pace after correcting eligible push laps
+for track evolution.
+
+#### 2.1.1 Assumptions
+
+- Fuel, tyre degradation, and track evolution are the main lap-time corrections.
+  - In qualifying, drivers are assumed to run low fuel, so no fuel correction needed.
+  - New-tyre push laps are the default comparison set, so no tyre degradation needed.
+- Every eligible push lap contributes the same to the track-evolution fit;
+  - with  `--track-evolution-quick-lap-number`, the x-axis can be quick-lap count
+  instead of total session lap order.
+- Track evolution is assumed to apply the same to all cars.
+- Driver error is not explicitly modelled. The workflow partly mitigates this
+  by using fastest laps, teammate delta checks, optional best-sector views, and
+  last-session selection.
+
+#### 2.1.2 Algorithm
+
+1. Load qualifying laps, preferring telemetry gap summaries for clean-lap
+   selection.
+2. Fall back to lap-time-only mode only when `--allow-lap-time-only` is set and
+   telemetry loading or requested gap columns are unavailable.
+3. Add push-lap flags from quick-lap threshold, clean-air gap, out/in lap
+   status, and out-push-in run pattern.
+4. Keep configured dry compounds and, by default, only new tyres.
+5. Fit track evolution from eligible push laps on the dominant compound. The fit
+   can be linear or exponential (`y = A * exp(-k x) + B`).
+6. Correct lap and sector times to the latest eligible push-lap reference.
+7. For the final displayed performance, optionally use only each driver's last
+   qualifying part (`--last-quali-part-only`). Track evolution is still fitted
+   from all eligible Q1/Q2/Q3 push laps.
+8. Aggregate team pace as fastest driver, average of up to two drivers, and
+   optional best-sector sum. The average falls back to the faster driver when
+   teammate delta exceeds the configured threshold.
+9. Plot each team as a percentage of the target team and save a usage CSV with
+   the source laps/sectors behind each plotted point.
+
+Example:
 
 ```bash
 python -m wostrategy.script.quali_performance_tracker \
@@ -131,177 +297,153 @@ python -m wostrategy.script.quali_performance_tracker \
   --track-evolution-fit exponential
 ```
 
-`--last-quali-part-only` changes only the final driver/team performance
-selection. Track evolution is still fitted from all eligible quali push laps
-across Q1/Q2/Q3, but each driver's presented result is selected only from the
-last qualifying part they entered. For example, a driver eliminated in Q2 uses
-only Q2 corrected laps for the final result even if a corrected Q1 lap is
-faster. A driver who enters Q3 but has no valid Q3 push lap is not allowed to
-fall back to a faster Q2 lap.
-
-`--allow-lap-time-only` keeps telemetry as the preferred clean-lap source. If
-telemetry loading fails, or the requested per-lap telemetry gap column is
-missing/empty, the tracker falls back to lap-time-only push-lap selection for
-that race. The final console output includes a brief line such as
-`Lap-time-only races: R6` or `Lap-time-only races: none`.
-
-For every plot set, the tracker also writes a `<output-stem>_usage.csv` file.
-The CSV includes the plotted result rows and a `SourceLaps` column showing
-exactly which driver, qualifying part, lap, or sector contributed to each
-`fastest`, `average`, and `best_sectors` point.
-
-Example local outputs from `temp/`:
+Full-range final tracker plots generated for the example above:
 
 <p>
-  <img src="../temp/quali_performance_tracker_2026_1-5_Mercedes_linear_fastest.png" alt="Qualifying performance fastest example" width="32%">
-  <img src="../temp/quali_performance_tracker_2026_1-5_Mercedes_linear_average.png" alt="Qualifying performance average example" width="32%">
-  <img src="../temp/quali_performance_tracker_2026_1-5_Mercedes_linear_best_sectors.png" alt="Qualifying performance best sectors example" width="32%">
+  <img src="doc/assets/quali_performance_tracker_2026_1-7_mercedes_exponential_fastest.png" alt="Qualifying performance fastest tracker example" width="32%">
+  <img src="doc/assets/quali_performance_tracker_2026_1-7_mercedes_exponential_average.png" alt="Qualifying performance average tracker example" width="32%">
+  <img src="doc/assets/quali_performance_tracker_2026_1-7_mercedes_exponential_best_sectors.png" alt="Qualifying performance best sectors tracker example" width="32%">
 </p>
 
-Race long-run performance:
+Push-lap track development is a diagnostic workflow, not the final qualifying
+tracker:
 
 ```bash
-python -m wostrategy.script.long_run_performance \
-  --year 2026 \
-  --race-range 4 7 \
-  --section R \
-  --reference-team Mercedes \
-  --track-evolution-rate-source quali \
-  --clean-mean-time-delta-seconds 3 \
-  --clean-mean-time-delta-behind-seconds 1
-```
-
-This workflow filters consecutive clean-air race runs, fits driver stint
-performance against tyre age, removes obvious stint-estimate outliers, corrects
-compound estimates to a shared tyre-life-zero reference lap, and aggregates to
-team performance by compound usage. With `--track-evolution-rate-source quali`,
-it runs or reuses the linear qualifying track-evolution rate for the same race
-and applies that rate to race stint estimates.
-
-Outputs are written to `--output-dir` (`temp/` by default), including filtered
-lap CSVs, fitted stint summaries, driver-estimate sanity diagnostics,
-track-evolution correction stats, team/compound reference estimates, final team
-performance CSVs, driver fit plots, and an aggregate long-run performance trend
-plot. Race tick labels include event names when FastF1 event metadata is
-available.
-
-Monte Carlo race performance review:
-
-```bash
-python -m wostrategy.script.race_performance_review \
+python -m wostrategy.script.push_lap_track_development \
   --year 2026 \
   --race 7 \
-  --session R \
-  --sample-count 50000 \
-  --sampling-strategy latin-hypercube \
-  --fuel-rate-bounds 0 0.10 \
-  --track-rate-bounds -0.05 0.05 \
-  --default-compound-degradation-bounds 0 0.50 \
-  --tyre-delta-bounds -1.0 1.0 \
-  --compound-delta-reference HARD \
-  --team-variation-fraction 0.5 \
-  --team-variation-absolute-min 0.005 \
-  --clean-lap-noise-sigma 0.5 \
-  --team-baseline-mode average-drivers
+  --section Q \
+  --new-tyre-only \
+  --allow-lap-time-only \
+  --track-evolution-fit exponential
 ```
 
-This workflow loads race laps with telemetry gap summaries, requires telemetry
-clean-air data, skips races only when the median driver wet/intermediate lap
-proportion exceeds the configured threshold, and runs a weighted Monte Carlo
-correction model. Each sample draws global fuel and track-evolution rates,
-compound degradation rates, compound lap-time deltas relative to a reference
-compound, and bounded team-compound degradation variation. Corrected clean laps
-are fitted to driver or team baselines, scored by global RMSE, and converted to
-Gaussian-like weights.
-Use `--limit-negative-track-correction` to clamp sampled track-evolution rates
-to non-negative values, preventing the correction from making later-race laps
-longer as the track ages.
+#### 2.1.3 Problems
 
-Weighting is configurable with `--weight-strategy`. The default `gaussian`
-keeps the original unnormalized weighting:
+- The track-evolution model is intentionally simple. It is currently one shared
+  linear or exponential curve, usually fitted on one dominant compound.
+- Driver execution error is not modelled directly.
+- A dominant compound is required for the track-evolution fit, so mixed-compound
+  sessions can be skipped or raise an error.
+- Lap-time-only fallback is useful for robustness but cannot identify traffic as
+  well as telemetry-derived clean-air filtering.
+- Sector correction scales each sector by the lap-level correction ratio; it is
+  not a sector-specific track-evolution model.
 
-```python
-weight = exp(-(rmse**2) / (2 * sigma**2))
-```
+### 2.2 Race performance tracker
 
-`best-rmse-relative` uses the best sampled RMSE as the likelihood reference and
-normalizes weights to sum to one:
+Race performance estimates corrected baseline race pace from clean-air race
+laps using weighted Monte Carlo sampling.
 
-```python
-best_rmse = min(rmse)
-weight = exp(-N_eff * (rmse**2 - best_rmse**2) / (2 * sigma**2))
-weight = weight / sum(weight)
-```
+#### 2.2.0 Limitation
 
-Use `--weight-effective-sample-count` to provide `N_eff`; by default it uses
-the clean lap count.
+- Fuel, tyre degradation, and track evolution are the main corrections, which are
+  coupled together.
+- Race performance must decouple all three from noisy race laps, which is much
+  harder than qualifying.
+- The current code does not use vehicle modelling. FastF1 public telemetry is
+  useful for gap and lap context, but it is not treated as sufficient here for a
+  full vehicle model.
+- F1 teams can do better with private car, tyre, fuel, and simulator data. This
+  project does not have those resources.
+- The current choice is a simple weighted Monte Carlo sampler, not a full
+  Bayesian MCMC model.
 
-Clean-air filtering uses telemetry-derived gap summaries. When physical track
-position samples are available, both ahead and behind gaps are derived from
-same-session-time car distances so lapping scenarios are handled consistently;
-otherwise the workflow falls back to the existing FastF1 driver-ahead stream.
-`--min-clean-air-laps` is interpreted as an inclusive minimum, so a four-lap
-block is accepted when the value is `4`.
+#### 2.2.1 Assumptions
 
-By default, clean laps are selected as consecutive clean-air chunks within a
-driver stint. Use `--treat-stint-as-whole` to instead group all clean laps from
-the same driver/stint into one run when the stint has at least
-`--min-clean-air-laps` clean laps in total.
+- Fuel correction, track evolution, and tyre degradation are sampled as linear
+  rates.
+- Fuel rate bounds are non-negative.
+- Track evolution can be sampled over configured bounds.
+  - Use `--limit-negative-track-correction` to clamp sampled track rates to
+  non-negative values.
+- Base tyre degradation is sampled per compound, with bounded team-compound
+  variation around the compound baseline.
+- Compound lap-time delta is estimated separately from degradation, relative to
+  `--compound-delta-reference` (`HARD` by default).
+- When track temperature is above
+  `--degradation-order-track-temperature`, the sampler enforces hot-track tyre
+  ordering: `SOFT >= MEDIUM >= HARD` for degradation and
+  `SOFT <= MEDIUM <= HARD` for lap-time deltas, where lower delta means faster.
+- Driver performance is not explicitly modelled. Baselines can be fitted at
+  driver level and then converted to teams by average driver, best driver, or
+  direct team baseline mode.
 
-Tyre-age correction defaults to `--tyre-age-mode stint`, so the first lap of a
-stint is treated as tyre age 0 even if the fitted tyre set was already used.
-Use `--tyre-age-mode overall` to instead use the session `TyreLife` value.
+#### 2.2.2 Algorithm
 
-Team corrected baseline pace can be reported by averaging driver baselines,
-taking the best corrected driver baseline, or fitting directly at team level.
-CSV outputs are written to `cache/race_performance_review/` by default,
-including clean laps, sampled parameters, degradation samples, baseline samples,
-team baseline samples, and weighted P10/median/P90 summaries. Compound deltas
-are saved separately from degradation slopes so tyre grip offsets and tyre-age
-degradation can be inspected independently.
+1. Load race laps with telemetry gap summaries. Missing required telemetry gap
+   columns skip the race and save diagnostic outputs.
+2. Skip wet races when median driver wet/intermediate lap proportion exceeds the
+   configured threshold.
+3. Prepare dry race laps: remove out/in laps, apply driver-relative quick-lap
+   threshold, calculate stint or overall tyre age, and create a fuel proxy from
+   laps remaining.
+4. Select clean-air laps using average gap to the car ahead and, when
+   configured, behind. Selection is either consecutive clean-air chunks or whole
+   clean stints.
+5. Draw Monte Carlo samples for fuel rate, track rate, compound degradation,
+   compound delta, and team-compound degradation variation. Latin hypercube
+   sampling is available and is the script default.
+6. Correct every clean lap:
 
-The workflow also saves `*_sample_diagnostics.csv` with quantitative fit-health
-metrics including best RMSE, weighted RMSE, RMSE P10/median/P90, total weight,
-effective sample size, effective sample fraction, and top-1% weight share.
+   ```text
+   corrected =
+     lap_time
+     - fuel_rate * fuel_proxy_delta
+     - track_rate * race_lap_delta
+     - team_compound_degradation * tyre_age_delta
+     - compound_delta
+   ```
 
-Use `--use-cached-monte-carlo` to reuse existing per-race Monte Carlo CSVs when
-they are present and calculate only missing races. Disable it with
-`--no-use-cached-monte-carlo` to rerun all requested races from scratch.
-When cached `*_baseline_pace.csv` and `*_sample_parameters.csv` are available,
-the requested `--team-baseline-mode` is rebuilt from cached driver/team baseline
-samples, so switching between `average-drivers` and `best-driver` does not
-require rerunning Monte Carlo.
+7. Fit corrected baselines by driver or team, score each sample by RMSE, and
+   convert RMSE to weights. The default `gaussian` weighting is unnormalized;
+   `best-rmse-relative` normalizes weights relative to the best RMSE sample.
+8. Save weighted P10/median/P90 summaries for fuel, track, compound
+   degradation, compound deltas, team-compound degradation, and baseline pace.
+9. Convert baselines to team pace and plot each team's weighted median as a
+   percentage of the reference team.
 
-When track temperature is above `--degradation-order-track-temperature`
-(`20` Celsius by default), the base compound degradation sampler enforces
-`SOFT >= MEDIUM >= HARD`. The same temperature gate also constrains compound
-lap-time deltas so the softer compound is quicker at the tyre-age reference:
-`SOFT <= MEDIUM <= HARD` because lower delta means faster. Use
-`--track-temperature` to provide the actual track temperature when the loaded
-lap dataframe does not contain a track temperature column.
-
-The same script also saves a race performance tracker plot to `temp/` by
-default. It plots each team's weighted median corrected race baseline as a
-percentage of `--reference-team`, using F1 team colors:
+Example:
 
 ```bash
 python -m wostrategy.script.race_performance_review \
   --year 2026 \
   --race "[1, 7]" \
+  --session R \
+  --sample-count 50000 \
+  --sampling-strategy latin-hypercube \
+  --fuel-rate-bounds 0 0.10 \
+  --track-rate-bounds -0.05 0.05 \
+  --limit-negative-track-correction \
+  --tyre-deg-bounds 0 0.50 \
+  --tyre-delta-bounds -1.0 1.0 \
+  --compound-delta-reference HARD \
+  --team-variation-fraction 0.5 \
+  --team-variation-absolute-min 0.005 \
+  --clean-lap-noise-sigma 0.5 \
+  --team-baseline-mode average-drivers \
   --reference-team Mercedes \
   --plot-output temp/race_performance_tracker_2026_1-7_mercedes.png
 ```
 
-The P10/P90 uncertainty band is not drawn by default. Add
-`--plot-uncertainty-band` when you want it on the tracker plot.
+Outputs are written to `cache/race_performance_review/` by default, including
+clean laps, sampled parameters, degradation samples, compound-delta samples,
+baseline samples, team baseline summaries, and sample diagnostics. Use
+`--use-cached-monte-carlo` to reuse existing per-race CSVs and calculate only
+missing races.
 
-Add `--plot-rmse-background` to shade each GP by the Monte Carlo
-`WeightedRMSESeconds` diagnostic: below 0.5s is green, 0.75s is orange, and
-1.0s or higher is red. A colorbar is added to the plot. If fewer than five
-teams have data for a GP, that GP is marked with a black striped background
-instead.
+Optional plot controls:
 
-Race performance weight prediction:
+- `--plot-uncertainty-band` draws P10/P90 bands.
+- `--plot-rmse-background` shades events by weighted RMSE diagnostics.
+
+Full-range final race tracker plot:
+
+<p>
+  <img src="doc/assets/race_performance_tracker_2026_1-7_mercedes_team_baseline.png" alt="Race performance baseline tracker example" width="70%">
+</p>
+
+Race performance weight prediction uses cached race-performance outputs:
 
 ```bash
 python -m wostrategy.script.race_performance_weight_predict \
@@ -314,16 +456,36 @@ python -m wostrategy.script.race_performance_weight_predict \
   --full-fuel-weight-kg 100
 ```
 
-This script uses cached `race_performance_review` outputs. For each requested
-race, it loads the selected team's corrected baseline pace, the weighted median
-fuel correction rate, and clean-lap fuel proxy coverage. It estimates race fuel
-burn as `full_fuel_weight_kg / total_race_laps`, converts the fuel correction
-rate to seconds per kilogram, then shifts the selected team's baseline by
-`seconds_per_kg * weight_delta_kg`. Positive weight delta means more weight and
-slower projected pace; negative means less weight and faster projected pace.
-The output plot draws all cached teams as solid lines and overlays the selected
-team's weight-adjusted projection as a dashed line, all as percentages of
-`--reference-team`. If `--reference-team` is omitted it defaults to the selected
-team, so that team's solid line is 100% and the dashed line shows the isolated
-weight effect. A selected-team projection CSV and a full plot-data CSV are saved
-beside the PNG.
+## 3. Corrections and additions
+
+Corrections to the requested outline:
+
+- Qualifying does not explicitly correct fuel or tyre degradation; it assumes
+  low fuel and usually filters to new-tyre push laps, then corrects track
+  evolution.
+- The qualifying track-evolution fit can use total session lap order or quick
+  lap number. It is not always strictly "total push lap vs lap time" unless that
+  option is selected.
+- The qualifying final comparison uses each driver's last qualifying part only
+  when `--last-quali-part-only` is enabled; this is a presentation/performance
+  selection step, not the track-evolution fit scope.
+- Race track correction is not forced to be negative in all configurations. The
+  script can sample negative and positive track rates, or clamp to non-negative
+  with `--limit-negative-track-correction`.
+- The race CLI uses `--tyre-deg-bounds` for the default compound degradation
+  bounds; `--default-compound-degradation-bounds` is not a valid option.
+- The race workflow does not currently implement vehicle modelling. It uses
+  telemetry mainly for clean-air gap summaries.
+- The Monte Carlo implementation is a weighted random/Latin-hypercube sampler,
+  not a full MCMC model.
+
+Additional points included:
+
+- Telemetry cache behavior and automatic stale-cache rebuilds.
+- Physical same-session-time clean-air gap summaries for both ahead and behind
+  cars, with fallback behavior.
+- Wet-session skip policies.
+- Tyre-age modes, team baseline modes, compound delta estimation, sample
+  diagnostics, cached Monte Carlo reuse, uncertainty bands, and RMSE plot
+  backgrounds.
+- Durable README plot links now point to `doc/assets/` instead of `temp/`.
