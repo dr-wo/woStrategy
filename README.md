@@ -1,10 +1,12 @@
 # woStrategy
 
-Formula 1 strategy analysis tools built on FastF1.
+woStrategy is an independent F1 race-performance analysis project built on
+public FastF1 data. It is currently a Monte Carlo-based performance tracker
+that aims to estimate underlying team pace by separating fuel effect, track
+evolution, tyre degradation, and race noise from lap-time data.
 
-This repository contains the strategy-analysis code that was previously living
-inside a Fast-F1 fork: session wrappers, long-stint preparation, pre-season test
-analysis, and plotting utilities.
+The next development focus is to extend this into race planning and strategy 
+decision-support tools.
 
 ## 0. Examples
 
@@ -13,21 +15,21 @@ analysis, and plotting utilities.
 ```bash
 python -m wostrategy.script.quali_performance_tracker \
   --year 2026 \
-  --race-range "[1, 7]" \
+  --race-range "[1, 8]" \
   --target-team Mercedes \
   --new-tyre-only \
   --last-quali-part-only \
   --allow-lap-time-only \
   --track-evolution-fit exponential \
-  --output doc/assets/quali_performance_tracker_2026_1-7_mercedes.png
+  --output doc/assets/quali_performance_tracker_2026_1-8_mercedes.png
 ```
 
 This command writes one plot per result type:
 
 <p>
-  <img src="doc/assets/quali_performance_tracker_2026_1-7_mercedes_exponential_fastest.png" alt="Qualifying performance fastest tracker example" width="32%">
-  <img src="doc/assets/quali_performance_tracker_2026_1-7_mercedes_exponential_average.png" alt="Qualifying performance average tracker example" width="32%">
-  <img src="doc/assets/quali_performance_tracker_2026_1-7_mercedes_exponential_best_sectors.png" alt="Qualifying performance best sectors tracker example" width="32%">
+  <img src="doc/assets/quali_performance_tracker_2026_1-8_mercedes_exponential_fastest.png" alt="Qualifying performance fastest tracker example" width="32%">
+  <img src="doc/assets/quali_performance_tracker_2026_1-8_mercedes_exponential_average.png" alt="Qualifying performance average tracker example" width="32%">
+  <img src="doc/assets/quali_performance_tracker_2026_1-8_mercedes_exponential_best_sectors.png" alt="Qualifying performance best sectors tracker example" width="32%">
 </p>
 
 ### 0.2 Race performance tracker
@@ -35,7 +37,7 @@ This command writes one plot per result type:
 ```bash
 python -m wostrategy.script.race_performance_review \
   --year 2026 \
-  --race "[1, 7]" \
+  --race "[1, 8]" \
   --session R \
   --sample-count 5000 \
   --sampling-strategy latin-hypercube \
@@ -50,13 +52,14 @@ python -m wostrategy.script.race_performance_review \
   --clean-lap-noise-sigma 0.5 \
   --team-baseline-mode average-drivers \
   --reference-team Mercedes \
-  --plot-output doc/assets/race_performance_tracker_2026_1-7_mercedes.png
+  --plot-output doc/assets/race_performance_tracker_2026_1-8_mercedes.png \
+  --use-cached-monte-carlo
 ```
 
 This command writes the final team-baseline tracker plot:
 
 <p>
-  <img src="doc/assets/race_performance_tracker_2026_1-7_mercedes_team_baseline.png" alt="Race performance baseline tracker example" width="70%">
+  <img src="doc/assets/race_performance_tracker_2026_1-8_mercedes_team_baseline.png" alt="Race performance baseline tracker example" width="70%">
 </p>
 
 ### 0.3 Pure lap-time trace
@@ -81,17 +84,17 @@ python -m wostrategy.script.pure_lap_time_trace \
 ```bash
 python -m wostrategy.script.race_performance_weight_predict \
   --year 2026 \
-  --race "1-7" \
+  --race "1-8" \
   --session R \
   --team Mercedes \
   --reference-team Mercedes \
   --weight-delta-kg 5 \
   --full-fuel-weight-kg 100 \
-  --output doc/assets/race_performance_weight_predict_2026_1-7_mercedes_plus5kg.png
+  --output doc/assets/race_performance_weight_predict_2026_1-8_mercedes_plus5kg.png
 ```
 
 <p>
-  <img src="doc/assets/race_performance_weight_predict_2026_1-7_mercedes_plus5kg.png" alt="Race performance weight prediction example" width="70%">
+  <img src="doc/assets/race_performance_weight_predict_2026_1-8_mercedes_plus5kg.png" alt="Race performance weight prediction example" width="70%">
 </p>
 
 ### 0.5 Tyre strategy summary
@@ -289,7 +292,7 @@ Example:
 ```bash
 python -m wostrategy.script.quali_performance_tracker \
   --year 2026 \
-  --race-range "[1, 7]" \
+  --race-range "[1, 8]" \
   --target-team Mercedes \
   --new-tyre-only \
   --last-quali-part-only \
@@ -300,9 +303,9 @@ python -m wostrategy.script.quali_performance_tracker \
 Full-range final tracker plots generated for the example above:
 
 <p>
-  <img src="doc/assets/quali_performance_tracker_2026_1-7_mercedes_exponential_fastest.png" alt="Qualifying performance fastest tracker example" width="32%">
-  <img src="doc/assets/quali_performance_tracker_2026_1-7_mercedes_exponential_average.png" alt="Qualifying performance average tracker example" width="32%">
-  <img src="doc/assets/quali_performance_tracker_2026_1-7_mercedes_exponential_best_sectors.png" alt="Qualifying performance best sectors tracker example" width="32%">
+  <img src="doc/assets/quali_performance_tracker_2026_1-8_mercedes_exponential_fastest.png" alt="Qualifying performance fastest tracker example" width="32%">
+  <img src="doc/assets/quali_performance_tracker_2026_1-8_mercedes_exponential_average.png" alt="Qualifying performance average tracker example" width="32%">
+  <img src="doc/assets/quali_performance_tracker_2026_1-8_mercedes_exponential_best_sectors.png" alt="Qualifying performance best sectors tracker example" width="32%">
 </p>
 
 Push-lap track development is a diagnostic workflow, not the final qualifying
@@ -408,7 +411,7 @@ Example:
 ```bash
 python -m wostrategy.script.race_performance_review \
   --year 2026 \
-  --race "[1, 7]" \
+  --race "[1, 8]" \
   --session R \
   --sample-count 50000 \
   --sampling-strategy latin-hypercube \
@@ -423,7 +426,8 @@ python -m wostrategy.script.race_performance_review \
   --clean-lap-noise-sigma 0.5 \
   --team-baseline-mode average-drivers \
   --reference-team Mercedes \
-  --plot-output temp/race_performance_tracker_2026_1-7_mercedes.png
+  --plot-output doc/assets/race_performance_tracker_2026_1-8_mercedes.png \
+  --use-cached-monte-carlo
 ```
 
 Outputs are written to `cache/race_performance_review/` by default, including
@@ -440,7 +444,7 @@ Optional plot controls:
 Full-range final race tracker plot:
 
 <p>
-  <img src="doc/assets/race_performance_tracker_2026_1-7_mercedes_team_baseline.png" alt="Race performance baseline tracker example" width="70%">
+  <img src="doc/assets/race_performance_tracker_2026_1-8_mercedes_team_baseline.png" alt="Race performance baseline tracker example" width="70%">
 </p>
 
 Race performance weight prediction uses cached race-performance outputs:
@@ -448,7 +452,7 @@ Race performance weight prediction uses cached race-performance outputs:
 ```bash
 python -m wostrategy.script.race_performance_weight_predict \
   --year 2026 \
-  --race "1-7" \
+  --race "1-8" \
   --session R \
   --team Mercedes \
   --reference-team Mercedes \

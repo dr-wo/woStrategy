@@ -45,7 +45,7 @@ DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "cache" / "race_performance_review"
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race": "8",
+    "race": "[1,8]",
     "session": "R",
     "sample_count": 80000,
     "sampling_strategy": LATIN_HYPERCUBE_SAMPLER,
@@ -62,7 +62,7 @@ SCRIPT_CONFIG = {
     "clean_lap_noise_sigma": 0.5,
     "weight_strategy": WEIGHT_STRATEGY_GAUSSIAN,
     "weight_effective_sample_count": 20,
-    "team_baseline_mode": TEAM_MODE_AVERAGE_DRIVERS,
+    "team_baseline_mode": TEAM_MODE_DIRECT_TEAM, #TEAM_MODE_BEST_DRIVER, TEAM_MODE_AVERAGE_DRIVERS, TEAM_MODE_DIRECT_TEAM
     "fuel_ref": 0.0,
     "race_lap_ref": None,
     "tyre_age_ref": 0.0,
@@ -72,7 +72,7 @@ SCRIPT_CONFIG = {
     "random_seed": None,
     "progress_interval": 10000,
     "quick_lap_threshold": 1.10,
-    "min_clean_air_laps": 3,
+    "min_clean_air_laps": 4,
     "treat_stint_as_whole": False,
     "clean_mean_time_delta_seconds": 2.5,
     "clean_mean_time_delta_behind_seconds": 1.0,
@@ -81,7 +81,7 @@ SCRIPT_CONFIG = {
     "output_dir": DEFAULT_OUTPUT_DIR,
     "telemetry_cache_dir": None,
     "force_refresh_telemetry": False,
-    "use_cached_monte_carlo": False,
+    "use_cached_monte_carlo": True,
     "test": False,
     "reference_team": "Mercedes",
     "plot": True,
