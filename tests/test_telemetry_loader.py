@@ -283,6 +283,60 @@ def test_summarize_lap_gap_metrics_derives_driver_behind_gap():
     assert ver["MeanDistanceToDriverBehind"] == 30.0
 
 
+def test_summarize_lap_gap_metrics_uses_smaller_direct_driver_ahead_gap():
+    telemetry = pd.DataFrame(
+        {
+            "Year": [2026, 2026, 2026, 2026],
+            "Round": [3, 3, 3, 3],
+            "SessionName": ["R", "R", "R", "R"],
+            "Driver": ["RUS", "RUS", "PIA", "PIA"],
+            "DriverNumber": ["63", "63", "81", "81"],
+            "DriverAhead": ["81", "81", "", ""],
+            "LapNumber": [7, 7, 7, 7],
+            "SessionTime": pd.to_timedelta([100.0, 101.0, 100.0, 101.0], unit="s"),
+            "Distance": [1000.0, 1100.0, 4000.0, 4100.0],
+            "Speed": [180.0, 180.0, 180.0, 180.0],
+            "TimeDeltaToDriverAhead": [0.8, 0.9, pd.NA, pd.NA],
+            "DistanceToDriverAhead": [40.0, 45.0, pd.NA, pd.NA],
+        }
+    )
+
+    result = summarize_lap_gap_metrics(telemetry)
+    rus = result.loc[result["Driver"] == "RUS"].iloc[0]
+
+    assert rus["MinTimeDeltaToDriverAhead"] == 0.8
+    assert round(rus["MeanTimeDeltaToDriverAhead"], 6) == 0.85
+    assert rus["MinDistanceToDriverAhead"] == 40.0
+    assert rus["MeanDistanceToDriverAhead"] == 42.5
+
+
+def test_summarize_lap_gap_metrics_uses_smaller_physical_ahead_gap():
+    telemetry = pd.DataFrame(
+        {
+            "Year": [2026, 2026, 2026],
+            "Round": [7, 7, 7],
+            "SessionName": ["R", "R", "R"],
+            "Driver": ["GAS", "VER", "BOT"],
+            "DriverNumber": ["10", "1", "77"],
+            "DriverAhead": ["1", "", ""],
+            "LapNumber": [50, 51, 49],
+            "SessionTime": pd.to_timedelta([100.0, 100.0, 100.0], unit="s"),
+            "Distance": [1000.0, 1200.0, 4000.0],
+            "Speed": [180.0, 180.0, 180.0],
+            "TimeDeltaToDriverAhead": [15.0, pd.NA, pd.NA],
+            "DistanceToDriverAhead": [800.0, pd.NA, pd.NA],
+        }
+    )
+
+    result = summarize_lap_gap_metrics(telemetry)
+    gas = result.loc[result["Driver"] == "GAS"].iloc[0]
+
+    assert gas["MinDistanceToDriverAhead"] == 200.0
+    assert gas["MeanDistanceToDriverAhead"] == 200.0
+    assert gas["MinTimeDeltaToDriverAhead"] == 4.0
+    assert gas["MeanTimeDeltaToDriverAhead"] == 4.0
+
+
 def test_summarize_lap_gap_metrics_derives_lapped_car_behind_gap_from_track_position():
     telemetry = pd.DataFrame(
         {

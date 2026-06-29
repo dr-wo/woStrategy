@@ -342,17 +342,40 @@ def summarize_lap_gap_metrics(
                 "MeanTimeDeltaToDriverAhead",
                 "MinDistanceToDriverAhead",
                 "MeanDistanceToDriverAhead",
+                "MinTimeDeltaToDriverBehind",
+                "MeanTimeDeltaToDriverBehind",
+                "MinDistanceToDriverBehind",
+                "MeanDistanceToDriverBehind",
             ]
         )
 
+    direct_summary = pd.DataFrame()
+    direct_required = {*group_columns, time_delta_column, distance_delta_column}
+    if not direct_required.difference(telemetry.columns):
+        direct_summary = _summarize_lap_gaps_from_driver_ahead(
+            telemetry,
+            group_columns=group_columns,
+            time_delta_column=time_delta_column,
+            distance_delta_column=distance_delta_column,
+        )
+
     physical_required = {*group_columns, "SessionTime", "Distance", "Speed"}
+    physical_summary = pd.DataFrame()
     if not physical_required.difference(telemetry.columns):
         physical_summary = _summarize_lap_gaps_from_track_position(
             telemetry,
             group_columns=group_columns,
         )
-        if not physical_summary.empty:
-            return physical_summary
+    if not direct_summary.empty:
+        if physical_summary.empty:
+            return direct_summary
+        return _combine_gap_summaries(
+            preferred=direct_summary,
+            fallback=physical_summary,
+            group_columns=group_columns,
+        )
+    if not physical_summary.empty:
+        return physical_summary
 
     required_columns = {*group_columns, time_delta_column, distance_delta_column}
     missing_columns = required_columns.difference(telemetry.columns)
@@ -360,6 +383,21 @@ def summarize_lap_gap_metrics(
         missing = ", ".join(sorted(missing_columns))
         raise ValueError(f"Telemetry is missing required columns: {missing}")
 
+    return _summarize_lap_gaps_from_driver_ahead(
+        telemetry,
+        group_columns=group_columns,
+        time_delta_column=time_delta_column,
+        distance_delta_column=distance_delta_column,
+    )
+
+
+def _summarize_lap_gaps_from_driver_ahead(
+    telemetry: pd.DataFrame,
+    *,
+    group_columns: tuple[str, ...],
+    time_delta_column: str,
+    distance_delta_column: str,
+) -> pd.DataFrame:
     summary_input = telemetry.loc[:, [*group_columns, time_delta_column, distance_delta_column]]
     ahead_summary = (
         summary_input.groupby(list(group_columns), dropna=False, as_index=False)
@@ -388,6 +426,32 @@ def summarize_lap_gap_metrics(
         on=list(group_columns),
         how="left",
     )
+
+
+def _combine_gap_summaries(
+    *,
+    preferred: pd.DataFrame,
+    fallback: pd.DataFrame,
+    group_columns: tuple[str, ...],
+) -> pd.DataFrame:
+    columns = [*group_columns, *_gap_summary_columns(group_columns)]
+    preferred = preferred.copy()
+    fallback = fallback.copy()
+    for column in columns:
+        if column not in preferred.columns:
+            preferred[column] = pd.NA
+        if column not in fallback.columns:
+            fallback[column] = pd.NA
+    preferred = preferred.loc[:, columns].set_index(list(group_columns))
+    fallback = fallback.loc[:, columns].set_index(list(group_columns))
+    combined = preferred.combine_first(fallback)
+    for column in _gap_summary_columns(group_columns):
+        combined[column] = pd.concat(
+            [preferred[column], fallback[column]],
+            axis=1,
+        ).min(axis=1, skipna=True)
+    combined = combined.reset_index()
+    return combined.loc[:, columns]
 
 
 def _summarize_lap_gap_behind(

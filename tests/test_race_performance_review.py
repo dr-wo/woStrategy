@@ -249,6 +249,37 @@ def test_monte_carlo_race_performance_review_can_treat_stint_as_whole():
     assert result.clean_laps.groupby(["Driver", "Stint"])["LongRunId"].nunique().eq(1).all()
 
 
+def test_monte_carlo_race_performance_review_excludes_non_green_track_status():
+    laps = _example_laps()
+    laps["TrackStatus"] = "1"
+    laps.loc[
+        (laps["Driver"] == "AAA") & (laps["LapNumber"] == 2),
+        "TrackStatus",
+    ] = "16"
+    laps.loc[
+        (laps["Driver"] == "AAB") & (laps["LapNumber"] == 3),
+        "TrackStatus",
+    ] = "671"
+
+    result = calculate_monte_carlo_race_performance_review(
+        laps,
+        min_clean_air_laps=2,
+        clean_mean_time_delta_seconds=3.0,
+        clean_mean_time_delta_behind_seconds=1.0,
+        quick_lap_threshold=1.05,
+        config=MonteCarloRacePerformanceConfig(sample_count=4, random_seed=18),
+    )
+
+    assert result != "Wet"
+    assert result.clean_laps["TrackStatus"].eq("1").all()
+    excluded = result.clean_laps.loc[
+        result.clean_laps["Driver"].isin(["AAA", "AAB"]),
+        ["Driver", "LapNumber"],
+    ]
+    assert ("AAA", 2) not in set(excluded.itertuples(index=False, name=None))
+    assert ("AAB", 3) not in set(excluded.itertuples(index=False, name=None))
+
+
 def test_monte_carlo_race_performance_review_uses_stint_tyre_age_by_default():
     laps = _example_laps()
     laps["TyreLife"] = laps["StintLapNumber"] + 3

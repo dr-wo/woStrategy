@@ -500,6 +500,11 @@ def _prepare_laps(
     dry_compound_names = tuple(c.upper() for c in dry_compounds)
     prepared = prepared.loc[prepared["Compound"].isin(dry_compound_names)]
     prepared = prepared.dropna(subset=["LapTime", "Driver", "Team", "Compound"]).copy()
+    if "TrackStatus" in prepared.columns:
+        track_status = prepared["TrackStatus"].astype("string").str.strip()
+        prepared["IsGreenTrackStatus"] = track_status.eq("1")
+    else:
+        prepared["IsGreenTrackStatus"] = True
     prepared["LapTimeSeconds"] = prepared["LapTime"].dt.total_seconds()
     prepared["IsOutLap"] = prepared["PitOutTime"].notna()
     prepared["IsInLap"] = prepared["PitInTime"].notna()
@@ -545,8 +550,12 @@ def _prepare_laps(
         np.where(has_gap_summary, np.inf, np.nan),
     )
     clean_air_mask = (
-        ahead_gap > clean_mean_time_delta_seconds
-    ) & prepared["IsQuickLap"] & ~prepared["IsOutLap"] & ~prepared["IsInLap"]
+        (ahead_gap > clean_mean_time_delta_seconds)
+        & prepared["IsQuickLap"]
+        & prepared["IsGreenTrackStatus"]
+        & ~prepared["IsOutLap"]
+        & ~prepared["IsInLap"]
+    )
     if clean_mean_time_delta_behind_seconds is not None:
         # Missing per-lap gap values can mean there was no relevant car ahead or
         # behind, which is clean air. Only allow that interpretation when some
