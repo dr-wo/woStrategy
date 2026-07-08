@@ -34,6 +34,7 @@ from wostrategy.plots.race_performance import (
     save_relative_team_pace_figures,
 )
 from wostrategy.tools import load_all_session_laps_with_telemetry_gap_summary
+from wostrategy.utils import expand_inclusive_race_range
 
 TEAM_MODE_BEST_DRIVER = "best-driver"
 TEAM_MODE_AVERAGE_DRIVERS = "average-drivers"
@@ -45,7 +46,7 @@ DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "cache" / "race_performance_review"
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race": "[1,8]",
+    "race_range": [1, 9],
     "session": "R",
     "sample_count": 80000,
     "sampling_strategy": LATIN_HYPERCUBE_SAMPLER,
@@ -1460,7 +1461,7 @@ def _progress_printer(race: int):
 
 def main() -> None:
     args = parse_args()
-    races = parse_race_selector(args.race)
+    races = parse_race_selector(args.race_range)
     run_result = run_race_performance_review(
         year=args.year,
         races=races,
@@ -1546,9 +1547,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--year", type=int, default=SCRIPT_CONFIG["year"])
     parser.add_argument(
+        "--race-range",
         "--race",
-        default=SCRIPT_CONFIG["race"],
-        help="Race number or inclusive range, for example '7' or '1-7'.",
+        dest="race_range",
+        default=SCRIPT_CONFIG["race_range"],
+        help="Inclusive race range as [<start>, <end>], e.g. '[1, 9]'.",
     )
     parser.add_argument("--session", default=SCRIPT_CONFIG["session"])
     parser.add_argument("--sample-count", type=int, default=SCRIPT_CONFIG["sample_count"])
@@ -1784,23 +1787,8 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def parse_race_selector(value: str) -> list[int]:
-    text = str(value).strip()
-    if text.startswith("[") and text.endswith("]"):
-        parts = [part.strip() for part in text[1:-1].split(",")]
-        if len(parts) != 2:
-            raise ValueError("--race bracket range must look like '[<start>, <end>]'.")
-        start, end = int(parts[0]), int(parts[1])
-        if end < start:
-            raise ValueError("--race range end must be >= start.")
-        return list(range(start, end + 1))
-    if "-" in text:
-        start_text, end_text = text.split("-", maxsplit=1)
-        start, end = int(start_text), int(end_text)
-        if end < start:
-            raise ValueError("--race range end must be >= start.")
-        return list(range(start, end + 1))
-    return [int(text)]
+def parse_race_selector(value: object) -> list[int]:
+    return expand_inclusive_race_range(value, argument_name="--race-range")
 
 
 def parse_bounds(values: tuple[float, float] | list[str] | tuple[str, str]) -> tuple[float, float]:

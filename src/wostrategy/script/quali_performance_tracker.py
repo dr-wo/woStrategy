@@ -40,13 +40,14 @@ from wostrategy.tools import (
     load_all_session_laps,
     load_all_session_laps_with_telemetry_gap_summary,
 )
+from wostrategy.utils import parse_inclusive_race_range
 
 LAP_TIME_ONLY = "LapTimeOnly"
 
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race_range": [1, 8],
+    "race_range": [1, 9],
     "target_team": "Mercedes",
     "quick_lap_threshold": 1.07,
     "clean_min_time_delta_seconds": None,
@@ -472,8 +473,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--year", type=int, default=SCRIPT_CONFIG["year"])
     parser.add_argument(
         "--race-range",
-        default=str(SCRIPT_CONFIG["race_range"]),
-        help="Inclusive race range, e.g. '[1, 8]'",
+        default=SCRIPT_CONFIG["race_range"],
+        help="Inclusive race range as [<start>, <end>], e.g. '[1, 9]'.",
     )
     parser.add_argument("--target-team", default=SCRIPT_CONFIG["target_team"])
     parser.add_argument(
@@ -577,14 +578,10 @@ def _parse_args() -> argparse.Namespace:
 
 
 def _parse_race_range(value: str) -> tuple[int, int]:
-    cleaned = value.strip().removeprefix("[").removesuffix("]")
-    parts = [part.strip() for part in cleaned.split(",")]
-    if len(parts) != 2:
-        raise argparse.ArgumentTypeError("race range must look like '[<start>, <end>]'")
-    start, end = int(parts[0]), int(parts[1])
-    if end < start:
-        raise argparse.ArgumentTypeError("race range end must be greater than or equal to start")
-    return start, end
+    try:
+        return parse_inclusive_race_range(value, argument_name="--race-range")
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc
 
 
 def _parse_optional_float(value: str) -> float | None:

@@ -10,7 +10,7 @@ from wostrategy.tools import load_all_session_laps
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race": 8,
+    "race": 9,
     "session": "R",
     "test": False,
     "output": None,

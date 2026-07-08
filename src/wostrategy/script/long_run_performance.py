@@ -24,7 +24,11 @@ from wostrategy.script.quali_performance_tracker import (
     run_quali_performance_tracker,
 )
 from wostrategy.tools import load_all_session_laps_with_telemetry_gap_summary
-from wostrategy.utils import match_team_name, reference_team_or_wcc_leader
+from wostrategy.utils import (
+    match_team_name,
+    parse_inclusive_race_range,
+    reference_team_or_wcc_leader,
+)
 
 
 SCRIPT_CONFIG = {
@@ -340,7 +344,11 @@ def _parse_args() -> argparse.Namespace:
         description="Analyze race long-run performance over a configurable race range."
     )
     parser.add_argument("--year", type=int, default=SCRIPT_CONFIG["year"])
-    parser.add_argument("--race-range", nargs=2, default=SCRIPT_CONFIG["race_range"])
+    parser.add_argument(
+        "--race-range",
+        default=SCRIPT_CONFIG["race_range"],
+        help="Inclusive race range as [<start>, <end>], e.g. '[4, 6]'.",
+    )
     parser.add_argument("--section", default=SCRIPT_CONFIG["section"])
     parser.add_argument(
         "--reference-team",
@@ -475,16 +483,8 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _parse_race_range(values: list[int | str]) -> tuple[int, int]:
-    if len(values) != 2:
-        raise ValueError("race_range must contain exactly [start_race, end_race].")
-    start_value = _parse_round(str(values[0]))
-    end_value = _parse_round(str(values[1]))
-    if not isinstance(start_value, int) or not isinstance(end_value, int):
-        raise ValueError("long-run race range currently requires numeric race numbers.")
-    if end_value < start_value:
-        raise ValueError("end race must be greater than or equal to start race.")
-    return start_value, end_value
+def _parse_race_range(values: list[int | str] | str) -> tuple[int, int]:
+    return parse_inclusive_race_range(values, argument_name="--race-range")
 
 
 def _parse_round(value: str) -> int | str:

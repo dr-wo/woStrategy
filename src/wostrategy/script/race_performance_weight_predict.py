@@ -17,7 +17,7 @@ from wostrategy.script.race_performance_review import (
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race": "1-7",
+    "race_range": [1, 7],
     "session": "R",
     "team": "Red Bull Racing",
     "reference_team": "Mercedes",
@@ -422,9 +422,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--year", type=int, default=SCRIPT_CONFIG["year"])
     parser.add_argument(
+        "--race-range",
         "--race",
-        default=SCRIPT_CONFIG["race"],
-        help="Race number or inclusive range, for example '7' or '1-7'.",
+        dest="race_range",
+        default=SCRIPT_CONFIG["race_range"],
+        help="Inclusive race range as [<start>, <end>], e.g. '[1, 7]'.",
     )
     parser.add_argument("--session", default=SCRIPT_CONFIG["session"])
     parser.add_argument("--team", default=SCRIPT_CONFIG["team"])
@@ -461,7 +463,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    races = parse_race_selector(args.race)
+    races = parse_race_selector(args.race_range)
     run_race_performance_weight_prediction(
         year=args.year,
         races=races,

@@ -9,6 +9,8 @@ import fastf1
 import pandas as pd
 from fastf1 import _api as fastf1_api
 
+from wostrategy.utils import parse_inclusive_race_range
+
 
 SESSION_COLUMNS = {
     "FP1": ("Practice 1",),
@@ -24,8 +26,7 @@ PROBE_SAMPLE_LAPS = "sample-laps"
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race_start": 1,
-    "race_end": 7,
+    "race_range": [1, 7],
     "output": None,
     "include_testing": False,
     "force_refresh": True,
@@ -39,8 +40,7 @@ SCRIPT_CONFIG = {
 def telemetry_availability_report(
     *,
     year: int,
-    race_start: int = SCRIPT_CONFIG["race_start"],
-    race_end: int | None = SCRIPT_CONFIG["race_end"],
+    race_range: list[int] | tuple[int, int] | str = SCRIPT_CONFIG["race_range"],
     output_path: str | Path | None = SCRIPT_CONFIG["output"],
     include_testing: bool = SCRIPT_CONFIG["include_testing"],
     force_refresh: bool = SCRIPT_CONFIG["force_refresh"],
@@ -59,8 +59,10 @@ def telemetry_availability_report(
     schedule = fastf1.get_event_schedule(year, include_testing=include_testing)
     schedule = schedule.loc[schedule["RoundNumber"].notna()].copy()
     schedule["RoundNumber"] = schedule["RoundNumber"].astype(int)
-    if race_end is None:
-        race_end = int(schedule["RoundNumber"].max())
+    race_start, race_end = parse_inclusive_race_range(
+        race_range,
+        argument_name="race range",
+    )
     if race_end < race_start:
         raise ValueError("race_end must be greater than or equal to race_start.")
 
@@ -347,8 +349,11 @@ def main() -> None:
     args = _parse_args()
     telemetry_availability_report(
         year=args.year,
-        race_start=args.race_start,
-        race_end=args.race_end,
+        race_range=_resolve_race_range_args(
+            race_range=args.race_range,
+            race_start=args.race_start,
+            race_end=args.race_end,
+        ),
         output_path=args.output,
         include_testing=args.include_testing,
         force_refresh=args.force_refresh,
@@ -365,15 +370,12 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--year", type=int, default=SCRIPT_CONFIG["year"])
     parser.add_argument(
-        "--race-start",
-        type=int,
-        default=SCRIPT_CONFIG["race_start"],
+        "--race-range",
+        default=SCRIPT_CONFIG["race_range"],
+        help="Inclusive race range as [<start>, <end>], e.g. '[1, 7]'.",
     )
-    parser.add_argument(
-        "--race-end",
-        type=int,
-        default=SCRIPT_CONFIG["race_end"],
-    )
+    parser.add_argument("--race-start", type=int, default=None, help=argparse.SUPPRESS)
+    parser.add_argument("--race-end", type=int, default=None, help=argparse.SUPPRESS)
     parser.add_argument("--output", type=Path, default=SCRIPT_CONFIG["output"])
     parser.add_argument(
         "--include-testing",
@@ -414,6 +416,19 @@ def _parse_args() -> argparse.Namespace:
         help="Print per-session failure details while scanning.",
     )
     return parser.parse_args()
+
+
+def _resolve_race_range_args(
+    *,
+    race_range: list[int] | tuple[int, int] | str,
+    race_start: int | None,
+    race_end: int | None,
+) -> list[int] | tuple[int, int] | str:
+    if race_start is None and race_end is None:
+        return race_range
+    if race_start is None or race_end is None:
+        raise ValueError("Legacy --race-start and --race-end must be provided together.")
+    return [race_start, race_end]
 
 
 if __name__ == "__main__":
