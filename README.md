@@ -144,6 +144,23 @@ The package depends on `fastf1`, `pandas`, `numpy`, and `matplotlib`. Your
 installed FastF1 version determines which events, timing columns, and telemetry
 formats are supported.
 
+`woStrategy` also depends on the sibling `woData` package for shared data-root
+and planner-facing cache path resolution. In the normal local checkout layout:
+
+```text
+dr-wo/
+  woData/
+  woStrategy/
+  woPlanner/
+```
+
+install development dependencies in dependency order:
+
+```bash
+python -m pip install -e ../woData
+python -m pip install -e .
+```
+
 For development and regression checks:
 
 ```bash
@@ -173,6 +190,16 @@ model -> algorithm -> analysis -> plots -> script
   telemetry enrichment, cache handling, and convenience loaders used by the
   analysis scripts.
 
+`woStrategy` remains analysis-only. Interactive GUI and race-planning user
+interface code lives in the sibling `woPlanner` project. The dependency
+direction is:
+
+```text
+woData -> woStrategy -> woPlanner
+```
+
+`woStrategy` may import `wodata`, but it must not import `woplanner`.
+
 Example API usage:
 
 ```python
@@ -200,8 +227,8 @@ The loading layer wraps FastF1 sessions and normalizes the data needed by the
 analysis scripts.
 
 - `load_session_laps` loads laps for one or more events and appends `Year`,
-  `Round`, `SessionName`, event metadata, session result rank, and per-lap
-  weather columns when FastF1 exposes them.
+  `Round`, `SessionName`, event metadata, session result rank, session start
+  position/grid position, and per-lap weather columns when FastF1 exposes them.
 - `load_session_laps_with_telemetry_gap_summary` additionally loads full
   per-lap telemetry, caches it under `cache/telemetry/` by default, and merges
   per-lap clean-air gap metrics back onto the lap dataframe.
@@ -210,7 +237,52 @@ analysis scripts.
 - Clean-air summaries include min/mean time and distance gaps to cars ahead and
   behind when the data are available.
 
-#### 2.0.1 Distance delta to time delta using interpolation
+#### 2.0.1 Planner-facing race lap cache
+
+`woPlanner` uses `woStrategy` through the narrow planner-facing helper:
+
+```python
+from wostrategy import load_race_laps_for_planner
+
+laps = load_race_laps_for_planner(
+    year=2026,
+    round_number=12,
+    session="R",
+    data_root="/path/to/woData",  # optional
+)
+```
+
+This helper loads full race laps and caches them through `woData` using:
+
+```text
+<DATA_ROOT>/wostrategy/planner_race_laps/schema_v1/year=<year>/round=<round>/session=<session>/laps.pkl
+```
+
+`DATA_ROOT` is resolved by `wodata.get_data_root`:
+
+1. explicit `data_root`
+2. `WODATA_ROOT`
+3. `WOSTRATEGY_DATA_ROOT`
+4. `Path.cwd() / "woData"`
+
+For repeatable local development, prefer setting the shared sibling data root:
+
+```bash
+export WODATA_ROOT=/path/to/dr-wo/woData
+```
+
+The old local fallback remains readable for compatibility:
+
+```text
+woStrategy/cache/planner_race_laps/<year>_<round>_<session>.pkl
+```
+
+Planner cache files are considered stale and rebuilt when they do not contain
+`SessionStartPosition`, because `woPlanner` uses that column for true grid/start
+ranking. If FastF1 does not expose grid data, `woPlanner` can still fall back to
+first-lap timing, but that is not treated as the preferred start order.
+
+#### 2.0.2 Distance delta to time delta using interpolation
 
 `DistanceInterpolationTimeDeltaEstimator` converts FastF1's
 `DistanceToDriverAhead` telemetry into `TimeDeltaToDriverAhead`.
@@ -231,7 +303,7 @@ nearest cars ahead and behind by circular track distance, which handles lapped
 traffic more consistently than inverting `DriverAhead`. If physical samples are
 not available, the older `DriverAhead`-based behind-gap fallback is still used.
 
-#### 2.0.2 Other data clean tools
+#### 2.0.3 Other data clean tools
 
 - Push-lap filtering rejects out laps, in laps, non-quick laps, non-clean laps,
   wet/intermediate sessions, and optionally used tyres.

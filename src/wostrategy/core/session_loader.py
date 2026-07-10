@@ -182,27 +182,44 @@ def _add_session_result_rank(session_laps: pd.DataFrame, session: object) -> pd.
 
     driver_column = _first_existing_column(results, ("Abbreviation", "Driver"))
     rank_column = _first_existing_column(results, ("Position", "ClassifiedPosition"))
-    if driver_column is None or rank_column is None:
+    grid_column = _first_existing_column(results, ("GridPosition", "Grid", "GridPos"))
+    if driver_column is None or (rank_column is None and grid_column is None):
         return session_laps
 
-    result_rank = results.loc[:, [driver_column, rank_column]].copy()
-    result_rank = result_rank.rename(
-        columns={
-            driver_column: "Driver",
-            rank_column: "SessionResultRank",
-        }
-    )
-    result_rank["SessionResultRank"] = pd.to_numeric(
-        result_rank["SessionResultRank"],
-        errors="coerce",
-    )
-    result_rank = result_rank.dropna(subset=["Driver", "SessionResultRank"])
+    source_columns = [driver_column]
+    if rank_column is not None:
+        source_columns.append(rank_column)
+    if grid_column is not None:
+        source_columns.append(grid_column)
+    result_rank = results.loc[:, source_columns].copy()
+    rename_columns = {driver_column: "Driver"}
+    if rank_column is not None:
+        rename_columns[rank_column] = "SessionResultRank"
+    if grid_column is not None:
+        rename_columns[grid_column] = "SessionStartPosition"
+    result_rank = result_rank.rename(columns=rename_columns)
+
+    for column in ("SessionResultRank", "SessionStartPosition"):
+        if column in result_rank.columns:
+            result_rank[column] = pd.to_numeric(result_rank[column], errors="coerce")
+
+    value_columns = [
+        column
+        for column in ("SessionResultRank", "SessionStartPosition")
+        if column in result_rank.columns
+    ]
+    result_rank = result_rank.dropna(subset=["Driver"])
+    result_rank = result_rank.dropna(subset=value_columns, how="all")
     if result_rank.empty:
         return session_laps
 
-    result_rank = result_rank.sort_values("SessionResultRank").drop_duplicates(
-        subset=["Driver"],
-        keep="first",
+    sort_columns = [
+        column
+        for column in ("SessionResultRank", "SessionStartPosition", "Driver")
+        if column in result_rank.columns
+    ]
+    result_rank = result_rank.sort_values(sort_columns).drop_duplicates(
+        subset=["Driver"], keep="first"
     )
     return session_laps.merge(result_rank, on="Driver", how="left")
 

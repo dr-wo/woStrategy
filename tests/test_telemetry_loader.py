@@ -449,6 +449,7 @@ def test_load_session_laps_with_telemetry_gap_summary_adds_session_result_rank(t
                 {
                     "Abbreviation": ["VER", "LEC"],
                     "Position": [1, 2],
+                    "GridPosition": [2, 1],
                 }
             ),
         )
@@ -463,6 +464,8 @@ def test_load_session_laps_with_telemetry_gap_summary_adds_session_result_rank(t
 
     ranks = result.set_index("Driver")["SessionResultRank"].to_dict()
     assert ranks == {"VER": 1, "LEC": 2}
+    grid = result.set_index("Driver")["SessionStartPosition"].to_dict()
+    assert grid == {"VER": 2, "LEC": 1}
 
 
 def test_load_session_laps_with_telemetry_gap_summary_adds_lap_weather(tmp_path):

@@ -2,6 +2,11 @@
 
 from .session import Session
 from .session_loader import load_session_laps, load_session_laps_with_telemetry_gap_summary
+from .planner_loader import (
+    get_legacy_planner_laps_cache_path,
+    get_planner_laps_cache_path,
+    load_race_laps_for_planner,
+)
 from .telemetry_loader import (
     DEFAULT_TELEMETRY_CACHE_DIR,
     DistanceInterpolationTimeDeltaEstimator,
@@ -20,7 +25,10 @@ __all__ = [
     "TelemetryDataLoader",
     "TimeDeltaEstimator",
     "get_session_telemetry_cache_path",
+    "get_legacy_planner_laps_cache_path",
+    "get_planner_laps_cache_path",
     "load_or_cache_session_telemetry",
+    "load_race_laps_for_planner",
     "load_session_laps",
     "load_session_laps_with_telemetry_gap_summary",
     "load_session_telemetry",
