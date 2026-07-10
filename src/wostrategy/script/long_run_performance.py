@@ -33,8 +33,8 @@ from wostrategy.utils import (
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race_range": [4, 4],
-    "section": "R",
+    "race_range": [9, 9],
+    "section": 1,
     # None means use the leading WCC team after race_range[1].
     "reference_team": None,
     "quick_lap_threshold": 1.10,
@@ -85,9 +85,10 @@ SCRIPT_CONFIG = {
     "min_fit_laps_after_outlier_filter": 4,
     "combined_loss_slope_outlier_sigma": 1.5,
     "combined_loss_slope_outlier_min_fits": 4,
-    # "quali" runs/loads a linear qualifying track evolution rate and feeds it
-    # into race long-run correction. "race" keeps the previous race-only fit.
-    "track_evolution_rate_source": "quali",
+    # "auto" uses a linear qualifying track evolution rate for race sessions
+    # and no external qualifying rate for practice sessions. "quali" forces
+    # the qualifying rate; "race" disables the external qualifying rate.
+    "track_evolution_rate_source": "auto",
     "quali_track_evolution_path": None,
     "quali_track_evolution_fit": LINEAR_TRACK_EVOLUTION_MODEL,
     "output_dir": "temp",
@@ -142,6 +143,7 @@ def run_long_run_performance_analysis(
         track_evolution_rate = _track_evolution_rate_for_race(
             year=year,
             race=race,
+            analyzed_session=section,
             source=track_evolution_rate_source,
             output_dir=output_dir,
             configured_path=quali_track_evolution_path,
@@ -354,7 +356,7 @@ def _parse_args() -> argparse.Namespace:
         "--reference-team",
         default=SCRIPT_CONFIG["reference_team"],
         help=(
-            "Team to use as 100% reference. Default: WCC leader after the "
+            "Team to use as 100%% reference. Default: WCC leader after the "
             "end race in --race-range."
         ),
     )
@@ -370,7 +372,7 @@ def _parse_args() -> argparse.Namespace:
         default=SCRIPT_CONFIG["quick_lap_threshold"],
         help=(
             "Only use race laps within this multiple of each driver's fastest "
-            "non-pit lap; 1.10 means 110%."
+            "non-pit lap; 1.10 means 110%%."
         ),
     )
     parser.add_argument(
@@ -444,11 +446,12 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--track-evolution-rate-source",
-        choices=("quali", "race"),
+        choices=("auto", "quali", "race"),
         default=SCRIPT_CONFIG["track_evolution_rate_source"],
         help=(
-            "Use a linear quali track evolution rate in race correction, or use "
-            "race-only correction with no external track rate."
+            "auto uses quali track evolution for race sessions and no external "
+            "quali rate for practice sessions; quali forces the external rate; "
+            "race disables it."
         ),
     )
     parser.add_argument(
@@ -515,6 +518,7 @@ def _track_evolution_rate_for_race(
     *,
     year: int,
     race: int | str,
+    analyzed_session: int | str,
     source: str,
     output_dir: Path,
     configured_path: str | Path | None,
@@ -524,10 +528,14 @@ def _track_evolution_rate_for_race(
     force_refresh_telemetry: bool,
     test: bool,
 ) -> float | None:
+    if source == "auto":
+        source = "quali" if _is_race_session(analyzed_session) else "race"
     if source == "race":
         return None
     if source != "quali":
-        raise ValueError("track_evolution_rate_source must be 'quali' or 'race'.")
+        raise ValueError(
+            "track_evolution_rate_source must be 'auto', 'quali', or 'race'."
+        )
 
     path = (
         Path(configured_path)
@@ -586,6 +594,10 @@ def _track_evolution_rate_for_race(
         f"Race {race}: saved quali track evolution rate {rate:.4f}s/lap to {path}"
     )
     return rate
+
+
+def _is_race_session(session: int | str) -> bool:
+    return str(session).strip().upper() in {"R", "RACE"}
 
 
 def _track_evolution_summary_row(
