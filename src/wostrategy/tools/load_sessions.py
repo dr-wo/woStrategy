@@ -16,6 +16,7 @@ def load_all_session_laps(
     rounds: list[Union[int, str]],
     session_names: list[Union[int, str]],
     test: bool = False,
+    enrich_session=None,
     **kwargs,
 ) -> pd.DataFrame:
     """Load all laps for the requested sessions without long-stint filtering."""
@@ -30,6 +31,7 @@ def load_all_session_laps(
             test=test,
             **kwargs,
         ),
+        enrich_session=enrich_session,
         log_label="Loading full laps for",
         skip_label="Skipping full laps for",
         empty_columns=["Year", "Round", "SessionName", "Driver", "Team"],

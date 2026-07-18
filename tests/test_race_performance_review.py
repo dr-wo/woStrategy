@@ -18,6 +18,7 @@ from wostrategy.script.race_performance_review import relative_team_pace_rows
 from wostrategy.script.race_performance_review import is_no_clean_laps_error
 from wostrategy.script.race_performance_review import load_cached_monte_carlo_outputs
 from wostrategy.script.race_performance_review import format_effective_sample_size
+from wostrategy.script.race_performance_review import pit_loss_split_summary
 from wostrategy.script.race_performance_review import sample_diagnostics_summary
 from wostrategy.plots.race_performance import plot_relative_team_pace
 from wostrategy.analysis.long_run_performance import (
@@ -68,6 +69,35 @@ def test_monte_carlo_race_performance_review_returns_sample_outputs():
         "baseline_pace",
     }
     assert result.summaries["fuel_rate"]["Median"].notna().all()
+
+
+def test_pit_loss_split_summary_uses_sector_losses_against_driver_baseline():
+    laps = pd.DataFrame(
+        {
+            "Driver": ["AAA", "AAA", "AAA", "AAA", "BBB", "BBB"],
+            "LapNumber": [1, 2, 3, 4, 1, 2],
+            "PitInTime": [pd.NaT, pd.Timedelta(seconds=120), pd.NaT, pd.NaT, pd.NaT, pd.NaT],
+            "PitOutTime": [pd.NaT, pd.NaT, pd.Timedelta(seconds=180), pd.NaT, pd.NaT, pd.NaT],
+            "Sector1Time": pd.to_timedelta([20.0, 20.0, 34.0, 20.0, 21.0, 21.0], unit="s"),
+            "Sector3Time": pd.to_timedelta([25.0, 30.0, 25.0, 25.0, 26.0, 26.0], unit="s"),
+            "TrackStatus": ["1"] * 6,
+        }
+    )
+
+    summary = pit_loss_split_summary(laps)
+
+    assert summary.to_dict("records") == [
+        {
+            "TrackStatusType": "normal",
+            "SampleCount": 1,
+            "PitInS3LossMedianSeconds": 5.0,
+            "PitOutS1LossMedianSeconds": 14.0,
+            "PitTotalLossMedianSeconds": 19.0,
+            "PitInS3LossMeanSeconds": 5.0,
+            "PitOutS1LossMeanSeconds": 14.0,
+            "PitTotalLossMeanSeconds": 19.0,
+        }
+    ]
 
 
 def test_best_rmse_relative_weight_strategy_normalizes_weights():

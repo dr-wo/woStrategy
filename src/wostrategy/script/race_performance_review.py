@@ -46,7 +46,7 @@ DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "cache" / "race_performance_review"
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race_range": [1, 9],
+    "race_range": [8, 8],
     "session": "R",
     "sample_count": 80000,
     "sampling_strategy": LATIN_HYPERCUBE_SAMPLER,
@@ -82,7 +82,7 @@ SCRIPT_CONFIG = {
     "output_dir": DEFAULT_OUTPUT_DIR,
     "telemetry_cache_dir": None,
     "force_refresh_telemetry": False,
-    "use_cached_monte_carlo": True,
+    "use_cached_monte_carlo": False,
     "test": False,
     "reference_team": "Mercedes",
     "plot": True,
@@ -376,10 +376,14 @@ def run_race_performance_review(
         race_results[race] = result
         race_event_names[race] = event_name_from_laps(result.all_laps)
         print_clean_lap_summary(result.clean_laps)
+        pit_loss_summary = pit_loss_split_summary(result.all_laps)
         sample_diagnostics = sample_diagnostics_summary(result.sample_parameters)
         race_sample_diagnostics[race] = sample_diagnostics
         print_sample_diagnostics(result.sample_parameters, sample_diagnostics)
         print_parameter_summaries(result)
+        if not pit_loss_summary.empty:
+            print("\nPit loss split summary")
+            print(pit_loss_summary.to_string(index=False))
 
         team_baseline_samples = team_baseline_samples_from_result(
             result,
@@ -397,6 +401,7 @@ def run_race_performance_review(
                 team_baseline_samples=team_baseline_samples,
                 team_baseline_summary=team_baseline_summary,
                 sample_diagnostics=sample_diagnostics,
+                pit_loss_summary=pit_loss_summary,
                 year=year,
                 race=race,
                 session=session,
@@ -1268,6 +1273,7 @@ def save_race_outputs(
     team_baseline_samples: pd.DataFrame,
     team_baseline_summary: pd.DataFrame,
     sample_diagnostics: pd.DataFrame,
+    pit_loss_summary: pd.DataFrame,
     year: int,
     race: int,
     session: str,
@@ -1285,6 +1291,7 @@ def save_race_outputs(
         f"{prefix}_team_baseline_samples.csv": team_baseline_samples,
         f"{prefix}_team_baseline_summary.csv": team_baseline_summary,
         f"{prefix}_sample_diagnostics.csv": sample_diagnostics,
+        f"{prefix}_pit_loss_summary.csv": pit_loss_summary,
     }
     outputs.update(
         {
@@ -1298,6 +1305,179 @@ def save_race_outputs(
         frame.to_csv(path, index=False)
         paths.append(path)
     return paths
+
+
+def pit_loss_split_summary(laps: pd.DataFrame) -> pd.DataFrame:
+    required = {
+        "Driver",
+        "LapNumber",
+        "PitInTime",
+        "PitOutTime",
+        "Sector1Time",
+        "Sector3Time",
+    }
+    if laps.empty or not required.issubset(laps.columns):
+        return _empty_pit_loss_summary()
+
+    data = laps.copy()
+    data["LapNumber"] = pd.to_numeric(data["LapNumber"], errors="coerce")
+    data["Sector1Seconds"] = _timedelta_seconds(data["Sector1Time"])
+    data["Sector3Seconds"] = _timedelta_seconds(data["Sector3Time"])
+    data["IsPitIn"] = data["PitInTime"].notna()
+    data["IsPitOut"] = data["PitOutTime"].notna()
+    if "TrackStatus" in data.columns:
+        data["TrackStatusType"] = data["TrackStatus"].map(_pit_track_status_type)
+    else:
+        data["TrackStatusType"] = "normal"
+
+    sector_baseline = _pit_sector_baseline(data)
+    samples = []
+    for _, out_lap in data.loc[data["IsPitOut"]].iterrows():
+        driver = str(out_lap["Driver"])
+        lap_number = out_lap["LapNumber"]
+        if pd.isna(lap_number):
+            continue
+        previous = data.loc[
+            (data["Driver"].astype(str) == driver)
+            & (pd.to_numeric(data["LapNumber"], errors="coerce") == int(lap_number) - 1)
+            & data["IsPitIn"]
+        ]
+        if previous.empty:
+            continue
+        in_lap = previous.iloc[0]
+        in_sector = pd.to_numeric(pd.Series([in_lap.get("Sector3Seconds")]), errors="coerce").iloc[0]
+        out_sector = pd.to_numeric(pd.Series([out_lap.get("Sector1Seconds")]), errors="coerce").iloc[0]
+        if pd.isna(in_sector) or pd.isna(out_sector):
+            continue
+        status = _combine_pit_status(
+            str(in_lap.get("TrackStatusType") or "normal"),
+            str(out_lap.get("TrackStatusType") or "normal"),
+        )
+        samples.append(
+            {
+                "TrackStatusType": status,
+                "Driver": driver,
+                "PitInLap": int(in_lap["LapNumber"]),
+                "PitOutLap": int(out_lap["LapNumber"]),
+                "PitInS3LossSeconds": max(
+                    0.0,
+                    float(in_sector)
+                    - _sector_baseline_value(sector_baseline, driver=driver, sector="S3"),
+                ),
+                "PitOutS1LossSeconds": max(
+                    0.0,
+                    float(out_sector)
+                    - _sector_baseline_value(sector_baseline, driver=driver, sector="S1"),
+                ),
+            }
+        )
+
+    sample_data = pd.DataFrame(samples)
+    if sample_data.empty:
+        return _empty_pit_loss_summary()
+    rows = []
+    for status, group in sample_data.groupby("TrackStatusType", sort=True):
+        in_loss = pd.to_numeric(group["PitInS3LossSeconds"], errors="coerce").dropna()
+        out_loss = pd.to_numeric(group["PitOutS1LossSeconds"], errors="coerce").dropna()
+        if in_loss.empty or out_loss.empty:
+            continue
+        total = in_loss.reset_index(drop=True) + out_loss.reset_index(drop=True)
+        rows.append(
+            {
+                "TrackStatusType": status,
+                "SampleCount": int(len(group)),
+                "PitInS3LossMedianSeconds": float(in_loss.median()),
+                "PitOutS1LossMedianSeconds": float(out_loss.median()),
+                "PitTotalLossMedianSeconds": float(total.median()),
+                "PitInS3LossMeanSeconds": float(in_loss.mean()),
+                "PitOutS1LossMeanSeconds": float(out_loss.mean()),
+                "PitTotalLossMeanSeconds": float(total.mean()),
+            }
+        )
+    return pd.DataFrame(rows, columns=_empty_pit_loss_summary().columns)
+
+
+def _empty_pit_loss_summary() -> pd.DataFrame:
+    return pd.DataFrame(
+        columns=[
+            "TrackStatusType",
+            "SampleCount",
+            "PitInS3LossMedianSeconds",
+            "PitOutS1LossMedianSeconds",
+            "PitTotalLossMedianSeconds",
+            "PitInS3LossMeanSeconds",
+            "PitOutS1LossMeanSeconds",
+            "PitTotalLossMeanSeconds",
+        ]
+    )
+
+
+def _pit_sector_baseline(data: pd.DataFrame) -> pd.DataFrame:
+    clean = data.loc[
+        (~data["IsPitIn"])
+        & (~data["IsPitOut"])
+        & data["TrackStatusType"].eq("normal")
+    ].copy()
+    rows = []
+    for sector, column in (("S1", "Sector1Seconds"), ("S3", "Sector3Seconds")):
+        driver_rows = (
+            clean.dropna(subset=["Driver", column])
+            .groupby("Driver", as_index=False)[column]
+            .median()
+            .rename(columns={column: "SectorBaselineSeconds"})
+        )
+        driver_rows["Sector"] = sector
+        rows.append(driver_rows)
+    if not rows:
+        return pd.DataFrame(columns=["Driver", "Sector", "SectorBaselineSeconds"])
+    return pd.concat(rows, ignore_index=True)
+
+
+def _sector_baseline_value(
+    sector_baseline: pd.DataFrame,
+    *,
+    driver: str,
+    sector: str,
+) -> float:
+    rows = sector_baseline.loc[
+        (sector_baseline["Driver"].astype(str) == str(driver))
+        & sector_baseline["Sector"].astype(str).eq(sector)
+    ]
+    if not rows.empty:
+        return float(rows.iloc[0]["SectorBaselineSeconds"])
+    fallback = sector_baseline.loc[sector_baseline["Sector"].astype(str).eq(sector)]
+    if fallback.empty:
+        return 0.0
+    return float(pd.to_numeric(fallback["SectorBaselineSeconds"], errors="coerce").median())
+
+
+def _pit_track_status_type(value: object) -> str:
+    status = str(value).upper()
+    if status in {"", "<NA>", "NAN", "NONE", "1"}:
+        return "normal"
+    if "VSC" in status or "VIRTUAL" in status:
+        return "sc_vsc"
+    if "SAFETY" in status or " SC" in f" {status}" or status == "SC":
+        return "sc_vsc"
+    codes = {char for char in status if char.isdigit()}
+    if codes.intersection({"4", "6", "7"}):
+        return "sc_vsc"
+    return "normal"
+
+
+def _combine_pit_status(in_status: str, out_status: str) -> str:
+    if "sc_vsc" in {in_status, out_status}:
+        return "sc_vsc"
+    return "normal"
+
+
+def _timedelta_seconds(values: pd.Series) -> pd.Series:
+    if pd.api.types.is_timedelta64_dtype(values):
+        return values.dt.total_seconds()
+    numeric = pd.to_numeric(values, errors="coerce")
+    if numeric.notna().any():
+        return numeric
+    return pd.to_timedelta(values, errors="coerce").dt.total_seconds()
 
 
 def print_clean_lap_summary(clean_laps: pd.DataFrame) -> None:
