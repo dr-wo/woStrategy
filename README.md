@@ -56,6 +56,23 @@ python -m wostrategy.script.race_performance_review \
   --use-cached-monte-carlo
 ```
 
+Race-scoped lap-compound corrections can be supplied when public timing data
+contains a known stint-compound issue:
+
+```bash
+python -m wostrategy.script.race_performance_review \
+  --year 2026 \
+  --race "[1, 10]" \
+  --session R \
+  --lap-compound-overrides-json '[{"race":10,"driver":"ANT","lap_range":[19,44],"compound":"HARD"}]' \
+  --use-cached-monte-carlo
+```
+
+Each override must name the race, driver, lap range, and corrected compound.
+Only matching races apply the correction and require matching Monte Carlo cache
+metadata. Races without a matching override can still reuse existing cached
+Monte Carlo results.
+
 This command writes the final team-baseline tracker plot:
 
 <p>
@@ -506,7 +523,9 @@ Outputs are written to `cache/race_performance_review/` by default, including
 clean laps, sampled parameters, degradation samples, compound-delta samples,
 baseline samples, team baseline summaries, and sample diagnostics. Use
 `--use-cached-monte-carlo` to reuse existing per-race CSVs and calculate only
-missing races.
+missing races. Races with lap-compound overrides write metadata alongside the
+CSV outputs, so stale cached outputs generated without the same correction are
+not reused for that race.
 
 Optional plot controls:
 

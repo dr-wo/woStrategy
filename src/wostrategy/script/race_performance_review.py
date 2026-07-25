@@ -46,7 +46,7 @@ DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "cache" / "race_performance_review"
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race_range": [8, 8],
+    "race_range": [1, 10],
     "session": "R",
     "sample_count": 80000,
     "sampling_strategy": LATIN_HYPERCUBE_SAMPLER,
@@ -79,10 +79,13 @@ SCRIPT_CONFIG = {
     "clean_mean_time_delta_behind_seconds": 1.0,
     "wet_lap_proportion_skip_threshold": 0.5,
     "dry_compounds": ("SOFT", "MEDIUM", "HARD"),
+    "lap_compound_overrides_json": None,
+    "lap_compound_overrides_json": "[{\"race\":10,\"driver\":\"ANT\",\"lap_range\":[19,44],\"compound\":\"HARD\"}]",
     "output_dir": DEFAULT_OUTPUT_DIR,
     "telemetry_cache_dir": None,
+    "force_refresh_session_cache": False,
     "force_refresh_telemetry": False,
-    "use_cached_monte_carlo": False,
+    "use_cached_monte_carlo": True,
     "test": False,
     "reference_team": "Mercedes",
     "plot": True,
@@ -129,8 +132,10 @@ def run_race_performance_review(
     clean_mean_time_delta_behind_seconds: float | None,
     wet_lap_proportion_skip_threshold: float,
     dry_compounds: tuple[str, ...],
+    lap_compound_overrides: list[dict[str, object]],
     output_dir: str | Path,
     telemetry_cache_dir: str | Path | None,
+    force_refresh_session_cache: bool,
     force_refresh_telemetry: bool,
     use_cached_monte_carlo: bool,
     test: bool,
@@ -158,6 +163,38 @@ def run_race_performance_review(
     range_summary_team_compound_degradation_frames: list[pd.DataFrame] = []
 
     baseline_group = "team" if team_baseline_mode == TEAM_MODE_DIRECT_TEAM else "driver"
+    base_cache_metadata = monte_carlo_cache_metadata(
+        sample_count=sample_count,
+        sampling_strategy=sampling_strategy,
+        fuel_rate_bounds=fuel_rate_bounds,
+        track_rate_bounds=track_rate_bounds,
+        limit_negative_track_correction=limit_negative_track_correction,
+        default_compound_degradation_bounds=default_compound_degradation_bounds,
+        compound_degradation_bounds=compound_degradation_bounds,
+        default_compound_delta_bounds=default_compound_delta_bounds,
+        compound_delta_bounds=compound_delta_bounds,
+        compound_delta_reference=compound_delta_reference,
+        team_variation_fraction=team_variation_fraction,
+        team_variation_absolute_min=team_variation_absolute_min,
+        clean_lap_noise_sigma=clean_lap_noise_sigma,
+        weight_strategy=weight_strategy,
+        weight_effective_sample_count=weight_effective_sample_count,
+        team_baseline_mode=team_baseline_mode,
+        baseline_group=baseline_group,
+        fuel_ref=fuel_ref,
+        race_lap_ref=race_lap_ref,
+        tyre_age_ref=tyre_age_ref,
+        tyre_age_mode=tyre_age_mode,
+        track_temperature=track_temperature,
+        degradation_order_track_temperature=degradation_order_track_temperature,
+        quick_lap_threshold=quick_lap_threshold,
+        min_clean_air_laps=min_clean_air_laps,
+        treat_stint_as_whole=treat_stint_as_whole,
+        clean_mean_time_delta_seconds=clean_mean_time_delta_seconds,
+        clean_mean_time_delta_behind_seconds=clean_mean_time_delta_behind_seconds,
+        wet_lap_proportion_skip_threshold=wet_lap_proportion_skip_threshold,
+        dry_compounds=dry_compounds,
+    )
     print("Monte Carlo race performance review")
     print(f"Year: {year}")
     print(f"Races: {races}")
@@ -201,19 +238,31 @@ def run_race_performance_review(
         "Wet-race skip threshold: "
         f"median driver wet proportion > {wet_lap_proportion_skip_threshold}"
     )
+    if lap_compound_overrides:
+        print(f"Lap compound overrides: {lap_compound_overrides}")
     clean_lap_mode = "whole stint" if treat_stint_as_whole else "consecutive chunks"
     print(f"Clean-lap selection mode: {clean_lap_mode}")
+    print(f"Force refresh FastF1 session cache: {force_refresh_session_cache}")
     print(f"Use cached Monte Carlo results: {use_cached_monte_carlo}")
     print("Missing telemetry gap columns: skip race and save empty diagnostic result")
 
     for race_index, race in enumerate(races):
-        if use_cached_monte_carlo:
+        race_lap_compound_overrides = lap_compound_overrides_for_race(
+            lap_compound_overrides,
+            race=race,
+        )
+        cache_metadata = dict(base_cache_metadata)
+        cache_metadata["lap_compound_overrides"] = race_lap_compound_overrides
+        if use_cached_monte_carlo and not force_refresh_session_cache:
             cached = load_cached_monte_carlo_outputs(
                 year=year,
                 race=race,
                 session=session,
                 output_dir=output_dir,
                 team_baseline_mode=team_baseline_mode,
+                expected_metadata=(
+                    cache_metadata if race_lap_compound_overrides else None
+                ),
             )
             if cached is not None:
                 race_team_baseline_summaries[race] = cached["team_baseline_summary"]
@@ -260,12 +309,14 @@ def run_race_performance_review(
             rounds=[race],
             session_names=[session],
             test=test,
+            force_refresh_session_cache=force_refresh_session_cache,
             telemetry_cache_dir=telemetry_cache_dir,
             force_refresh_telemetry=force_refresh_telemetry,
         )
         if laps.empty:
             print(f"{year} race {race} {session}: no laps loaded, skipping.")
             continue
+        laps = apply_lap_compound_overrides(laps, race_lap_compound_overrides)
         wet_lap_summary = wet_lap_proportion_by_driver(laps)
         print_wet_lap_summary(wet_lap_summary)
         missing_gap_columns = missing_clean_gap_columns(
@@ -406,6 +457,7 @@ def run_race_performance_review(
                 race=race,
                 session=session,
                 output_dir=output_dir,
+                metadata=cache_metadata,
             )
         )
 
@@ -790,6 +842,16 @@ def cached_output_path(
     return output_dir / f"race_performance_{year}_{race}_{session}_{suffix}.csv"
 
 
+def cached_metadata_path(
+    *,
+    output_dir: Path,
+    year: int,
+    race: int,
+    session: str,
+) -> Path:
+    return output_dir / f"race_performance_{year}_{race}_{session}_metadata.json"
+
+
 def load_cached_monte_carlo_outputs(
     *,
     year: int,
@@ -797,7 +859,18 @@ def load_cached_monte_carlo_outputs(
     session: str,
     output_dir: Path,
     team_baseline_mode: str,
+    expected_metadata: dict[str, object] | None = None,
 ) -> dict[str, object] | None:
+    if expected_metadata is not None:
+        metadata_path = cached_metadata_path(
+            output_dir=output_dir,
+            year=year,
+            race=race,
+            session=session,
+        )
+        if not cached_metadata_matches(metadata_path, expected_metadata):
+            return None
+
     team_summary_path = cached_output_path(
         output_dir=output_dir,
         year=year,
@@ -955,6 +1028,40 @@ def load_cached_monte_carlo_outputs(
         "paths": paths,
         **degradation_outputs,
     }
+
+
+def cached_metadata_matches(
+    metadata_path: Path,
+    expected_metadata: dict[str, object],
+) -> bool:
+    if not metadata_path.exists():
+        return False
+    try:
+        with metadata_path.open(encoding="utf-8") as file:
+            actual_metadata = json.load(file)
+    except (OSError, json.JSONDecodeError):
+        return False
+    return _json_normalized(actual_metadata) == _json_normalized(expected_metadata)
+
+
+def monte_carlo_cache_metadata(
+    **kwargs: object,
+) -> dict[str, object]:
+    metadata = {"cache_schema": 1}
+    metadata.update(kwargs)
+    return _json_normalized(metadata)
+
+
+def _json_normalized(value: object) -> object:
+    if isinstance(value, dict):
+        return {str(key): _json_normalized(value[key]) for key in sorted(value)}
+    if isinstance(value, tuple):
+        return [_json_normalized(item) for item in value]
+    if isinstance(value, list):
+        return [_json_normalized(item) for item in value]
+    if isinstance(value, Path):
+        return str(value)
+    return value
 
 
 def relative_team_pace_rows(
@@ -1278,6 +1385,7 @@ def save_race_outputs(
     race: int,
     session: str,
     output_dir: Path,
+    metadata: dict[str, object] | None = None,
 ) -> list[Path]:
     prefix = f"race_performance_{year}_{race}_{session}"
     outputs = {
@@ -1304,6 +1412,17 @@ def save_race_outputs(
         path = output_dir / filename
         frame.to_csv(path, index=False)
         paths.append(path)
+    if metadata is not None:
+        metadata_path = cached_metadata_path(
+            output_dir=output_dir,
+            year=year,
+            race=race,
+            session=session,
+        )
+        with metadata_path.open("w", encoding="utf-8") as file:
+            json.dump(_json_normalized(metadata), file, indent=2, sort_keys=True)
+            file.write("\n")
+        paths.append(metadata_path)
     return paths
 
 
@@ -1683,8 +1802,12 @@ def main() -> None:
         ),
         wet_lap_proportion_skip_threshold=args.wet_lap_proportion_skip_threshold,
         dry_compounds=tuple(args.dry_compounds),
+        lap_compound_overrides=parse_lap_compound_overrides(
+            args.lap_compound_overrides_json
+        ),
         output_dir=args.output_dir,
         telemetry_cache_dir=args.telemetry_cache_dir,
+        force_refresh_session_cache=args.force_refresh_session_cache,
         force_refresh_telemetry=args.force_refresh_telemetry,
         use_cached_monte_carlo=args.use_cached_monte_carlo,
         test=args.test,
@@ -1914,6 +2037,14 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument("--dry-compounds", nargs="+", default=SCRIPT_CONFIG["dry_compounds"])
+    parser.add_argument(
+        "--lap-compound-overrides-json",
+        default=SCRIPT_CONFIG["lap_compound_overrides_json"],
+        help=(
+            "Optional JSON list of lap compound corrections, e.g. "
+            '\'[{"race":10,"driver":"ANT","lap_range":[19,44],"compound":"HARD"}]\'.'
+        ),
+    )
     parser.add_argument("--output-dir", type=Path, default=SCRIPT_CONFIG["output_dir"])
     parser.add_argument("--reference-team", default=SCRIPT_CONFIG["reference_team"])
     parser.add_argument(
@@ -1951,8 +2082,18 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--force-refresh-telemetry",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
         default=SCRIPT_CONFIG["force_refresh_telemetry"],
+        help="Refresh cached telemetry gap inputs. Defaults to reusing telemetry cache.",
+    )
+    parser.add_argument(
+        "--force-refresh-session-cache",
+        action=argparse.BooleanOptionalAction,
+        default=SCRIPT_CONFIG["force_refresh_session_cache"],
+        help=(
+            "Disable FastF1's cache while loading session laps/results. This "
+            "also bypasses cached Monte Carlo outputs for the requested run."
+        ),
     )
     parser.add_argument(
         "--use-cached-monte-carlo",
@@ -1989,6 +2130,108 @@ def parse_compound_bounds(value: str | None) -> dict[str, tuple[float, float]]:
         if not isinstance(bounds, (list, tuple)) or len(bounds) != 2:
             raise ValueError(f"Bounds for compound {compound!r} must be a two-item list.")
         output[str(compound).upper()] = parse_bounds(bounds)
+    return output
+
+
+def parse_lap_compound_overrides(value: str | None) -> list[dict[str, object]]:
+    if value is None:
+        return []
+    parsed = json.loads(value)
+    if not isinstance(parsed, list):
+        raise ValueError("--lap-compound-overrides-json must decode to a JSON list.")
+
+    overrides: list[dict[str, object]] = []
+    for index, item in enumerate(parsed):
+        if not isinstance(item, dict):
+            raise ValueError(f"Lap compound override {index} must be a JSON object.")
+        driver = str(item.get("driver", "")).strip()
+        compound = str(item.get("compound", "")).strip().upper()
+        if "race" not in item:
+            raise ValueError(f"Lap compound override {index} requires a race.")
+        race = int(item["race"])
+        if not driver:
+            raise ValueError(f"Lap compound override {index} requires a driver.")
+        if not compound:
+            raise ValueError(f"Lap compound override {index} requires a compound.")
+
+        if "lap_range" in item:
+            lap_range = item["lap_range"]
+            if not isinstance(lap_range, list) or len(lap_range) != 2:
+                raise ValueError(
+                    f"lap_range for override {index} must be a two-item list."
+                )
+            lap_start = int(lap_range[0])
+            lap_end = int(lap_range[1])
+        else:
+            lap_start = int(item["lap_start"])
+            lap_end = int(item["lap_end"])
+        if lap_start > lap_end:
+            raise ValueError(
+                f"lap range for override {index} must have start <= end."
+            )
+
+        override: dict[str, object] = {
+            "race": race,
+            "driver": driver,
+            "lap_start": lap_start,
+            "lap_end": lap_end,
+            "compound": compound,
+        }
+        if item.get("team") is not None:
+            override["team"] = str(item["team"]).strip()
+        overrides.append(override)
+    return overrides
+
+
+def lap_compound_overrides_for_race(
+    overrides: list[dict[str, object]],
+    *,
+    race: int,
+) -> list[dict[str, object]]:
+    return [override for override in overrides if int(override["race"]) == race]
+
+
+def apply_lap_compound_overrides(
+    laps: pd.DataFrame,
+    overrides: list[dict[str, object]],
+) -> pd.DataFrame:
+    if not overrides or laps.empty:
+        return laps
+    required_columns = {"Driver", "LapNumber", "Compound"}
+    missing = required_columns.difference(laps.columns)
+    if missing:
+        raise ValueError(
+            "Cannot apply lap compound overrides; laps are missing required "
+            f"columns: {sorted(missing)}"
+        )
+
+    output = laps.copy()
+    driver_values = output["Driver"].astype("string")
+    lap_numbers = pd.to_numeric(output["LapNumber"], errors="coerce")
+    team_values = output["Team"].astype("string") if "Team" in output.columns else None
+    for override in overrides:
+        mask = (
+            driver_values.eq(str(override["driver"]))
+            & lap_numbers.ge(int(override["lap_start"]))
+            & lap_numbers.le(int(override["lap_end"]))
+        )
+        team = override.get("team")
+        if team is not None and str(team):
+            if team_values is None:
+                raise ValueError(
+                    "Cannot apply team-scoped lap compound override; laps are "
+                    "missing required column: Team"
+                )
+            mask &= team_values.eq(str(team))
+        updated_count = int(mask.sum())
+        if updated_count:
+            output.loc[mask, "Compound"] = str(override["compound"])
+        print(
+            "Applied lap compound override: "
+            f"driver={override['driver']} "
+            f"laps={override['lap_start']}-{override['lap_end']} "
+            f"compound={override['compound']} rows={updated_count}"
+        )
     return output
 
 

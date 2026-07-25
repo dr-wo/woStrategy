@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from math import ceil, isfinite
 from typing import Union
 
@@ -17,12 +18,14 @@ class Session:
         round: Union[int, str],
         session_name: str,
         test: bool = False,
+        force_refresh_session_cache: bool = False,
         **kwargs,
     ):
         self.year = year
         self.round = round
         self.session_name = session_name
         self.test = test
+        self.force_refresh_session_cache = force_refresh_session_cache
         self._session = self._load_session(**kwargs)
         self._original_laps = self._session.laps
         self.laps = self._session.laps
@@ -37,7 +40,13 @@ class Session:
             data = fastf1.get_testing_event(self.year, self.round).get_session(
                 self.session_name, **kwargs
             )
-        data.load()
+        cache_context = (
+            fastf1.Cache.disabled()
+            if self.force_refresh_session_cache
+            else nullcontext()
+        )
+        with cache_context:
+            data.load()
         self._fill_missing_outlap_laptimes(data)
         return data
 

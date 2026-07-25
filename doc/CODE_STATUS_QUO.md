@@ -185,10 +185,13 @@ These are thin re-export shims to keep older imports working while model impleme
 
 Constructor behavior:
 
-- Accepts `year`, `round`, `session_name`, and `test`.
+- Accepts `year`, `round`, `session_name`, `test`, and
+  `force_refresh_session_cache`.
 - Uses `fastf1.get_session(...)` for normal events.
 - Uses `fastf1.get_testing_event(...).get_session(...)` when `test=True`.
-- Calls `data.load()` immediately.
+- Calls `data.load()` immediately. When `force_refresh_session_cache=True`, the
+  load runs inside `fastf1.Cache.disabled()` so FastF1 refetches session data
+  instead of reading its HTTP cache.
 - Stores original laps in `_original_laps`, exposes mutable current laps as `self.laps`.
 - Computes `lap_distance` from `get_circuit_info().marshal_sectors["Distance"].max()`.
 - Computes `race_lap_number` as `max(ceil(300000 / lap_distance), 78)`.
@@ -621,6 +624,15 @@ Scripts are importable modules under `src/wostrategy/script`.
 - Prints sample progress, clean-lap coverage, sample diagnostics, weighted parameter summaries, and team corrected baseline summaries.
 - Saves `*_sample_diagnostics.csv` with best RMSE, weighted RMSE, RMSE quantiles, weight sum, effective sample size/fraction, and top-1% weight share.
 - `--use-cached-monte-carlo` loads existing per-race Monte Carlo CSVs when available and calculates only missing races; `--no-use-cached-monte-carlo` forces a full recalculation.
+- `--lap-compound-overrides-json` accepts race-scoped manual lap compound
+  corrections, for example
+  `[{"race":10,"driver":"ANT","lap_range":[19,44],"compound":"HARD"}]`.
+  Overrides are filtered per race before lap preparation, so unaffected races can
+  still use cached Monte Carlo outputs.
+- Races with active lap-compound overrides write and require matching
+  `*_metadata.json` cache metadata before reusing cached Monte Carlo outputs.
+  This prevents a corrected race from silently reusing stale CSVs generated from
+  the uncorrected compounds.
 - Cached Monte Carlo loading rebuilds the requested `--team-baseline-mode` from `*_baseline_pace.csv` and `*_sample_parameters.csv` when available, so switching between `average-drivers` and `best-driver` can reuse driver-level Monte Carlo outputs.
 - Saves a relative team race performance tracker plot to `temp/` by default, with `--reference-team`, `--plot-output`, `--plot` / `--no-plot`, `--plot-uncertainty-band` / `--no-plot-uncertainty-band`, `--plot-rmse-background` / `--no-plot-rmse-background`, and `--show` controls.
 - Cached plotting uses the per-race `*_team_baseline_summary.csv` files and reuses event labels from cached clean-lap files when available.

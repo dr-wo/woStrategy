@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pandas as pd
 
@@ -13,10 +15,15 @@ from wostrategy.analysis.race_performance_review import (
     wet_lap_proportion_by_driver,
 )
 from wostrategy.script.race_performance_review import missing_clean_gap_columns
+from wostrategy.script.race_performance_review import apply_lap_compound_overrides
+from wostrategy.script.race_performance_review import lap_compound_overrides_for_race
+from wostrategy.script.race_performance_review import parse_lap_compound_overrides
 from wostrategy.script.race_performance_review import parse_race_selector
 from wostrategy.script.race_performance_review import relative_team_pace_rows
 from wostrategy.script.race_performance_review import is_no_clean_laps_error
 from wostrategy.script.race_performance_review import load_cached_monte_carlo_outputs
+from wostrategy.script.race_performance_review import cached_metadata_path
+from wostrategy.script.race_performance_review import monte_carlo_cache_metadata
 from wostrategy.script.race_performance_review import format_effective_sample_size
 from wostrategy.script.race_performance_review import pit_loss_split_summary
 from wostrategy.script.race_performance_review import sample_diagnostics_summary
@@ -640,6 +647,67 @@ def test_parse_race_selector_accepts_dash_and_bracket_ranges():
     assert parse_race_selector("7") == [7]
 
 
+def test_parse_lap_compound_overrides_accepts_lap_range():
+    parsed = parse_lap_compound_overrides(
+        '[{"race":10,"driver":"ANT","lap_range":[19,44],"compound":"hard"}]'
+    )
+
+    assert parsed == [
+        {
+            "race": 10,
+            "driver": "ANT",
+            "lap_start": 19,
+            "lap_end": 44,
+            "compound": "HARD",
+        }
+    ]
+
+
+def test_lap_compound_overrides_for_race_returns_only_matching_race():
+    overrides = parse_lap_compound_overrides(
+        "["
+        '{"race":9,"driver":"ANT","lap_range":[19,44],"compound":"MEDIUM"},'
+        '{"race":10,"driver":"ANT","lap_range":[19,44],"compound":"HARD"}'
+        "]"
+    )
+
+    assert lap_compound_overrides_for_race(overrides, race=10) == [
+        {
+            "race": 10,
+            "driver": "ANT",
+            "lap_start": 19,
+            "lap_end": 44,
+            "compound": "HARD",
+        }
+    ]
+
+
+def test_apply_lap_compound_overrides_changes_only_matching_laps():
+    laps = pd.DataFrame(
+        [
+            {"Driver": "ANT", "Team": "Mercedes", "LapNumber": 18, "Compound": "MEDIUM"},
+            {"Driver": "ANT", "Team": "Mercedes", "LapNumber": 19, "Compound": "SOFT"},
+            {"Driver": "ANT", "Team": "Mercedes", "LapNumber": 44, "Compound": "SOFT"},
+            {"Driver": "RUS", "Team": "Mercedes", "LapNumber": 19, "Compound": "SOFT"},
+        ]
+    )
+
+    updated = apply_lap_compound_overrides(
+        laps,
+        [
+            {
+                "race": 10,
+                "driver": "ANT",
+                "lap_start": 19,
+                "lap_end": 44,
+                "compound": "HARD",
+            }
+        ],
+    )
+
+    assert updated["Compound"].tolist() == ["MEDIUM", "HARD", "HARD", "SOFT"]
+
+
 def test_is_no_clean_laps_error_matches_only_expected_filter_failure():
     assert is_no_clean_laps_error(
         ValueError("No consecutive clean-air race laps matched the configured filters.")
@@ -956,6 +1024,93 @@ def test_load_cached_monte_carlo_outputs_reads_degradation_outputs(tmp_path):
     assert cached["summary_compound_degradation"]["Median"].tolist() == [0.04]
     assert cached["summary_compound_delta"]["Median"].tolist() == [-0.2]
     assert cached["summary_team_compound_degradation"]["Median"].tolist() == [0.05]
+
+
+def test_load_cached_monte_carlo_outputs_requires_matching_metadata_when_expected(tmp_path):
+    prefix = tmp_path / "race_performance_2026_3_R"
+    pd.DataFrame(
+        [
+            {
+                "Team": "Alfa",
+                "P10": 89.5,
+                "Median": 90.0,
+                "P90": 90.5,
+                "SampleCount": 10,
+                "WeightSum": 4.0,
+                "MeanRMSESeconds": 0.2,
+                "TeamBaselineMode": "average-drivers",
+            }
+        ]
+    ).to_csv(f"{prefix}_team_baseline_summary.csv", index=False)
+    metadata = monte_carlo_cache_metadata(
+        sample_count=10,
+        dry_compounds=("MEDIUM", "HARD"),
+        team_baseline_mode="average-drivers",
+    )
+    with cached_metadata_path(
+        output_dir=tmp_path,
+        year=2026,
+        race=3,
+        session="R",
+    ).open("w", encoding="utf-8") as file:
+        json.dump(metadata, file)
+
+    matching = load_cached_monte_carlo_outputs(
+        year=2026,
+        race=3,
+        session="R",
+        output_dir=tmp_path,
+        team_baseline_mode="average-drivers",
+        expected_metadata=metadata,
+    )
+    mismatched = load_cached_monte_carlo_outputs(
+        year=2026,
+        race=3,
+        session="R",
+        output_dir=tmp_path,
+        team_baseline_mode="average-drivers",
+        expected_metadata=monte_carlo_cache_metadata(
+            sample_count=10,
+            dry_compounds=("SOFT", "MEDIUM", "HARD"),
+            team_baseline_mode="average-drivers",
+        ),
+    )
+
+    assert matching is not None
+    assert mismatched is None
+
+
+def test_load_cached_monte_carlo_outputs_rejects_missing_metadata_when_expected(tmp_path):
+    prefix = tmp_path / "race_performance_2026_3_R"
+    pd.DataFrame(
+        [
+            {
+                "Team": "Alfa",
+                "P10": 89.5,
+                "Median": 90.0,
+                "P90": 90.5,
+                "SampleCount": 10,
+                "WeightSum": 4.0,
+                "MeanRMSESeconds": 0.2,
+                "TeamBaselineMode": "average-drivers",
+            }
+        ]
+    ).to_csv(f"{prefix}_team_baseline_summary.csv", index=False)
+
+    cached = load_cached_monte_carlo_outputs(
+        year=2026,
+        race=3,
+        session="R",
+        output_dir=tmp_path,
+        team_baseline_mode="average-drivers",
+        expected_metadata=monte_carlo_cache_metadata(
+            sample_count=10,
+            dry_compounds=("MEDIUM", "HARD"),
+            team_baseline_mode="average-drivers",
+        ),
+    )
+
+    assert cached is None
 
 
 def test_load_cached_monte_carlo_outputs_rebuilds_best_driver_from_driver_baselines(tmp_path):
