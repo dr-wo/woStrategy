@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 
 from wostrategy.core.telemetry_loader import (
+    DEFAULT_TELEMETRY_CACHE_DIR,
     DistanceInterpolationTimeDeltaEstimator,
     TelemetryDataLoader,
     get_session_telemetry_cache_path,
@@ -11,6 +14,12 @@ from wostrategy.core.telemetry_loader import (
     summarize_lap_gap_metrics,
 )
 from wostrategy.core.session_loader import load_session_laps_with_telemetry_gap_summary
+
+
+def test_default_telemetry_cache_dir_is_repository_cache():
+    repository_root = Path(__file__).resolve().parents[2]
+
+    assert DEFAULT_TELEMETRY_CACHE_DIR == repository_root / "cache" / "telemetry"
 
 
 def test_distance_interpolation_time_delta_estimator_adds_seconds_column():

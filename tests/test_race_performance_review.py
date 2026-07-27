@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -27,11 +28,18 @@ from wostrategy.script.race_performance_review import monte_carlo_cache_metadata
 from wostrategy.script.race_performance_review import format_effective_sample_size
 from wostrategy.script.race_performance_review import pit_loss_split_summary
 from wostrategy.script.race_performance_review import sample_diagnostics_summary
+from wostrategy.script.race_performance_review import DEFAULT_OUTPUT_DIR
 from wostrategy.plots.race_performance import plot_relative_team_pace
 from wostrategy.analysis.long_run_performance import (
     select_clean_air_stints_as_whole,
     select_consecutive_clean_air_runs,
 )
+
+
+def test_default_output_dir_is_repository_cache():
+    repository_root = Path(__file__).resolve().parents[2]
+
+    assert DEFAULT_OUTPUT_DIR == repository_root / "cache" / "race_performance_review"
 
 
 def test_monte_carlo_race_performance_review_returns_sample_outputs():

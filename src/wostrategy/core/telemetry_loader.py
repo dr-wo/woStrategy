@@ -9,7 +9,7 @@ import pandas as pd
 
 RoundLike = Union[int, str]
 SessionNameLike = Union[int, str]
-DEFAULT_TELEMETRY_CACHE_DIR = Path(__file__).resolve().parents[3] / "cache" / "telemetry"
+DEFAULT_TELEMETRY_CACHE_DIR = Path(__file__).resolve().parents[4] / "cache" / "telemetry"
 
 
 class TimeDeltaEstimator(Protocol):

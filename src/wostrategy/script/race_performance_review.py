@@ -40,7 +40,7 @@ TEAM_MODE_BEST_DRIVER = "best-driver"
 TEAM_MODE_AVERAGE_DRIVERS = "average-drivers"
 TEAM_MODE_DIRECT_TEAM = "direct-team"
 TEAM_MODES = (TEAM_MODE_BEST_DRIVER, TEAM_MODE_AVERAGE_DRIVERS, TEAM_MODE_DIRECT_TEAM)
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "cache" / "race_performance_review"
 
 

@@ -1,11 +1,26 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 
 from wostrategy.core.planner_loader import (
+    get_legacy_planner_laps_cache_path,
     get_planner_laps_cache_path,
     load_race_laps_for_planner,
 )
+
+
+def test_legacy_planner_cache_path_uses_repository_cache():
+    repository_root = Path(__file__).resolve().parents[2]
+
+    path = get_legacy_planner_laps_cache_path(
+        year=2026,
+        round_number=12,
+        session="R",
+    )
+
+    assert path == repository_root / "cache" / "planner_race_laps" / "2026_12_R.pkl"
 
 
 def test_get_planner_laps_cache_path_uses_wodata_layout(tmp_path):
@@ -20,7 +35,7 @@ def test_get_planner_laps_cache_path_uses_wodata_layout(tmp_path):
         tmp_path
         / "wostrategy"
         / "planner_race_laps"
-        / "schema_v1"
+        / "schema_v2"
         / "year=2026"
         / "round=12"
         / "session=R"

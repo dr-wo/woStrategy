@@ -1,6 +1,6 @@
 # woStrategy Code Status Quo
 
-Last reviewed: 2026-06-20
+Last reviewed: 2026-07-27
 
 This document is a compact map of the current `woStrategy` package so future coding agents can orient quickly without rereading every module. It describes the repository as observed at the review date above.
 
@@ -19,21 +19,23 @@ The package is configured in `pyproject.toml`:
 ## Repository Layout
 
 ```text
-woStrategy/
-  README.md
-  pyproject.toml
-  cache/telemetry/              # Local pickle cache for per-session telemetry
-  doc/                          # Agent/project docs
-  src/wostrategy/
-    __init__.py                 # Public package exports
-    core/                       # Session wrapper, lap loaders, telemetry cache/loaders
-    model/                      # Mathematical model implementations
-    algorithm/                  # Reusable samplers and Monte Carlo algorithms
-    analysis/                   # Domain analysis and dataframe aggregation
-    tools/                      # Data preparation and end-to-end analysis workflows
-    plots/                      # Matplotlib plot renderers and style maps
-    script/                     # CLI-style runnable scripts
-  tests/
+dr-wo/
+  cache/telemetry/              # Shared per-session telemetry pickle cache
+  cache/race_performance_review/ # Shared race-review CSV cache
+  woStrategy/
+    README.md
+    pyproject.toml
+    doc/                        # Agent/project docs
+    src/wostrategy/
+      __init__.py               # Public package exports
+      core/                     # Session wrapper, lap loaders, telemetry cache/loaders
+      model/                    # Mathematical model implementations
+      algorithm/                # Reusable samplers and Monte Carlo algorithms
+      analysis/                 # Domain analysis and dataframe aggregation
+      tools/                    # Data preparation and end-to-end analysis workflows
+      plots/                    # Matplotlib plot renderers and style maps
+      script/                   # CLI-style runnable scripts
+    tests/
     test_clean_lap_track_development.py
     test_quali_performance_tracker.py
     test_race_performance_review.py
@@ -258,7 +260,7 @@ Session result rank behavior:
 Default cache path:
 
 ```python
-DEFAULT_TELEMETRY_CACHE_DIR = <repo>/cache/telemetry
+DEFAULT_TELEMETRY_CACHE_DIR = <dr-wo>/cache/telemetry
 ```
 
 `get_session_telemetry_cache_path` names cache files as:
@@ -638,7 +640,7 @@ Scripts are importable modules under `src/wostrategy/script`.
 - Cached plotting uses the per-race `*_team_baseline_summary.csv` files and reuses event labels from cached clean-lap files when available.
 - The optional RMSE background shades each GP by `WeightedRMSESeconds`: below 0.5s is green, 0.75s is orange, and 1.0s or higher is red, with a colorbar. GPs with fewer than five teams are shown with a black striped background instead.
 - Plot rows use sample-paired relative pace when cached team baseline samples are available, otherwise they fall back to each team's weighted median corrected baseline pace divided by the reference team's weighted median pace for the same race.
-- Writes CSVs to `cache/race_performance_review/` by default:
+- Writes CSVs to `<dr-wo>/cache/race_performance_review/` by default:
   - clean laps
   - wet lap summary
   - sample parameters
@@ -750,7 +752,8 @@ Observed verification status in this workspace:
 ## Data And Cache Conventions
 
 - Runtime outputs in examples/scripts generally write to `temp/` relative to the current working directory.
-- Telemetry pickle cache defaults to `woStrategy/cache/telemetry`.
+- Telemetry pickle cache defaults to the shared `<dr-wo>/cache/telemetry`
+  directory, matching the root `run_f1_report.py` entry point.
 - Current cache files in the working tree include sessions like `2026_4_FP1` and `2026_5_SQ`.
 - Cache files are pandas pickle files without an extension.
 - CSV export is available through `export_telemetry_cache_csv.py`.

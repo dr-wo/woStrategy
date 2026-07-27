@@ -160,5 +160,5 @@ def get_legacy_planner_laps_cache_path(
     round_number: RoundLike,
     session: SessionNameLike,
 ) -> Path:
-    cache_root = Path(__file__).resolve().parents[3] / "cache" / "planner_race_laps"
+    cache_root = Path(__file__).resolve().parents[4] / "cache" / "planner_race_laps"
     return cache_root / f"{year}_{round_number}_{session}.pkl"

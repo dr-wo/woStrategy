@@ -162,7 +162,9 @@ installed FastF1 version determines which events, timing columns, and telemetry
 formats are supported.
 
 `woStrategy` also depends on the sibling `woData` package for shared data-root
-and planner-facing cache path resolution. In the normal local checkout layout:
+and planner-facing cache path resolution. Team and driver plotting colours also
+come from `wodata.colours`, which is populated from FastF1's live-timing
+`DriverList`. In the normal local checkout layout:
 
 ```text
 dr-wo/
@@ -247,8 +249,9 @@ analysis scripts.
   `Round`, `SessionName`, event metadata, session result rank, session start
   position/grid position, and per-lap weather columns when FastF1 exposes them.
 - `load_session_laps_with_telemetry_gap_summary` additionally loads full
-  per-lap telemetry, caches it under `cache/telemetry/` by default, and merges
-  per-lap clean-air gap metrics back onto the lap dataframe.
+  per-lap telemetry, caches it under the shared workspace-level
+  `dr-wo/cache/telemetry/` directory by default, and merges per-lap clean-air
+  gap metrics back onto the lap dataframe.
 - Telemetry cache files are rebuilt automatically when they are empty or miss
   the derived `TimeDeltaToDriverAhead` column.
 - Clean-air summaries include min/mean time and distance gaps to cars ahead and
@@ -272,7 +275,7 @@ laps = load_race_laps_for_planner(
 This helper loads full race laps and caches them through `woData` using:
 
 ```text
-<DATA_ROOT>/wostrategy/planner_race_laps/schema_v1/year=<year>/round=<round>/session=<session>/laps.pkl
+<DATA_ROOT>/wostrategy/planner_race_laps/schema_v2/year=<year>/round=<round>/session=<session>/laps.pkl
 ```
 
 `DATA_ROOT` is resolved by `wodata.get_data_root`:
@@ -291,7 +294,7 @@ export WODATA_ROOT=/path/to/dr-wo/woData
 The old local fallback remains readable for compatibility:
 
 ```text
-woStrategy/cache/planner_race_laps/<year>_<round>_<session>.pkl
+<dr-wo>/cache/planner_race_laps/<year>_<round>_<session>.pkl
 ```
 
 Planner cache files are considered stale and rebuilt when they do not contain
@@ -519,9 +522,11 @@ python -m wostrategy.script.race_performance_review \
   --use-cached-monte-carlo
 ```
 
-Outputs are written to `cache/race_performance_review/` by default, including
-clean laps, sampled parameters, degradation samples, compound-delta samples,
-baseline samples, team baseline summaries, and sample diagnostics. Use
+Outputs are written to the shared workspace-level
+`dr-wo/cache/race_performance_review/` directory by default, matching
+`run_f1_report.py`. They include clean laps, sampled parameters, degradation
+samples, compound-delta samples, baseline samples, team baseline summaries,
+and sample diagnostics. Use
 `--use-cached-monte-carlo` to reuse existing per-race CSVs and calculate only
 missing races. Races with lap-compound overrides write metadata alongside the
 CSV outputs, so stale cached outputs generated without the same correction are
