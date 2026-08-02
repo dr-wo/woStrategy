@@ -40,7 +40,7 @@ from wostrategy.tools import (
     load_all_session_laps,
     load_all_session_laps_with_telemetry_gap_summary,
 )
-from wostrategy.utils import parse_inclusive_race_range
+from wostrategy.tools.race_range import parse_inclusive_race_range
 
 LAP_TIME_ONLY = "LapTimeOnly"
 

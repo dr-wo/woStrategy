@@ -8,6 +8,8 @@ from .load_sessions import (
 from .long_effective_stints import export_long_effective_stints
 from .session_values import add_session_value_column
 from .two_day_benchmark_race_sim import run_two_day_benchmark_race_sim
+from .race_range import expand_inclusive_race_range, parse_inclusive_race_range
+from .team_reference import match_team_name, reference_team_or_wcc_leader, wcc_leading_team
 
 __all__ = [
     "add_half_day_label",
@@ -17,4 +19,9 @@ __all__ = [
     "load_all_session_laps",
     "load_all_session_laps_with_telemetry_gap_summary",
     "run_two_day_benchmark_race_sim",
+    "expand_inclusive_race_range",
+    "parse_inclusive_race_range",
+    "match_team_name",
+    "reference_team_or_wcc_leader",
+    "wcc_leading_team",
 ]

@@ -28,6 +28,8 @@ from wostrategy.script.race_performance_review import monte_carlo_cache_metadata
 from wostrategy.script.race_performance_review import format_effective_sample_size
 from wostrategy.script.race_performance_review import pit_loss_split_summary
 from wostrategy.script.race_performance_review import sample_diagnostics_summary
+from wostrategy.script.race_performance_review import build_tyre_information_summary
+from wostrategy.script.race_performance_review import write_tyre_information
 from wostrategy.script.race_performance_review import DEFAULT_OUTPUT_DIR
 from wostrategy.plots.race_performance import plot_relative_team_pace
 from wostrategy.analysis.long_run_performance import (
@@ -36,10 +38,57 @@ from wostrategy.analysis.long_run_performance import (
 )
 
 
-def test_default_output_dir_is_repository_cache():
+def test_default_output_dir_is_wodata_race_review_root():
     repository_root = Path(__file__).resolve().parents[2]
 
-    assert DEFAULT_OUTPUT_DIR == repository_root / "cache" / "race_performance_review"
+    assert DEFAULT_OUTPUT_DIR == (
+        repository_root
+        / "woData/wostrategy/race_performance_review/schema_v1"
+    )
+
+
+def test_combined_tyre_information_contains_global_and_team_values():
+    global_degradation = pd.DataFrame(
+        [{"Compound": "SOFT", "P10": 0.1, "Median": 0.2, "P90": 0.3,
+          "SampleCount": 10, "WeightSum": 2.0}]
+    )
+    deltas = pd.DataFrame(
+        [{"Compound": "SOFT", "CompoundDeltaReference": "HARD", "P10": -1.0,
+          "Median": -0.7, "P90": -0.3, "SampleCount": 10, "WeightSum": 2.0}]
+    )
+    team_degradation = pd.DataFrame(
+        [{"Team": "Mercedes", "Compound": "SOFT", "P10": 0.11,
+          "Median": 0.21, "P90": 0.31, "SampleCount": 10, "WeightSum": 2.0}]
+    )
+
+    combined = build_tyre_information_summary(
+        compound_degradation=global_degradation,
+        compound_delta=deltas,
+        team_compound_degradation=team_degradation,
+        year=2026,
+        session="R",
+        round_number=11,
+    )
+
+    assert combined["Scope"].tolist() == ["global", "team"]
+    assert combined["Team"].iloc[1] == "Mercedes"
+    assert combined["DegradationMedianSecondsPerLap"].tolist() == [0.2, 0.21]
+    assert combined["CompoundDeltaMedianSeconds"].tolist() == [-0.7, -0.7]
+
+
+def test_tyre_information_write_replaces_previous_race_file(tmp_path):
+    path = tmp_path / "year=2026/round=11/session=R/tyre_information.csv"
+
+    write_tyre_information(
+        pd.DataFrame([{"Compound": "SOFT", "Median": 0.2}]), path
+    )
+    write_tyre_information(
+        pd.DataFrame([{"Compound": "HARD", "Median": 0.1}]), path
+    )
+
+    saved = pd.read_csv(path)
+    assert saved.to_dict("records") == [{"Compound": "HARD", "Median": 0.1}]
+    assert not path.with_name(".tyre_information.csv.tmp").exists()
 
 
 def test_monte_carlo_race_performance_review_returns_sample_outputs():

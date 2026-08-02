@@ -16,6 +16,7 @@ from .track_development import (
     plot_compound_lap_time_fits,
     plot_top_driver_summary,
 )
+from .pre_race_performance import plot_pre_race_performance_summary
 
 __all__ = [
     "plot_race_sim",
@@ -29,4 +30,5 @@ __all__ = [
     "plot_relative_race_team_pace",
     "plot_relative_team_pace",
     "plot_top_driver_summary",
+    "plot_pre_race_performance_summary",
 ]

@@ -151,6 +151,43 @@ shown from `doc/assets`:
 
 ## 1. Code
 
+### Strategy Prediction weekend model and exact strategy search
+
+Strategy Prediction uses a joint, deterministic Latin-hypercube weekend model
+with a shared fuel parameter, session-specific track/tyre parameters, per-run nuisance
+intercepts, and an exact top-K dynamic-programming strategy engine. Select any FP
+combination in `SCRIPT_CONFIG`; every session is filtered independently and contributes
+additively to one joint posterior.
+
+Set `enforce_compound_order` in `SCRIPT_CONFIG` (or use
+`--enforce-compound-order`) to constrain every sampled dry-compound candidate to
+SOFT ≤ MEDIUM ≤ HARD for baseline lap time and SOFT ≥ MEDIUM ≥ HARD for
+degradation. The chosen `reference_compound` remains the zero point for compound
+deltas.
+
+```bash
+python -m wostrategy.script.pre_race_analysis \
+  --year 2026 --round 12 --sessions FP1 FP2 FP3 \
+  --sample-count 5000 --reference-compound HARD
+```
+
+The strategy APIs are `revalue_fixed_strategy`, `optimise_same_sequence`,
+`full_reoptimisation`, and `search_best_continuations`. Tyre age always means completed
+laps on the physical set after the last completed lap; the first future lap uses age+1.
+
+For interactive/local use, edit `SCRIPT_CONFIG` near the top of
+`src/wostrategy/script/pre_race_analysis.py`, then run the module with no options:
+
+```bash
+MPLBACKEND=Agg MPLCONFIGDIR=/private/tmp \
+  ../.venv/bin/python -m wostrategy.script.pre_race_analysis
+```
+
+The workflow checks enriched session laps under `WODATA_ROOT/fastf1/session_laps/`
+first. Cache misses are loaded through FastF1; FastF1's raw cache and derived telemetry
+also live below `WODATA_ROOT/fastf1/`. With `primary_seed=None`, a stable event-specific
+seed is derived from year and round and reused for the whole weekend.
+
 ### 1.1 Install
 
 ```bash
@@ -522,11 +559,29 @@ python -m wostrategy.script.race_performance_review \
   --use-cached-monte-carlo
 ```
 
-Outputs are written to the shared workspace-level
-`dr-wo/cache/race_performance_review/` directory by default, matching
-`run_f1_report.py`. They include clean laps, sampled parameters, degradation
-samples, compound-delta samples, baseline samples, team baseline summaries,
-and sample diagnostics. Use
+Outputs are written to woData by default, partitioned by event:
+
+```text
+woData/wostrategy/race_performance_review/schema_v1/
+  year=2026/round=8/session=R/
+    tyre_information.csv
+    race_performance_2026_8_R_*.csv
+```
+
+`tyre_information.csv` is the single planner-facing tyre summary. It contains
+global and team rows for compound baseline speed, compound delta, degradation,
+uncertainty ranges, and sample/weight information. Detailed clean laps, sampled
+parameters, degradation and delta samples, baseline samples, team summaries,
+and diagnostics remain separate files in the same event directory. This keeps
+the convenient summary file small without discarding reproducibility data.
+Each successfully recalculated race atomically replaces its own
+`year=.../round=.../session=.../tyre_information.csv`; values are never appended
+across recalculations or mixed with another race.
+
+Multi-race summaries use a sibling `range=1-8/session=R/` partition. All new
+cache writes use woData. When `--use-cached-monte-carlo` finds an older cache in
+`dr-wo/cache/race_performance_review/`, it reads and promotes that event into the
+canonical woData directory; it does not delete the legacy files. Use
 `--use-cached-monte-carlo` to reuse existing per-race CSVs and calculate only
 missing races. Races with lap-compound overrides write metadata alongside the
 CSV outputs, so stale cached outputs generated without the same correction are

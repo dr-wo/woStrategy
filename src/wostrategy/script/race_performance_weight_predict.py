@@ -5,6 +5,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from wodata import get_race_performance_review_root
 
 from wostrategy.plots.race_labels import race_tick_labels
 from wostrategy.plots.style_maps import F1_TEAM_COLORS
@@ -23,7 +24,7 @@ SCRIPT_CONFIG = {
     "reference_team": "Mercedes",
     "weight_delta_kg": -12,
     "full_fuel_weight_kg": 95.0,
-    "input_dir": "cache/race_performance_review",
+    "input_dir": get_race_performance_review_root(),
     "output": None,
     "show": False,
 }
@@ -290,10 +291,19 @@ def cached_output_path(
     session: str,
     suffix: str,
 ) -> Path:
-    path = input_dir / f"race_performance_{year}_{race}_{session}_{suffix}.csv"
-    if not path.exists():
-        raise FileNotFoundError(str(path))
-    return path
+    filename = f"race_performance_{year}_{race}_{session}_{suffix}.csv"
+    candidates = (
+        input_dir
+        / f"year={int(year)}"
+        / f"round={int(race)}"
+        / f"session={str(session).upper()}"
+        / filename,
+        input_dir / filename,
+    )
+    for path in candidates:
+        if path.exists():
+            return path
+    raise FileNotFoundError(str(candidates[0]))
 
 
 def total_race_laps_from_clean_laps(clean_laps: pd.DataFrame) -> float:

@@ -16,10 +16,12 @@ from wostrategy.core.telemetry_loader import (
 from wostrategy.core.session_loader import load_session_laps_with_telemetry_gap_summary
 
 
-def test_default_telemetry_cache_dir_is_repository_cache():
+def test_default_telemetry_cache_dir_is_owned_by_wodata():
     repository_root = Path(__file__).resolve().parents[2]
 
-    assert DEFAULT_TELEMETRY_CACHE_DIR == repository_root / "cache" / "telemetry"
+    assert DEFAULT_TELEMETRY_CACHE_DIR == (
+        repository_root / "woData/fastf1/telemetry/schema_v1"
+    )
 
 
 def test_distance_interpolation_time_delta_estimator_adds_seconds_column():

@@ -19,6 +19,7 @@ from .sampling import (
     UnitCubeSampler,
     get_unit_cube_sampler,
 )
+from .exact_strategy_search import search_best_compound_sequences
 
 __all__ = [
     "CORRECTED_LAP_TIME_SECONDS",
@@ -36,4 +37,5 @@ __all__ = [
     "HaltonSampler",
     "UnitCubeSampler",
     "get_unit_cube_sampler",
+    "search_best_compound_sequences",
 ]

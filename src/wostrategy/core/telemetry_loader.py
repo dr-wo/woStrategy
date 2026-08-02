@@ -6,10 +6,11 @@ from typing import Callable, Protocol, Union
 
 import numpy as np
 import pandas as pd
+from wodata import get_fastf1_telemetry_cache_dir
 
 RoundLike = Union[int, str]
 SessionNameLike = Union[int, str]
-DEFAULT_TELEMETRY_CACHE_DIR = Path(__file__).resolve().parents[4] / "cache" / "telemetry"
+DEFAULT_TELEMETRY_CACHE_DIR = get_fastf1_telemetry_cache_dir()
 
 
 class TimeDeltaEstimator(Protocol):

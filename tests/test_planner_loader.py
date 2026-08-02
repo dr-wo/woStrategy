@@ -56,6 +56,9 @@ def test_load_race_laps_for_planner_reads_wodata_cache(tmp_path):
             "Driver": ["AAA"],
             "LapNumber": [1],
             "SessionStartPosition": [1],
+            "Sector1TrackStatus": [pd.NA],
+            "Sector2TrackStatus": [pd.NA],
+            "Sector3TrackStatus": [pd.NA],
         }
     )
     expected.to_pickle(cache_path)

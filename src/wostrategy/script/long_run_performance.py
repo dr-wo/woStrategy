@@ -24,11 +24,8 @@ from wostrategy.script.quali_performance_tracker import (
     run_quali_performance_tracker,
 )
 from wostrategy.tools import load_all_session_laps_with_telemetry_gap_summary
-from wostrategy.utils import (
-    match_team_name,
-    parse_inclusive_race_range,
-    reference_team_or_wcc_leader,
-)
+from wostrategy.tools.race_range import parse_inclusive_race_range
+from wostrategy.tools.team_reference import match_team_name, reference_team_or_wcc_leader
 
 
 SCRIPT_CONFIG = {

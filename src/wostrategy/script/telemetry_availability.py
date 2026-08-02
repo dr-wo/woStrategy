@@ -9,7 +9,7 @@ import fastf1
 import pandas as pd
 from fastf1 import _api as fastf1_api
 
-from wostrategy.utils import parse_inclusive_race_range
+from wostrategy.tools.race_range import parse_inclusive_race_range
 
 
 SESSION_COLUMNS = {

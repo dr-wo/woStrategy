@@ -4,10 +4,12 @@ import argparse
 import json
 import math
 from pathlib import Path
+import shutil
 from typing import Any
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from wodata import get_race_performance_review_root
 
 from wostrategy.algorithm.monte_carlo_race_performance import (
     MonteCarloRacePerformanceAlgorithm,
@@ -34,19 +36,41 @@ from wostrategy.plots.race_performance import (
     save_relative_team_pace_figures,
 )
 from wostrategy.tools import load_all_session_laps_with_telemetry_gap_summary
-from wostrategy.utils import expand_inclusive_race_range
+from wostrategy.tools.race_range import expand_inclusive_race_range
 
 TEAM_MODE_BEST_DRIVER = "best-driver"
 TEAM_MODE_AVERAGE_DRIVERS = "average-drivers"
 TEAM_MODE_DIRECT_TEAM = "direct-team"
 TEAM_MODES = (TEAM_MODE_BEST_DRIVER, TEAM_MODE_AVERAGE_DRIVERS, TEAM_MODE_DIRECT_TEAM)
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "cache" / "race_performance_review"
+DEFAULT_OUTPUT_DIR = get_race_performance_review_root()
+LEGACY_OUTPUT_DIR = Path(__file__).resolve().parents[4] / "cache/race_performance_review"
+
+
+def event_output_dir(
+    output_root: str | Path, *, year: int, race: int, session: str
+) -> Path:
+    return (
+        Path(output_root)
+        / f"year={int(year)}"
+        / f"round={int(race)}"
+        / f"session={str(session).upper()}"
+    )
+
+
+def range_output_dir(
+    output_root: str | Path, *, year: int, range_label: str, session: str
+) -> Path:
+    return (
+        Path(output_root)
+        / f"year={int(year)}"
+        / f"range={range_label}"
+        / f"session={str(session).upper()}"
+    )
 
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race_range": [1, 10],
+    "race_range": [11, 11],
     "session": "R",
     "sample_count": 80000,
     "sampling_strategy": LATIN_HYPERCUBE_SAMPLER,
@@ -85,7 +109,7 @@ SCRIPT_CONFIG = {
     "telemetry_cache_dir": None,
     "force_refresh_session_cache": False,
     "force_refresh_telemetry": False,
-    "use_cached_monte_carlo": True,
+    "use_cached_monte_carlo": False,
     "test": False,
     "reference_team": "Mercedes",
     "plot": True,
@@ -247,6 +271,10 @@ def run_race_performance_review(
     print("Missing telemetry gap columns: skip race and save empty diagnostic result")
 
     for race_index, race in enumerate(races):
+        race_output_dir = event_output_dir(
+            output_dir, year=year, race=race, session=session
+        )
+        race_output_dir.mkdir(parents=True, exist_ok=True)
         race_lap_compound_overrides = lap_compound_overrides_for_race(
             lap_compound_overrides,
             race=race,
@@ -258,13 +286,57 @@ def run_race_performance_review(
                 year=year,
                 race=race,
                 session=session,
-                output_dir=output_dir,
+                output_dir=race_output_dir,
                 team_baseline_mode=team_baseline_mode,
                 expected_metadata=(
                     cache_metadata if race_lap_compound_overrides else None
                 ),
             )
+            cache_was_legacy = False
+            if cached is None and race_output_dir != LEGACY_OUTPUT_DIR:
+                cached = load_cached_monte_carlo_outputs(
+                    year=year,
+                    race=race,
+                    session=session,
+                    output_dir=LEGACY_OUTPUT_DIR,
+                    team_baseline_mode=team_baseline_mode,
+                    expected_metadata=(
+                        cache_metadata if race_lap_compound_overrides else None
+                    ),
+                )
+                cache_was_legacy = cached is not None
             if cached is not None:
+                if cache_was_legacy:
+                    promoted_paths = []
+                    legacy_prefix = f"race_performance_{year}_{race}_{session}_"
+                    for source in LEGACY_OUTPUT_DIR.glob(f"{legacy_prefix}*"):
+                        if not source.is_file():
+                            continue
+                        destination = race_output_dir / Path(source).name
+                        shutil.copy2(source, destination)
+                        promoted_paths.append(destination)
+                    cached["paths"] = promoted_paths
+                    print(f"Promoted legacy cache into {race_output_dir}")
+                if (
+                    cached.get("summary_compound_degradation") is not None
+                    and cached.get("summary_compound_delta") is not None
+                ):
+                    tyre_path = race_output_dir / "tyre_information.csv"
+                    tyre_information = build_tyre_information_summary(
+                        compound_degradation=cached["summary_compound_degradation"],
+                        compound_delta=cached["summary_compound_delta"],
+                        team_compound_degradation=(
+                            cached.get("summary_team_compound_degradation")
+                            if cached.get("summary_team_compound_degradation") is not None
+                            else pd.DataFrame()
+                        ),
+                        year=year,
+                        session=session,
+                        round_number=race,
+                    )
+                    write_tyre_information(tyre_information, tyre_path)
+                    if tyre_path not in cached["paths"]:
+                        cached["paths"].append(tyre_path)
                 race_team_baseline_summaries[race] = cached["team_baseline_summary"]
                 race_event_names[race] = cached["event_name"]
                 saved_outputs.extend(cached["paths"])
@@ -328,7 +400,7 @@ def run_race_performance_review(
                 year=year,
                 race=race,
                 session=session,
-                output_dir=output_dir,
+                output_dir=race_output_dir,
                 reason="missing telemetry gap columns required for clean-air filtering",
                 details=", ".join(missing_gap_columns),
                 wet_lap_summary=wet_lap_summary,
@@ -389,7 +461,7 @@ def run_race_performance_review(
                 year=year,
                 race=race,
                 session=session,
-                output_dir=output_dir,
+                output_dir=race_output_dir,
                 reason="no consecutive clean-air race laps matched filters",
                 details=(
                     f"min_clean_air_laps={min_clean_air_laps}, "
@@ -412,7 +484,7 @@ def run_race_performance_review(
                 year=year,
                 race=race,
                 session=session,
-                output_dir=output_dir,
+                output_dir=race_output_dir,
                 reason="median driver wet lap proportion exceeded threshold",
                 details=f"threshold={wet_lap_proportion_skip_threshold}",
                 wet_lap_summary=wet_lap_summary,
@@ -456,7 +528,7 @@ def run_race_performance_review(
                 year=year,
                 race=race,
                 session=session,
-                output_dir=output_dir,
+                output_dir=race_output_dir,
                 metadata=cache_metadata,
             )
         )
@@ -501,12 +573,16 @@ def run_race_performance_review(
 
     if len(race_team_baseline_summaries) > 1 and range_team_baseline_frames:
         range_label = race_range_label(races)
+        aggregate_output_dir = range_output_dir(
+            output_dir, year=year, range_label=range_label, session=session
+        )
+        aggregate_output_dir.mkdir(parents=True, exist_ok=True)
         all_team_baselines = pd.concat(range_team_baseline_frames, ignore_index=True)
         all_team_summary = weighted_team_baseline_summary(all_team_baselines)
-        team_path = output_dir / (
+        team_path = aggregate_output_dir / (
             f"race_performance_team_baselines_{year}_{range_label}_{session}.csv"
         )
-        summary_path = output_dir / (
+        summary_path = aggregate_output_dir / (
             f"race_performance_team_summary_{year}_{range_label}_{session}.csv"
         )
         all_team_baselines.to_csv(team_path, index=False)
@@ -514,7 +590,7 @@ def run_race_performance_review(
         saved_outputs.extend([team_path, summary_path])
         if range_sample_frames:
             all_samples = pd.concat(range_sample_frames, ignore_index=True)
-            sample_path = output_dir / (
+            sample_path = aggregate_output_dir / (
                 f"race_performance_samples_{year}_{range_label}_{session}.csv"
             )
             all_samples.to_csv(sample_path, index=False)
@@ -524,7 +600,7 @@ def run_race_performance_review(
                 range_sample_diagnostic_frames,
                 ignore_index=True,
             )
-            diagnostics_path = output_dir / (
+            diagnostics_path = aggregate_output_dir / (
                 f"race_performance_sample_diagnostics_{year}_{range_label}_{session}.csv"
             )
             all_diagnostics.to_csv(diagnostics_path, index=False)
@@ -534,7 +610,7 @@ def run_race_performance_review(
                 year=year,
                 races=races,
                 session=session,
-                output_dir=output_dir,
+                output_dir=aggregate_output_dir,
                 compound_degradation_frames=range_compound_degradation_frames,
                 compound_delta_frames=range_compound_delta_frames,
                 team_compound_degradation_frames=range_team_compound_degradation_frames,
@@ -799,6 +875,7 @@ def save_range_degradation_outputs(
     summary_compound_delta_frames: list[pd.DataFrame],
     summary_team_compound_degradation_frames: list[pd.DataFrame],
 ) -> list[Path]:
+    output_dir.mkdir(parents=True, exist_ok=True)
     range_label = race_range_label(races)
     outputs = {
         f"race_performance_compound_degradation_{year}_{range_label}_{session}.csv": (
@@ -828,7 +905,164 @@ def save_range_degradation_outputs(
         path = output_dir / filename
         pd.concat(frames, ignore_index=True).to_csv(path, index=False)
         paths.append(path)
+    if summary_compound_degradation_frames and summary_compound_delta_frames:
+        tyre_information = build_tyre_information_summary(
+            compound_degradation=pd.concat(
+                summary_compound_degradation_frames, ignore_index=True
+            ),
+            compound_delta=pd.concat(summary_compound_delta_frames, ignore_index=True),
+            team_compound_degradation=(
+                pd.concat(summary_team_compound_degradation_frames, ignore_index=True)
+                if summary_team_compound_degradation_frames
+                else pd.DataFrame()
+            ),
+            year=year,
+            session=session,
+        )
+        tyre_path = output_dir / "tyre_information.csv"
+        write_tyre_information(tyre_information, tyre_path)
+        paths.append(tyre_path)
     return paths
+
+
+def write_tyre_information(frame: pd.DataFrame, path: Path) -> None:
+    """Atomically replace one event or range tyre-information artifact."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = path.with_name(f".{path.name}.tmp")
+    frame.to_csv(temporary_path, index=False)
+    temporary_path.replace(path)
+
+
+def build_tyre_information_summary(
+    *,
+    compound_degradation: pd.DataFrame,
+    compound_delta: pd.DataFrame,
+    team_compound_degradation: pd.DataFrame,
+    year: int,
+    session: str,
+    round_number: int | None = None,
+) -> pd.DataFrame:
+    """Combine planner-facing tyre summaries into one stable CSV schema."""
+    degradation = compound_degradation.copy()
+    deltas = compound_delta.copy()
+    team_degradation = team_compound_degradation.copy()
+    if round_number is not None:
+        for frame in (degradation, deltas, team_degradation):
+            if not frame.empty and "Round" not in frame.columns:
+                frame["Round"] = int(round_number)
+    rounds = sorted(
+        {
+            int(value)
+            for frame in (degradation, deltas, team_degradation)
+            if not frame.empty and "Round" in frame.columns
+            for value in pd.to_numeric(frame["Round"], errors="coerce").dropna().unique()
+        }
+    )
+    if not rounds and round_number is not None:
+        rounds = [int(round_number)]
+    rows: list[dict[str, object]] = []
+    for race in rounds:
+        race_degradation = degradation.loc[
+            pd.to_numeric(degradation.get("Round"), errors="coerce") == race
+        ]
+        race_deltas = deltas.loc[
+            pd.to_numeric(deltas.get("Round"), errors="coerce") == race
+        ]
+        race_team = (
+            team_degradation.loc[
+                pd.to_numeric(team_degradation.get("Round"), errors="coerce") == race
+            ]
+            if not team_degradation.empty
+            else team_degradation
+        )
+        delta_by_compound = {
+            str(row["Compound"]).upper(): row
+            for _, row in race_deltas.iterrows()
+        }
+        fastest_delta = min(
+            (float(row.get("Median", 0.0)) for row in delta_by_compound.values()),
+            default=0.0,
+        )
+        degradation_by_compound = {
+            str(row["Compound"]).upper(): row
+            for _, row in race_degradation.iterrows()
+        }
+        for compound in sorted(set(delta_by_compound) | set(degradation_by_compound)):
+            rows.append(
+                _tyre_information_row(
+                    year=year,
+                    race=race,
+                    session=session,
+                    team=None,
+                    compound=compound,
+                    delta=delta_by_compound.get(compound),
+                    degradation=degradation_by_compound.get(compound),
+                    fastest_delta=fastest_delta,
+                )
+            )
+        for (team, compound), group in race_team.groupby(
+            ["Team", "Compound"], sort=True, dropna=False
+        ):
+            rows.append(
+                _tyre_information_row(
+                    year=year,
+                    race=race,
+                    session=session,
+                    team=str(team),
+                    compound=str(compound).upper(),
+                    delta=delta_by_compound.get(str(compound).upper()),
+                    degradation=group.iloc[0],
+                    fastest_delta=fastest_delta,
+                )
+            )
+    columns = [
+        "Year", "Round", "Session", "Scope", "Team", "Compound",
+        "ReferenceCompound", "BaselineSpeedMedianSecondsVsFastest",
+        "CompoundDeltaP10Seconds", "CompoundDeltaMedianSeconds",
+        "CompoundDeltaP90Seconds", "DegradationP10SecondsPerLap",
+        "DegradationMedianSecondsPerLap", "DegradationP90SecondsPerLap",
+        "DeltaSampleCount", "DegradationSampleCount", "DeltaWeightSum",
+        "DegradationWeightSum",
+    ]
+    return pd.DataFrame(rows, columns=columns)
+
+
+def _tyre_information_row(
+    *, year, race, session, team, compound, delta, degradation, fastest_delta
+) -> dict[str, object]:
+    delta_median = float(delta.get("Median", 0.0)) if delta is not None else float("nan")
+    return {
+        "Year": int(year),
+        "Round": int(race),
+        "Session": str(session).upper(),
+        "Scope": "team" if team is not None else "global",
+        "Team": team,
+        "Compound": compound,
+        "ReferenceCompound": (
+            delta.get("CompoundDeltaReference") if delta is not None else None
+        ),
+        "BaselineSpeedMedianSecondsVsFastest": delta_median - fastest_delta,
+        "CompoundDeltaP10Seconds": delta.get("P10") if delta is not None else None,
+        "CompoundDeltaMedianSeconds": delta_median,
+        "CompoundDeltaP90Seconds": delta.get("P90") if delta is not None else None,
+        "DegradationP10SecondsPerLap": (
+            degradation.get("P10") if degradation is not None else None
+        ),
+        "DegradationMedianSecondsPerLap": (
+            degradation.get("Median") if degradation is not None else None
+        ),
+        "DegradationP90SecondsPerLap": (
+            degradation.get("P90") if degradation is not None else None
+        ),
+        "DeltaSampleCount": delta.get("SampleCount") if delta is not None else None,
+        "DegradationSampleCount": (
+            degradation.get("SampleCount") if degradation is not None else None
+        ),
+        "DeltaWeightSum": delta.get("WeightSum") if delta is not None else None,
+        "DegradationWeightSum": (
+            degradation.get("WeightSum") if degradation is not None else None
+        ),
+    }
 
 
 def cached_output_path(
@@ -1387,6 +1621,7 @@ def save_race_outputs(
     output_dir: Path,
     metadata: dict[str, object] | None = None,
 ) -> list[Path]:
+    output_dir.mkdir(parents=True, exist_ok=True)
     prefix = f"race_performance_{year}_{race}_{session}"
     outputs = {
         f"{prefix}_clean_laps.csv": result.clean_laps,
@@ -1407,10 +1642,21 @@ def save_race_outputs(
             for summary_name, summary in result.summaries.items()
         }
     )
+    outputs["tyre_information.csv"] = build_tyre_information_summary(
+        compound_degradation=result.summaries["compound_degradation"],
+        compound_delta=result.summaries["compound_delta"],
+        team_compound_degradation=result.summaries["team_compound_degradation"],
+        year=year,
+        session=session,
+        round_number=race,
+    )
     paths: list[Path] = []
     for filename, frame in outputs.items():
         path = output_dir / filename
-        frame.to_csv(path, index=False)
+        if filename == "tyre_information.csv":
+            write_tyre_information(frame, path)
+        else:
+            frame.to_csv(path, index=False)
         paths.append(path)
     if metadata is not None:
         metadata_path = cached_metadata_path(
@@ -2045,7 +2291,15 @@ def parse_args() -> argparse.Namespace:
             '\'[{"race":10,"driver":"ANT","lap_range":[19,44],"compound":"HARD"}]\'.'
         ),
     )
-    parser.add_argument("--output-dir", type=Path, default=SCRIPT_CONFIG["output_dir"])
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=SCRIPT_CONFIG["output_dir"],
+        help=(
+            "Race-performance dataset root. Defaults to the canonical woData "
+            "wostrategy/race_performance_review/schema_v1 directory."
+        ),
+    )
     parser.add_argument("--reference-team", default=SCRIPT_CONFIG["reference_team"])
     parser.add_argument(
         "--plot",
