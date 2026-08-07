@@ -1,5 +1,7 @@
 """Core wrappers and loading utilities."""
 
+from wostrategy.analysis.traffic import summarize_lap_gap_metrics
+
 from .session import Session
 from .session_loader import load_session_laps, load_session_laps_with_telemetry_gap_summary
 from .planner_loader import (
@@ -15,7 +17,6 @@ from .telemetry_loader import (
     get_session_telemetry_cache_path,
     load_or_cache_session_telemetry,
     load_session_telemetry,
-    summarize_lap_gap_metrics,
 )
 
 __all__ = [

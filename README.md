@@ -289,10 +289,27 @@ analysis scripts.
   per-lap telemetry, caches it under the shared workspace-level
   `dr-wo/cache/telemetry/` directory by default, and merges per-lap clean-air
   gap metrics back onto the lap dataframe.
-- Telemetry cache files are rebuilt automatically when they are empty or miss
-  the derived `TimeDeltaToDriverAhead` column.
+- Telemetry cache validity includes the traffic evaluator version and selection
+  mode; stale or incomplete derived data are rebuilt automatically.
 - Clean-air summaries include min/mean time and distance gaps to cars ahead and
   behind when the data are available.
+
+Retrospective, archive-replay, and live paths now pass the same normalized
+`Driver`, `SessionTime`, `LapNumber`, and `Speed` contract to the traffic
+implementation in `wostrategy.analysis.traffic`. See
+[Traffic evaluation](doc/traffic_evaluation.md) for its assumptions, component
+outputs, performance model, fallback rules, and finalization semantics.
+
+The race-performance review also writes `latest_resolved_settings.json` before
+loading session data. One copy is written at the review root and one in every
+requested event/session partition. This records the effective invocation even if
+the subsequent session is skipped or fitting fails. A successful cached event's
+metadata remains the preferred settings source; otherwise consumers use the
+event's latest invocation and then the global latest invocation. This precedence
+deliberately favors reproducibility of an existing event result over a newer
+unsuccessful command. Only settings compatible with the planner's joint model are
+imported; review-only controls such as team-variation fitting are left out rather
+than being silently reinterpreted.
 
 #### 2.0.1 Planner-facing race lap cache
 
@@ -354,11 +371,14 @@ For each telemetry sample it:
    the current car would arrive there.
 5. Stores the non-negative time difference in seconds.
 
-When synchronized `SessionTime`, `Distance`, and `Speed` samples are available,
-gap summaries prefer physical same-session-time car positions. That path derives
-nearest cars ahead and behind by circular track distance, which handles lapped
-traffic more consistently than inverting `DriverAhead`. If physical samples are
-not available, the older `DriverAhead`-based behind-gap fallback is still used.
+The shared evaluator keeps the finish-line-anchored direct result and the
+circular physical result independently visible. The current versioned
+`compatibility_min` selector deliberately chooses the smaller available metric,
+preserving the historical conservative rule while allowing either component to
+be compared or replaced later. Physical circuit phase—not classification lap
+difference—is used to locate nearby lapped cars. If telemetry is unavailable or
+fails coverage checks, the sector-boundary estimator is selected as a fallback
+with explicit method and status provenance.
 
 #### 2.0.3 Other data clean tools
 

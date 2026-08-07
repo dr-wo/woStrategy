@@ -19,6 +19,10 @@ from wostrategy.analysis.long_run_performance import (
     select_consecutive_clean_air_runs,
 )
 from wostrategy.tools.load_sessions import load_all_session_laps_with_telemetry_gap_summary
+from wostrategy.analysis.traffic import (
+    COMBINATION_MODE_COMPATIBILITY_MIN,
+    TRAFFIC_EVALUATOR_VERSION,
+)
 
 
 @dataclass(frozen=True)
@@ -53,9 +57,15 @@ def load_cached_weekend_sessions(
     }
     for session, path in paths.items():
         if path.exists() and not force_refresh:
-            output[session] = pd.read_pickle(path)
-            sources[session] = "wodata-cache"
-            continue
+            cached = pd.read_pickle(path)
+            if (
+                cached.attrs.get("traffic_evaluator_version") == TRAFFIC_EVALUATOR_VERSION
+                and cached.attrs.get("traffic_combination_mode")
+                == COMBINATION_MODE_COMPATIBILITY_MIN
+            ):
+                output[session] = cached
+                sources[session] = "wodata-cache"
+                continue
         try:
             laps = loader(
                 year=year,
@@ -73,6 +83,8 @@ def load_cached_weekend_sessions(
                 f"{path}. Check year/round/session and network access."
             )
             continue
+        laps.attrs["traffic_evaluator_version"] = TRAFFIC_EVALUATOR_VERSION
+        laps.attrs["traffic_combination_mode"] = COMBINATION_MODE_COMPATIBILITY_MIN
         path.parent.mkdir(parents=True, exist_ok=True)
         laps.to_pickle(path)
         output[session] = laps

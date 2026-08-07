@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+from wostrategy.analysis.traffic import summarize_lap_gap_metrics
 
 from wostrategy.core.telemetry_loader import (
     DEFAULT_TELEMETRY_CACHE_DIR,
@@ -11,7 +12,6 @@ from wostrategy.core.telemetry_loader import (
     get_session_telemetry_cache_path,
     load_or_cache_session_telemetry,
     load_session_telemetry,
-    summarize_lap_gap_metrics,
 )
 from wostrategy.core.session_loader import load_session_laps_with_telemetry_gap_summary
 
@@ -319,6 +319,12 @@ def test_summarize_lap_gap_metrics_uses_smaller_direct_driver_ahead_gap():
     assert round(rus["MeanTimeDeltaToDriverAhead"], 6) == 0.85
     assert rus["MinDistanceToDriverAhead"] == 40.0
     assert rus["MeanDistanceToDriverAhead"] == 42.5
+    assert round(rus["DirectMeanTimeDeltaToDriverAhead"], 6) == 0.85
+    assert pd.notna(rus["PhysicalMeanTimeDeltaToDriverAhead"])
+    assert rus["TrafficCombinationMode"] == "compatibility_min"
+    assert rus["DirectTrafficStatus"] == "ok"
+    assert rus["PhysicalTrafficStatus"] == "ok"
+    assert rus["MeanTimeDeltaToDriverAheadMethod"] == "DIRECT_FASTF1_STYLE"
 
 
 def test_summarize_lap_gap_metrics_uses_smaller_physical_ahead_gap():
@@ -370,9 +376,9 @@ def test_summarize_lap_gap_metrics_derives_lapped_car_behind_gap_from_track_posi
     gas = result.loc[result["Driver"] == "GAS"].iloc[0]
 
     assert gas["MinDistanceToDriverBehind"] == 100.0
-    assert gas["MeanDistanceToDriverBehind"] == 110.0
+    assert gas["MeanDistanceToDriverBehind"] == 100.0
     assert gas["MinTimeDeltaToDriverBehind"] == 2.0
-    assert gas["MeanTimeDeltaToDriverBehind"] == 2.2
+    assert gas["MeanTimeDeltaToDriverBehind"] == 2.0
 
 
 def test_summarize_lap_gap_metrics_derives_lapped_car_ahead_gap_from_track_position():

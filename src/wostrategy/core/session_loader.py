@@ -4,11 +4,11 @@ from pathlib import Path
 from typing import Callable, Union
 
 import pandas as pd
+from wostrategy.analysis.traffic import summarize_lap_gap_metrics
 
 from .telemetry_loader import (
     TelemetryDataLoader,
     load_or_cache_session_telemetry,
-    summarize_lap_gap_metrics,
 )
 
 RoundLike = Union[int, str]

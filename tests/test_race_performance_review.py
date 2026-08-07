@@ -1104,6 +1104,8 @@ def test_load_cached_monte_carlo_outputs_requires_matching_metadata_when_expecte
         dry_compounds=("MEDIUM", "HARD"),
         team_baseline_mode="average-drivers",
     )
+    assert metadata["traffic_evaluator_version"] == "unified-traffic-v2"
+    assert metadata["traffic_combination_mode"] == "compatibility_min"
     with cached_metadata_path(
         output_dir=tmp_path,
         year=2026,

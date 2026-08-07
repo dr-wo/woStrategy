@@ -12,6 +12,7 @@ from wostrategy.model.long_run_performance import (
     EXPONENTIAL_TRACK_LONG_RUN_MODEL_CONFIG,
 )
 from wostrategy.model.tyre_degragation import TYRE_AGE_LAPS_COLUMN
+from wostrategy.analysis.traffic import traffic_clean_mask
 
 LONG_RUN_MODEL_LINEAR_COMPONENTS = str(DEFAULT_LONG_RUN_MODEL_CONFIG["name"])
 LONG_RUN_MODEL_EXPONENTIAL_TRACK = str(EXPONENTIAL_TRACK_LONG_RUN_MODEL_CONFIG["name"])
@@ -544,30 +545,17 @@ def _prepare_laps(
         prepared["LapNumber"],
         errors="coerce",
     )
-    has_gap_summary = _has_any_gap_summary(prepared)
-    ahead_gap = prepared["MeanTimeDeltaToDriverAhead"].where(
-        prepared["MeanTimeDeltaToDriverAhead"].notna(),
-        np.where(has_gap_summary, np.inf, np.nan),
-    )
     clean_air_mask = (
-        (ahead_gap > clean_mean_time_delta_seconds)
+        traffic_clean_mask(
+            prepared,
+            minimum_ahead_seconds=clean_mean_time_delta_seconds,
+            minimum_behind_seconds=clean_mean_time_delta_behind_seconds,
+        )
         & prepared["IsQuickLap"]
         & prepared["IsGreenTrackStatus"]
         & ~prepared["IsOutLap"]
         & ~prepared["IsInLap"]
     )
-    if clean_mean_time_delta_behind_seconds is not None:
-        # Missing per-lap gap values can mean there was no relevant car ahead or
-        # behind, which is clean air. Only allow that interpretation when some
-        # telemetry gap summary exists for the lap, so unmerged/no-telemetry laps
-        # do not pass the clean-air filter.
-        behind_gap = prepared["MeanTimeDeltaToDriverBehind"].where(
-            prepared["MeanTimeDeltaToDriverBehind"].notna(),
-            np.where(has_gap_summary, np.inf, np.nan),
-        )
-        clean_air_mask = clean_air_mask & (
-            behind_gap > clean_mean_time_delta_behind_seconds
-        )
     prepared["IsCleanAirLongRunLap"] = clean_air_mask
     return prepared
 

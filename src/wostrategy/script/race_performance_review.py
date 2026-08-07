@@ -36,7 +36,14 @@ from wostrategy.plots.race_performance import (
     save_relative_team_pace_figures,
 )
 from wostrategy.tools import load_all_session_laps_with_telemetry_gap_summary
+from wostrategy.analysis.traffic import (
+    COMBINATION_MODE_COMPATIBILITY_MIN,
+    TRAFFIC_EVALUATOR_VERSION,
+)
 from wostrategy.tools.race_range import expand_inclusive_race_range
+from wostrategy.core.race_performance_settings import (
+    write_resolved_race_performance_settings,
+)
 
 TEAM_MODE_BEST_DRIVER = "best-driver"
 TEAM_MODE_AVERAGE_DRIVERS = "average-drivers"
@@ -219,6 +226,25 @@ def run_race_performance_review(
         wet_lap_proportion_skip_threshold=wet_lap_proportion_skip_threshold,
         dry_compounds=dry_compounds,
     )
+    resolved_settings = dict(base_cache_metadata)
+    resolved_settings.update(
+        random_seed=random_seed,
+        progress_interval=progress_interval,
+        lap_compound_overrides=lap_compound_overrides,
+        telemetry_cache_dir=telemetry_cache_dir,
+        force_refresh_session_cache=force_refresh_session_cache,
+        force_refresh_telemetry=force_refresh_telemetry,
+        use_cached_monte_carlo=use_cached_monte_carlo,
+        test=test,
+    )
+    settings_paths = write_resolved_race_performance_settings(
+        resolved_settings,
+        output_root=output_dir,
+        year=year,
+        races=races,
+        session=session,
+    )
+    print(f"Resolved review settings: {settings_paths[0]}")
     print("Monte Carlo race performance review")
     print(f"Year: {year}")
     print(f"Races: {races}")
@@ -1281,7 +1307,11 @@ def cached_metadata_matches(
 def monte_carlo_cache_metadata(
     **kwargs: object,
 ) -> dict[str, object]:
-    metadata = {"cache_schema": 1}
+    metadata = {
+        "cache_schema": 2,
+        "traffic_evaluator_version": TRAFFIC_EVALUATOR_VERSION,
+        "traffic_combination_mode": COMBINATION_MODE_COMPATIBILITY_MIN,
+    }
     metadata.update(kwargs)
     return _json_normalized(metadata)
 
