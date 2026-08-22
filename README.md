@@ -611,6 +611,56 @@ missing races. Races with lap-compound overrides write metadata alongside the
 CSV outputs, so stale cached outputs generated without the same correction are
 not reused for that race.
 
+### Cross-event tyre prediction
+
+The complete frozen-V1 assumptions, compromises, validation rules, descriptor-domain
+diagnostics, dual-output contract, and prospective scoring procedure are documented in
+[`doc/CROSS_EVENT_TYRE_PREDICTION_V1.md`](doc/CROSS_EVENT_TYRE_PREDICTION_V1.md).
+
+The downstream tyre-prediction pipeline reads existing Race Retro artifacts without
+invoking or changing Retro MC, joins them to validated Pirelli preview descriptors,
+checks model readiness, and writes rolling pre-race predictions under
+`woData/wostrategy/tyre_prediction/schema_v1/`.
+
+```bash
+python -m wostrategy.script.tyre_prediction_pipeline --year 2026
+```
+
+Unchanged preview images are served from their SHA256-keyed per-event JSON artifacts.
+For a new or changed image, install `wodata[vision]` and pass `--vision-model`, or set
+`WODATA_PIRELLI_VISION_MODEL`. API credentials remain provider environment settings.
+The V1 performance estimator preserves Retro's event-HARD-relative coordinate; its
+readiness is evaluated separately from the absolute degradation estimator. Performance
+is fitted as four adjacent C1-C2 through C4-C5 gap intercepts with shared linear tyre
+stress and asphalt grip terms. Degradation uses five absolute-compound intercepts with
+shared linear stress, abrasion, and grip terms. Neither regression changes Retro's
+calculation or saved semantics.
+
+Every run also writes `validation.json` and `validation_predictions.csv`. Validation is
+strictly chronological, excludes the performance HARD identity rows from metrics, and
+compares each Pirelli feature model with its intercept-only baseline. The three supported
+weight policies are `uniform`, `event_normalised`, and
+`evidence_event_normalised`. The evidence policy applies `sqrt` to persisted clean-lap
+counts by compound and then normalises each event to total weight one; P10/P90 widths
+remain diagnostics and are not treated as calibrated inverse variances.
+
+The compatibility default is fixed at P0/uniform for performance and D0/uniform for
+degradation; small rolling-metric changes never promote another model automatically.
+Every compound also exposes a `historical_baseline` family (P0/D0) and a
+`pirelli_informed` family (P1/D1), so the physically informed alternative is visible
+rather than hidden. Both families are stored in each immutable prediction version.
+`coefficient_history.csv` records rolling and current
+fit coefficients and conditioning, while `diagnostic_summary.json` ranks residuals and
+summarises descriptor groups. Once Retro becomes available for a versioned pre-race
+prediction, `prospective_validation.csv` scores that original saved P0/P1/D0/D1 output
+without recreating it. Prospective and historical-rolling metrics remain separate.
+
+Pirelli descriptor levels remain a V1 ordinal 1-5 numerical approximation. Diagnostics
+treat 1 and 5 as saturated boundary categories, record whether each level and exact
+descriptor tuple occurred in prior events, and report paired interior/boundary and
+seen/unseen-tuple metrics. These fields are descriptive only: they do not measure physical
+distance, alter a prediction, change its weight, or trigger model promotion.
+
 Optional plot controls:
 
 - `--plot-uncertainty-band` draws P10/P90 bands.
