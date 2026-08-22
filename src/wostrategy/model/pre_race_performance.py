@@ -674,6 +674,16 @@ def _prepare_analysis_laps(laps: pd.DataFrame) -> pd.DataFrame:
         output["session"] = laps.loc[output.index, "SessionName"].astype(str)
     else:
         output["session"] = "unknown"
+    # Race-specific likelihoods need the persistent driver identity in addition
+    # to the run/stint identity.  Keeping it here is backwards-compatible with
+    # the pre-race run-profile likelihood and avoids attempting to recover a
+    # driver from an opaque RunId downstream.
+    if "Driver" in laps.columns:
+        output["driver"] = laps.loc[output.index, "Driver"].astype(str)
+    else:
+        output["driver"] = output["run_id"]
+    if "Team" in laps.columns:
+        output["team"] = laps.loc[output.index, "Team"].astype(str)
     return output.reset_index(drop=True)
 
 

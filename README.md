@@ -1,5 +1,9 @@
 # woStrategy
 
+For the current Race Monte Carlo, live-retro, identifiability, accelerated
+evaluator, and production FP tyre-evidence assumptions, see
+[`doc/RACE_MC_AND_FP_ARCHITECTURE.md`](doc/RACE_MC_AND_FP_ARCHITECTURE.md).
+
 woStrategy is an independent F1 race-performance analysis project built on
 public FastF1 data. It is currently a Monte Carlo-based performance tracker
 that aims to estimate underlying team pace by separating fuel effect, track

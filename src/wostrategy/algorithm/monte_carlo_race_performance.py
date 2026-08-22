@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import time
 from typing import Callable, Literal, Protocol
 
 import numpy as np
@@ -33,6 +34,9 @@ WEIGHT_STRATEGIES = (
     WEIGHT_STRATEGY_GAUSSIAN,
     WEIGHT_STRATEGY_BEST_RMSE_RELATIVE,
 )
+EVALUATOR_LEGACY = "legacy"
+EVALUATOR_ACCELERATED = "accelerated"
+EVALUATOR_BACKENDS = (EVALUATOR_LEGACY, EVALUATOR_ACCELERATED)
 
 
 @dataclass(frozen=True)
@@ -61,6 +65,8 @@ class MonteCarloRacePerformanceConfig:
     degradation_order_track_temperature_celsius: float | None = (
         DEFAULT_DEGRADATION_ORDER_TRACK_TEMPERATURE_CELSIUS
     )
+    evaluator_backend: Literal["legacy", "accelerated"] = EVALUATOR_ACCELERATED
+    candidate_chunk_size: int = 2000
 
 
 @dataclass(frozen=True)
@@ -75,6 +81,7 @@ class RacePerformanceAlgorithmResult:
 class RacePerformanceReviewAlgorithm(Protocol):
     def run(self, clean_laps: pd.DataFrame) -> RacePerformanceAlgorithmResult:
         """Return sampled parameters and fitted baselines for prepared clean laps."""
+        ...
 
 
 class MonteCarloRacePerformanceAlgorithm:
@@ -98,8 +105,19 @@ class MonteCarloRacePerformanceAlgorithm:
             raise ValueError("progress_interval must be positive or None.")
         self.progress_callback = progress_callback
         self.progress_interval = progress_interval
+        self.last_timings: dict[str, float] = {}
 
     def run(self, clean_laps: pd.DataFrame) -> RacePerformanceAlgorithmResult:
+        if self.config.evaluator_backend == EVALUATOR_ACCELERATED:
+            return self._run_accelerated(clean_laps)
+        started = time.perf_counter()
+        result = self._run_legacy(clean_laps)
+        self.last_timings = {
+            "legacy_total_seconds": time.perf_counter() - started,
+        }
+        return result
+
+    def _run_legacy(self, clean_laps: pd.DataFrame) -> RacePerformanceAlgorithmResult:
         fit_laps = clean_laps.dropna(
             subset=[
                 "Driver",
@@ -357,6 +375,200 @@ class MonteCarloRacePerformanceAlgorithm:
             baseline_pace=pd.DataFrame(baseline_rows),
         )
 
+    def _run_accelerated(self, clean_laps: pd.DataFrame) -> RacePerformanceAlgorithmResult:
+        """Execute the exact retro candidate mathematics in NumPy chunks."""
+        total_started = time.perf_counter()
+        fit_laps = clean_laps.dropna(subset=[
+            "Driver", "Team", "Compound", "LapNumber", "LapTimeSeconds",
+            FUEL_PROXY_LAPS_REMAINING, TYRE_AGE_LAPS_COLUMN,
+        ]).copy()
+        if fit_laps.empty:
+            raise ValueError("No clean laps had the columns required for Monte Carlo correction.")
+        config = self.config
+        compounds = tuple(sorted(fit_laps["Compound"].astype(str).unique()))
+        team_compounds = tuple(sorted(map(tuple, fit_laps[["Team", "Compound"]]
+                                          .drop_duplicates().astype(str).to_numpy())))
+        reference = config.compound_delta_reference.upper()
+        delta_compounds = tuple(compound for compound in compounds if compound != reference)
+        dimension_count = 2 + len(compounds) + len(delta_compounds) + len(team_compounds)
+        generation_started = time.perf_counter()
+        unit = get_unit_cube_sampler(config.sampling_strategy).sample(
+            sample_count=config.sample_count, dimension_count=dimension_count,
+            seed=config.random_seed,
+        )
+        fuel = config.fuel_rate_bounds[0] + unit[:, 0] * np.ptp(config.fuel_rate_bounds)
+        track_bounds = _effective_track_rate_bounds(config)
+        track = track_bounds[0] + unit[:, 1] * np.ptp(track_bounds)
+        offset = 2
+        degradation_units = {compound: unit[:, offset + index]
+                             for index, compound in enumerate(compounds)}
+        offset += len(compounds)
+        track_temperature = _track_temperature_celsius(fit_laps, config)
+        enforce_order = _should_enforce_degradation_order(track_temperature, config)
+        degradation = _sample_compound_rates_array(
+            degradation_units, config=config, enforce_degradation_order=enforce_order
+        )
+        delta_units = {compound: unit[:, offset + index]
+                       for index, compound in enumerate(delta_compounds)}
+        offset += len(delta_compounds)
+        deltas = _sample_compound_deltas_array(
+            compounds, delta_units, config=config, enforce_delta_order=enforce_order,
+            reference_compound=reference,
+        )
+        variations: dict[tuple[str, str], np.ndarray] = {}
+        team_rates: dict[tuple[str, str], np.ndarray] = {}
+        for team_compound in team_compounds:
+            base = degradation[team_compound[1]]
+            limit = np.maximum(config.team_variation_fraction * np.abs(base),
+                               config.team_variation_absolute_min)
+            variation = (2.0 * unit[:, offset] - 1.0) * limit
+            offset += 1
+            variations[team_compound] = variation
+            team_rates[team_compound] = base + variation
+        candidate_generation_seconds = time.perf_counter() - generation_started
+
+        lap_time = fit_laps["LapTimeSeconds"].to_numpy(float)
+        fuel_x = fit_laps[FUEL_PROXY_LAPS_REMAINING].to_numpy(float) - config.fuel_ref
+        race_lap_ref = (float(fit_laps["LapNumber"].mean()) if config.race_lap_ref is None
+                        else float(config.race_lap_ref))
+        track_x = fit_laps["LapNumber"].to_numpy(float) - race_lap_ref
+        tyre_age = fit_laps[TYRE_AGE_LAPS_COLUMN].to_numpy(float) - config.tyre_age_ref
+        lap_compounds = fit_laps["Compound"].astype(str).to_numpy()
+        lap_pairs = list(zip(fit_laps["Team"].astype(str), lap_compounds))
+        baseline_columns = _baseline_columns(config.baseline_group)
+        group_labels = _baseline_labels(fit_laps, baseline_columns)
+        group_codes, group_names = pd.factorize(group_labels, sort=True)
+        group_masks = tuple(group_codes == code for code in range(len(group_names)))
+        rmse = np.empty(config.sample_count)
+        baselines = np.empty((config.sample_count, len(group_names)))
+        chunk_size = int(config.candidate_chunk_size)
+        correction_seconds = 0.0
+        baseline_seconds = 0.0
+        rmse_seconds = 0.0
+        for start in range(0, config.sample_count, chunk_size):
+            stop = min(start + chunk_size, config.sample_count)
+            phase_started = time.perf_counter()
+            effect = fuel[start:stop, None] * fuel_x + track[start:stop, None] * track_x
+            for lap_index, (pair, compound, age) in enumerate(
+                zip(lap_pairs, lap_compounds, tyre_age)
+            ):
+                effect[:, lap_index] += (
+                    team_rates[pair][start:stop] * age + deltas[compound][start:stop]
+                )
+            correction_seconds += time.perf_counter() - phase_started
+            phase_started = time.perf_counter()
+            residual = lap_time - effect
+            for code, mask in enumerate(group_masks):
+                mean = residual[:, mask].mean(axis=1, keepdims=True)
+                baselines[start:stop, code] = mean[:, 0]
+                residual[:, mask] -= mean
+            baseline_seconds += time.perf_counter() - phase_started
+            phase_started = time.perf_counter()
+            rmse[start:stop] = np.sqrt(np.mean(residual**2, axis=1))
+            rmse_seconds += time.perf_counter() - phase_started
+        weight_started = time.perf_counter()
+        weights = _sample_weights(rmse, config=config, lap_count=len(fit_laps))
+        weight_seconds = time.perf_counter() - weight_started
+        if self.progress_callback is not None:
+            running_best = np.minimum.accumulate(rmse)
+            if config.weight_strategy == WEIGHT_STRATEGY_GAUSSIAN:
+                running_weight = np.cumsum(np.exp(
+                    -(rmse**2) / (2 * config.clean_lap_noise_sigma**2)
+                ))
+            else:
+                running_weight = np.full(config.sample_count, np.nan)
+            for sample_id in range(config.sample_count):
+                self._report_progress(
+                    sample_id=sample_id, rmse=float(rmse[sample_id]),
+                    best_rmse=float(running_best[sample_id]),
+                    weight_sum=float(running_weight[sample_id]),
+                )
+        materialization_started = time.perf_counter()
+        sample_ids = np.arange(config.sample_count)
+        effective_count = _weight_effective_sample_count(config, lap_count=len(fit_laps))
+        sample_parameters = pd.DataFrame({
+            "SampleId": sample_ids, "FuelRateSecondsPerLap": fuel,
+            "TrackRateSecondsPerLap": track,
+            "LimitNegativeTrackCorrection": config.limit_negative_track_correction,
+            "RMSESeconds": rmse, "Score": rmse, "Weight": weights,
+            "CleanLapCount": len(fit_laps), "BaselineGroup": config.baseline_group,
+            "FuelRef": float(config.fuel_ref), "RaceLapRef": race_lap_ref,
+            "TyreAgeRef": float(config.tyre_age_ref),
+            "SamplingStrategy": config.sampling_strategy,
+            "WeightStrategy": config.weight_strategy,
+            "WeightEffectiveSampleCount": effective_count,
+            "CompoundDeltaReference": reference,
+            "TrackTemperatureCelsius": track_temperature,
+            "DegradationOrderTrackTemperatureCelsius":
+                config.degradation_order_track_temperature_celsius,
+            "DegradationOrderEnforced": enforce_order,
+        })
+        degradation_names = tuple(degradation)
+        compound_degradation = pd.DataFrame({
+            "SampleId": np.repeat(sample_ids, len(degradation_names)),
+            "Compound": np.tile(degradation_names, config.sample_count),
+            "CompoundDegSecondsPerLap": np.column_stack(
+                [degradation[name] for name in degradation_names]
+            ).ravel(),
+        })
+        delta_names = tuple(compound for compound in deltas if compound in compounds)
+        compound_delta = pd.DataFrame({
+            "SampleId": np.repeat(sample_ids, len(delta_names)),
+            "Compound": np.tile(delta_names, config.sample_count),
+            "CompoundDeltaSeconds": np.column_stack(
+                [deltas[name] for name in delta_names]
+            ).ravel(),
+            "CompoundDeltaReference": reference,
+            "IsCompoundDeltaReference": np.tile(
+                [name == reference for name in delta_names], config.sample_count
+            ),
+        })
+        team_names = tuple(team for team, _ in team_compounds)
+        team_compound_names = tuple(compound for _, compound in team_compounds)
+        team_compound_degradation = pd.DataFrame({
+            "SampleId": np.repeat(sample_ids, len(team_compounds)),
+            "Team": np.tile(team_names, config.sample_count),
+            "Compound": np.tile(team_compound_names, config.sample_count),
+            "CompoundDegSecondsPerLap": np.column_stack([
+                degradation[compound] for _, compound in team_compounds
+            ]).ravel(),
+            "TeamCompoundDegSecondsPerLap": np.column_stack([
+                team_rates[pair] for pair in team_compounds
+            ]).ravel(),
+            "VariationSecondsPerLap": np.column_stack([
+                variations[pair] for pair in team_compounds
+            ]).ravel(),
+        })
+        baseline_pace = pd.DataFrame({
+            "SampleId": np.repeat(sample_ids, len(group_names)),
+            "BaselineGroup": config.baseline_group,
+            "BaselineGroupKey": np.tile(group_names, config.sample_count),
+            "CorrectedBaselinePaceSeconds": baselines.ravel(),
+        })
+        split_keys = [_split_baseline_key(str(key), baseline_columns) for key in group_names]
+        for column in baseline_columns:
+            baseline_pace[column] = np.tile(
+                [values[column] for values in split_keys], config.sample_count
+            )
+        result = RacePerformanceAlgorithmResult(
+            sample_parameters, compound_degradation, compound_delta,
+            team_compound_degradation, baseline_pace,
+        )
+        materialization_seconds = time.perf_counter() - materialization_started
+        self.last_timings = {
+            "candidate_generation_seconds": candidate_generation_seconds,
+            "candidate_correction_seconds": correction_seconds,
+            "baseline_profiling_seconds": baseline_seconds,
+            "rmse_seconds": rmse_seconds,
+            "weight_calculation_seconds": weight_seconds,
+            "result_materialization_seconds": materialization_seconds,
+            "candidate_evaluation_seconds": (
+                correction_seconds + baseline_seconds + rmse_seconds + weight_seconds
+            ),
+            "model_total_seconds": time.perf_counter() - total_started,
+        }
+        return result
+
     def _report_progress(
         self,
         *,
@@ -509,6 +721,35 @@ def _sample_compound_rates(
     return rates
 
 
+def _sample_compound_rates_array(
+    unit_samples: dict[str, np.ndarray], *, config: MonteCarloRacePerformanceConfig,
+    enforce_degradation_order: bool,
+) -> dict[str, np.ndarray]:
+    if not enforce_degradation_order:
+        return {
+            compound: bounds[0] + values * (bounds[1] - bounds[0])
+            for compound, values in unit_samples.items()
+            for bounds in (_compound_bounds(config, compound),)
+        }
+    rates: dict[str, np.ndarray] = {}
+    previous: np.ndarray | None = None
+    for compound in reversed(ORDERED_DRY_COMPOUNDS):
+        if compound not in unit_samples:
+            continue
+        lower, upper = _compound_bounds(config, compound)
+        higher = ORDERED_DRY_COMPOUNDS[:ORDERED_DRY_COMPOUNDS.index(compound)]
+        upper = min([upper] + [_compound_bounds(config, item)[1]
+                               for item in higher if item in unit_samples])
+        effective_lower = np.maximum(lower, previous) if previous is not None else lower
+        rates[compound] = effective_lower + unit_samples[compound] * (upper - effective_lower)
+        previous = rates[compound]
+    for compound, values in unit_samples.items():
+        if compound not in rates:
+            lower, upper = _compound_bounds(config, compound)
+            rates[compound] = lower + values * (upper - lower)
+    return rates
+
+
 def _sample_compound_deltas(
     compounds: tuple[str, ...],
     unit_samples: dict[str, float],
@@ -573,6 +814,53 @@ def _sample_compound_deltas(
     return deltas
 
 
+def _sample_compound_deltas_array(
+    compounds: tuple[str, ...], unit_samples: dict[str, np.ndarray], *,
+    config: MonteCarloRacePerformanceConfig, enforce_delta_order: bool,
+    reference_compound: str,
+) -> dict[str, np.ndarray]:
+    sample_count = config.sample_count
+    if not enforce_delta_order:
+        return {
+            compound: np.zeros(sample_count) if compound == reference_compound else
+            _compound_delta_bounds(config, compound)[0] + unit_samples[compound] *
+            np.ptp(_compound_delta_bounds(config, compound))
+            for compound in compounds
+        }
+    compound_set = set(compounds)
+    deltas: dict[str, np.ndarray] = {}
+    previous: np.ndarray | None = None
+    reference_index = (ORDERED_DRY_COMPOUNDS.index(reference_compound)
+                       if reference_compound in ORDERED_DRY_COMPOUNDS else None)
+    for index, compound in enumerate(ORDERED_DRY_COMPOUNDS):
+        if compound not in compound_set:
+            continue
+        if compound == reference_compound:
+            value = np.zeros(sample_count)
+        else:
+            lower, upper = _compound_delta_bounds(config, compound)
+            if reference_index is not None:
+                if index < reference_index:
+                    upper = min(upper, 0.0)
+                elif index > reference_index:
+                    lower = max(lower, 0.0)
+            effective_lower = np.maximum(lower, previous) if previous is not None else lower
+            if np.any(effective_lower > upper):
+                raise ValueError("Compound delta bounds cannot satisfy hot-track ordering "
+                                 "SOFT <= MEDIUM <= HARD.")
+            value = effective_lower + unit_samples[compound] * (upper - effective_lower)
+        deltas[compound] = value
+        previous = value
+    for compound in compounds:
+        if compound not in deltas:
+            if compound == reference_compound:
+                deltas[compound] = np.zeros(sample_count)
+            else:
+                lower, upper = _compound_delta_bounds(config, compound)
+                deltas[compound] = lower + unit_samples[compound] * (upper - lower)
+    return deltas
+
+
 def _track_temperature_celsius(
     laps: pd.DataFrame,
     config: MonteCarloRacePerformanceConfig,
@@ -603,6 +891,10 @@ def _validate_config(config: MonteCarloRacePerformanceConfig) -> None:
         raise ValueError("sample_count must be positive.")
     if config.clean_lap_noise_sigma <= 0:
         raise ValueError("clean_lap_noise_sigma must be positive.")
+    if config.evaluator_backend not in EVALUATOR_BACKENDS:
+        raise ValueError(f"Unknown evaluator_backend {config.evaluator_backend!r}.")
+    if config.candidate_chunk_size <= 0:
+        raise ValueError("candidate_chunk_size must be positive.")
     if config.weight_strategy not in WEIGHT_STRATEGIES:
         options = ", ".join(WEIGHT_STRATEGIES)
         raise ValueError(f"Unknown weight_strategy {config.weight_strategy!r}. Options: {options}.")

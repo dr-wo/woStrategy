@@ -1,5 +1,11 @@
 # woStrategy Code Status Quo
 
+For the production live-retro Race model, accelerated evaluator equivalence,
+experimental Race-specific alternatives, identifiability assumptions, and FP tyre
+evidence API, read
+[`RACE_MC_AND_FP_ARCHITECTURE.md`](RACE_MC_AND_FP_ARCHITECTURE.md) before changing
+model dimensions or priors.
+
 Last reviewed: 2026-07-27
 
 This document is a compact map of the current `woStrategy` package so future coding agents can orient quickly without rereading every module. It describes the repository as observed at the review date above.
