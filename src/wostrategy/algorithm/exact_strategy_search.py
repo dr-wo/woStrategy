@@ -77,6 +77,29 @@ class StrategyResult:
     formatted_strategy: str
 
 
+@dataclass(frozen=True)
+class StrategyRules:
+    """General sporting/availability constraints for deterministic search."""
+
+    minimum_distinct_dry_compounds: int = 0
+    available_compounds: tuple[str, ...] | None = None
+
+    def __post_init__(self) -> None:
+        if self.minimum_distinct_dry_compounds < 0:
+            raise ValueError("minimum_distinct_dry_compounds cannot be negative")
+        if self.available_compounds is not None:
+            object.__setattr__(
+                self, "available_compounds",
+                tuple(dict.fromkeys(str(value).upper() for value in self.available_compounds)),
+            )
+
+    def accepts(self, plan: StrategyPlan) -> bool:
+        if self.available_compounds is not None and not set(plan.compounds).issubset(self.available_compounds):
+            return False
+        dry = {value for value in plan.compounds if value in {"SOFT", "MEDIUM", "HARD"}}
+        return len(dry) >= self.minimum_distinct_dry_compounds
+
+
 def stint_cost(n: int, compound: str, current_tyre_age: int, model: StrategyModel) -> float:
     """Cost n future laps when current age is after the last completed lap.
 
@@ -248,6 +271,7 @@ def search_best_compound_sequences(
     k: int = 10,
     permitted_compounds: Sequence[str] | None = None,
     allow_any_start: bool = False,
+    strategy_rules: StrategyRules | None = None,
 ) -> list[StrategyResult]:
     """Return the single best pit schedule for every compound sequence."""
     _validate_state(state, model)
@@ -287,8 +311,60 @@ def search_best_compound_sequences(
                     k=1,
                 )
                 if best:
-                    candidates.append((best[0].plan, best[0].remaining_cost))
+                    if strategy_rules is None or strategy_rules.accepts(best[0].plan):
+                        candidates.append((best[0].plan, best[0].remaining_cost))
     return _rank(candidates, "compound_sequence", k)
+
+
+def search_best_fixed_stop_count(
+    state: StrategySearchState,
+    model: StrategyModel,
+    pit_loss: float,
+    *,
+    stop_count: int,
+    k: int = 1,
+    permitted_compounds: Sequence[str] | None = None,
+    allow_any_start: bool = False,
+    strategy_rules: StrategyRules | None = None,
+) -> list[StrategyResult]:
+    """Find the best schedule/sequence with exactly `stop_count` stops."""
+    _validate_state(state, model)
+    if stop_count < 0 or k <= 0:
+        raise ValueError("stop_count cannot be negative and k must be positive")
+    compounds = tuple(dict.fromkeys(
+        value.upper() for value in (permitted_compounds or tuple(model.degradation))
+    ))
+    unknown = set(compounds).difference(model.degradation)
+    if unknown:
+        raise ValueError(f"Unknown permitted compounds: {sorted(unknown)}")
+    starts = compounds if allow_any_start and state.current_completed_lap == 0 else (
+        state.current_compound.upper(),
+    )
+    candidates: list[tuple[StrategyPlan, float]] = []
+    for current in starts:
+        sequence_state = replace(
+            state, current_compound=current, current_tyre_age=_start_age(model, current)
+        )
+        for tail in product(compounds, repeat=stop_count):
+            sequence = (current,) + tuple(tail)
+            if sequence_state.laps_remaining < len(sequence):
+                continue
+            if strategy_rules is not None and not strategy_rules.accepts(
+                StrategyPlan(sequence, tuple(
+                    sequence_state.current_completed_lap + index + 1
+                    for index in range(stop_count)
+                ))
+            ):
+                continue
+            placeholder = tuple(
+                sequence_state.current_completed_lap + index + 1 for index in range(stop_count)
+            )
+            best = optimise_same_sequence(
+                StrategyPlan(sequence, placeholder), sequence_state, model, pit_loss, k=1
+            )
+            if best:
+                candidates.append((best[0].plan, best[0].remaining_cost))
+    return _rank(candidates, "fixed_stop_count", k)
 
 
 def full_reoptimisation(

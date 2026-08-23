@@ -19,7 +19,11 @@ from .sampling import (
     UnitCubeSampler,
     get_unit_cube_sampler,
 )
-from .exact_strategy_search import search_best_compound_sequences
+from .exact_strategy_search import (
+    StrategyRules,
+    search_best_compound_sequences,
+    search_best_fixed_stop_count,
+)
 
 __all__ = [
     "CORRECTED_LAP_TIME_SECONDS",
@@ -38,4 +42,6 @@ __all__ = [
     "UnitCubeSampler",
     "get_unit_cube_sampler",
     "search_best_compound_sequences",
+    "search_best_fixed_stop_count",
+    "StrategyRules",
 ]
