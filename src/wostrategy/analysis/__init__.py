@@ -50,9 +50,16 @@ from .fp_tyre_evidence import (
     local_fp_tyre_evidence_status,
     write_fp_tyre_evidence,
 )
+from .pre_race_model_config import (
+    PreRaceModelConfigResult,
+    ensure_pre_race_model_config,
+    resolve_practice_sessions,
+    validate_pre_race_model_config,
+)
 
 __all__ = [
     "FPProgrammeClassifierConfig",
+    "PreRaceModelConfigResult",
     "FPTyreEvidenceCalculationConfig",
     "EXPONENTIAL_TRACK_EVOLUTION_MODEL",
     "LINEAR_TRACK_EVOLUTION_MODEL",
@@ -79,6 +86,7 @@ __all__ = [
     "calculate_monte_carlo_race_performance_review",
     "calculate_fp_tyre_evidence",
     "dominant_compound",
+    "ensure_pre_race_model_config",
     "fit_compound_track_evolution",
     "fp_tyre_evidence_path",
     "fresh_tyre_mask",
@@ -86,10 +94,12 @@ __all__ = [
     "get_track_evolution_model",
     "select_dry_push_laps",
     "select_top_drivers",
+    "resolve_practice_sessions",
     "is_wet_race",
     "load_fp_tyre_evidence",
     "local_fp_tyre_evidence_status",
     "write_fp_tyre_evidence",
+    "validate_pre_race_model_config",
     "summarize_monte_carlo_race_performance",
     "wet_lap_proportion_by_driver",
 ]

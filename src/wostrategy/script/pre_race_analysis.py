@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Mapping, Sequence
 
@@ -266,6 +267,12 @@ def run_weekend_model_script(
     )
     write_weekend_model_config(
         {
+            "artifact_schema_version": 2,
+            "season": int(year),
+            "round_number": int(round_number),
+            "source_sessions": list(selected_sessions),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "producer_api": "wostrategy.script.pre_race_analysis.run_weekend_model_script",
             "sample_count": config.sample_count,
             "random_seed": config.random_seed,
             "fuel_rate_bounds": list(config.fuel_rate_bounds),
