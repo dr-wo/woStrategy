@@ -143,3 +143,25 @@ def test_cutoff_plot_labels_prediction_and_both_crossings() -> None:
     finally:
         import matplotlib.pyplot as plt
         plt.close(figure)
+
+
+def test_cutoff_plot_labels_fp_diagnostic_markers() -> None:
+    result = calculate_degradation_cutoffs(
+        model=_cutoff_model(), state=_state(), pit_loss=2.0,
+        scan_min=0.05, scan_max=0.4, coarse_step=0.01,
+        evaluator=lambda value, stops, rules: {1: value, 2: 0.1, 3: 0.4 - value}[stops],
+    )
+    markers = [
+        {"session": "FP1", "medium_degradation": 0.06},
+        {"session": "FP2", "medium_degradation": 0.10},
+        {"session": "FP3", "medium_degradation": 0.08},
+    ]
+    figure, axis = plot_degradation_cutoff(result, fp_diagnostic_markers=markers)
+    try:
+        labels = axis.get_legend_handles_labels()[1]
+        assert "FP1 diagnostic" in labels
+        assert "FP2 diagnostic" in labels
+        assert "FP3 diagnostic" in labels
+    finally:
+        import matplotlib.pyplot as plt
+        plt.close(figure)

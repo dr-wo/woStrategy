@@ -55,6 +55,23 @@ count as a positive cutoff.
 The cutoff plot labels predicted MEDIUM degradation and each available 1→2 and
 2→3 cutoff. Existing reversal shading and non-monotonic warnings are retained.
 
+## FP diagnostic reference markers
+
+Race-preparation figures may also show supported FP1, FP2 and FP3 MEDIUM
+degradation posterior coordinates as explicitly labelled diagnostic markers.
+The production cutoff curves, S:M:H degradation ratios, performance deltas and
+crossing calculations are unchanged; the markers merely locate practice evidence
+on that existing envelope.
+
+This is a deliberate V1 engineering compromise. The current practice model cannot
+reliably separate absolute tyre degradation from fuel/load effects, and compound
+performance is not independently identifiable without stronger cross-compound
+constraints. FP diagnostics therefore do not become production tyre inputs or an
+independent FP strategy prediction. Their values, intervals, support and structural
+identifiability are emitted in deterministic report JSON so report generation does
+not infer numbers from the figure. Future work may replace this reference-only
+presentation once fuel/load estimation and FP identifiability are stronger.
+
 ## Assumptions
 
 - Predicted MEDIUM degradation is non-zero and provides the scale denominator.
