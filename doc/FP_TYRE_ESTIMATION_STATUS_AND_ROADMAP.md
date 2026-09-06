@@ -114,6 +114,20 @@ The compact snapshot is rebuilt automatically after Retro persistence and downst
 rolling validation. Race N updates the snapshot through N for Race N+1. It never edits
 the frozen Race N prediction or its version artifact.
 
+## Report-facing degradation names
+
+Human-readable FP tyre-evidence reports use neutral degradation labels:
+
+- `Historical degradation` for the internal D0 / `historical_baseline` family;
+- `Pirelli-informed degradation` for the internal D1 / `pirelli_informed` family.
+
+This is deliberately a display-only mapping. The machine-readable JSON, calibration
+joins, immutable prediction artifacts, and `selected_default` field retain the existing
+technical IDs. That compatibility compromise avoids an artifact-schema migration and
+keeps historical calibration data readable, but means report consumers must not derive
+presentation text by simply displaying or title-casing the internal family identifier.
+Any additional report surface should use the same explicit mapping.
+
 Once substantially more independent events exist, a later calibration version may
 test a statistically defined continuous relationship such as
 

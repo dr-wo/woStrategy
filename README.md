@@ -656,11 +656,30 @@ degradation; small rolling-metric changes never promote another model automatica
 Every compound also exposes a `historical_baseline` family (P0/D0) and a
 `pirelli_informed` family (P1/D1), so the physically informed alternative is visible
 rather than hidden. Both families are stored in each immutable prediction version.
+Human-readable FP evidence reports render the degradation families as `Historical
+degradation` and `Pirelli-informed degradation`; the internal IDs remain unchanged for
+artifact and calibration compatibility.
 `coefficient_history.csv` records rolling and current
 fit coefficients and conditioning, while `diagnostic_summary.json` ranks residuals and
 summarises descriptor groups. Once Retro becomes available for a versioned pre-race
 prediction, `prospective_validation.csv` scores that original saved P0/P1/D0/D1 output
 without recreating it. Prospective and historical-rolling metrics remain separate.
+
+Persisted FP evidence can be evaluated against the later Race Retro target without
+changing the production tyre predictor:
+
+```bash
+python -m wostrategy.script.fp_race_diagnostic \
+  --season 2026 \
+  --data-root ../woData
+```
+
+The command records direct degradation error, leave-one-compound-out event-K transfer,
+team-compound topology, HARD-relative same-team and baseline-corrected cross-team
+performance, and constrained joint-fit diagnostics. See
+[`doc/CROSS_EVENT_TYRE_PREDICTION_V1.md`](doc/CROSS_EVENT_TYRE_PREDICTION_V1.md#historical-fp-to-race-diagnostic)
+for the eligibility contract, current one-event evidence, and limitations. These outputs
+remain diagnostic and are not consumed by Strategy Prediction.
 
 Pirelli descriptor levels remain a V1 ordinal 1-5 numerical approximation. Diagnostics
 treat 1 and 5 as saturated boundary categories, record whether each level and exact

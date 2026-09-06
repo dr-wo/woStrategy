@@ -308,6 +308,61 @@ PYTHONPATH=../woData/src:src python -m wostrategy.script.tyre_prediction_pipelin
   --year 2026
 ```
 
+## Historical FP-to-Race diagnostic
+
+The downstream historical diagnostic tests whether persisted FP tyre evidence contains
+useful information beyond the frozen P0/P1 and D0/D1 pre-race predictions. It does not
+change those regressions, rerun Race Retro, or write FP-derived values into Strategy
+Prediction.
+
+An event is eligible only when all of the following already exist:
+
+- chronological P0/P1 and D0/D1 rolling predictions;
+- separate persisted FP1, FP2, and FP3 parameter snapshots;
+- canonical cached FP lap data used by the existing strict long-run selector;
+- the later completed Race Retro tyre observation;
+- a leakage-safe preceding-race team baseline for cross-team comparisons.
+
+The diagnostic writes deterministic long-form records for direct FP degradation,
+leave-one-compound-out event-severity transfer, information topology, HARD-relative
+performance comparisons, and constrained joint partial fits. Raw design rank is retained
+separately from the regularized solution so a prior-constrained estimate cannot make an
+underdetermined FP state appear identifiable.
+
+Run it from `woStrategy/` with:
+
+```bash
+PYTHONPATH=../woData/src:src python -m wostrategy.script.fp_race_diagnostic \
+  --season 2026 \
+  --data-root ../woData
+```
+
+Outputs are written below:
+
+```text
+woData/wostrategy/tyre_prediction/schema_v1/year=<year>/fp_race_diagnostic/
+```
+
+The current complete persisted population contains only the 2026 Hungarian Grand Prix.
+Its FP2 state covers all three compounds but has a disconnected cross-team-only graph:
+there is no same-team compound bridge. In this event, direct FP2 degradation improved the
+historical D0 MAE from `0.0856` to `0.0665 s/lap` and was neutral against D1. Held-out K
+transfer improved D0 RMSE from `0.0871` to `0.0638 s/lap`, but worsened D1 RMSE from
+`0.0719` to `0.0863 s/lap`.
+
+Cross-team baseline-corrected FP2 performance was not useful: its paired MAE was
+`1.0462 s`, compared with `0.0730 s` for P0 and `0.0711 s` for P1 on the same cases.
+There was no same-team Perf-1 case. None of the six session/prior-family joint-fit states
+was identifiable without regularization, and the FP2 joint estimates underperformed the
+simpler comparators.
+
+These are one-event diagnostic observations, not production thresholds. Direct FP2
+degradation and K transfer merit testing on a larger genuinely historical population;
+cross-team performance replacement and the joint fit do not currently merit promotion.
+No cumulative FP1+FP2 result is emitted because no leakage-safe persisted cumulative
+snapshot exists, and no compound-specific Deg-3 residual is forced without connected
+compound topology.
+
 ## Deliberately deferred work
 
 V1 does not add or tune:
