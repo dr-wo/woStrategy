@@ -79,6 +79,10 @@ def _report_dict(report) -> dict[str, object]:
         "coefficient_history_path": str(report.coefficient_history_path),
         "diagnostic_summary_path": str(report.diagnostic_summary_path),
         "prospective_validation_path": str(report.prospective_validation_path),
+        "fp_calibration_path": (
+            str(report.fp_calibration_path)
+            if report.fp_calibration_path is not None else None
+        ),
     }
 
 

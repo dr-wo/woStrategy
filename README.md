@@ -6,6 +6,10 @@ evaluator, and production FP tyre-evidence assumptions, see
 For the fixed-stop degradation envelope, automatic lower-bound search, result
 statuses, and current limitations, see
 [`doc/DEGRADATION_CUTOFF.md`](doc/DEGRADATION_CUTOFF.md).
+For causal FP session snapshots, rolling degradation calibration, report-only
+FP evidence, the performance programme-offset findings, and the deliberate
+production compromises, see
+[`doc/FP_TYRE_ESTIMATION_STATUS_AND_ROADMAP.md`](doc/FP_TYRE_ESTIMATION_STATUS_AND_ROADMAP.md).
 
 woStrategy is an independent F1 race-performance analysis project built on
 public FastF1 data. It is currently a Monte Carlo-based performance tracker

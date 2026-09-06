@@ -22,6 +22,7 @@ from wostrategy.model.pre_race_performance import (
     derive_race_seed,
     run_joint_weekend_model,
 )
+from wostrategy.analysis.fp_pre_race_report import write_fp_tyre_evidence_report
 
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[4]
@@ -293,6 +294,19 @@ def run_weekend_model_script(
         },
         year=int(year), round_number=int(round_number), data_root=data_root,
     )
+    supported_compounds = {
+        session: tuple(sorted(
+            laps["Compound"].dropna().astype(str).str.upper().unique()
+        ))
+        for session, laps in prepared_sessions.items()
+        if "Compound" in laps.columns
+    }
+    _, fp_report_path = write_fp_tyre_evidence_report(
+        season=int(year),
+        round_number=int(round_number),
+        data_root=data_root,
+        supported_compounds_by_session=supported_compounds,
+    )
     if plot_output:
         plot_path = Path(plot_output).expanduser()
         plot_path.parent.mkdir(parents=True, exist_ok=True)
@@ -303,6 +317,7 @@ def run_weekend_model_script(
     for session, reason in result.excluded_sessions.items():
         print(f"      Excluded {session}: {reason}")
     print(f"      Saved {result.aggregate_snapshot.analysis_id} to {destination}")
+    print(f"      FP tyre evidence report: {fp_report_path}")
     return 0
 
 

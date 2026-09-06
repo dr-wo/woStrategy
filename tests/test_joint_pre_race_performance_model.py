@@ -109,6 +109,16 @@ def test_joint_cost_is_additive_and_bank_stays_fixed_as_sessions_arrive():
     assert fuel_rows[0].session == "FP1+FP2"
     assert {row.session for row in second.aggregate_snapshot.parameters if row.parameter == "track_rate"} == {"FP1", "FP2"}
 
+    first_fp1 = first.session_snapshots["FP1"]
+    second_fp1 = second.session_snapshots["FP1"]
+    assert first_fp1.contributing_sessions == ("FP1",)
+    assert second_fp1.contributing_sessions == ("FP1",)
+    assert first_fp1.analysis_id == second_fp1.analysis_id
+    assert [row.median for row in first_fp1.parameters] == [
+        row.median for row in second_fp1.parameters
+    ]
+    assert second.session_snapshots["FP2"].contributing_sessions == ("FP2",)
+
 
 def test_race_seed_is_stable_for_event_and_changes_by_race():
     assert derive_race_seed(2026, 8) == derive_race_seed(2026, 8)

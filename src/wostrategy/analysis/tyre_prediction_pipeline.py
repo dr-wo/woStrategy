@@ -36,6 +36,9 @@ from wostrategy.analysis.tyre_prediction_validation import (
 from wostrategy.analysis.tyre_prediction_prospective import (
     score_available_prospective_predictions,
 )
+from wostrategy.analysis.fp_race_diagnostic import (
+    refresh_fp_degradation_calibration,
+)
 from wostrategy.model.cross_event_tyre_prediction import (
     FEATURES,
     MODEL_VERSION,
@@ -101,6 +104,7 @@ class TyrePredictionPipelineReport:
     coefficient_history_path: Path
     diagnostic_summary_path: Path
     prospective_validation_path: Path
+    fp_calibration_path: Path | None
 
 
 def run_tyre_prediction_pipeline(
@@ -158,6 +162,15 @@ def run_tyre_prediction_pipeline(
         coefficient_history_path=coefficient_history_path,
         diagnostic_summary_path=diagnostic_summary_path,
     )
+    # Retro through Race N refreshes only the calibration snapshot consumed by
+    # later events. Frozen prediction.json/version artifacts are never rewritten.
+    fp_calibration_path = None
+    if not observations.empty:
+        fp_calibration_path = refresh_fp_degradation_calibration(
+            season=season,
+            completed_retro_through_round=int(observations["round"].max()),
+            data_root=data_root,
+        )
 
     observed_rounds = set(int(value) for value in observations["round"].unique())
     candidates = tuple(
@@ -225,6 +238,7 @@ def run_tyre_prediction_pipeline(
         coefficient_history_path=coefficient_history_path,
         diagnostic_summary_path=diagnostic_summary_path,
         prospective_validation_path=prospective_validation_path,
+        fp_calibration_path=fp_calibration_path,
     )
 
 

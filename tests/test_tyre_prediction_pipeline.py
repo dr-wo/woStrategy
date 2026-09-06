@@ -74,6 +74,8 @@ def test_pipeline_second_run_is_idempotent(tmp_path):
         year_root / "prospective_validation.csv",
         first.predictions[0].path,
         *sorted((first.predictions[0].path.parent / "versions").glob("*.json")),
+        first.fp_calibration_path,
+        year_root / "fp_degradation_calibration/versions/through_round=8.json",
     ]
     before = {path: path.read_bytes() for path in tracked}
 
@@ -88,6 +90,10 @@ def test_pipeline_second_run_is_idempotent(tmp_path):
     history = pd.read_csv(year_root / "prediction_history.csv")
     assert len(history) == 3
     prediction = json.loads(first.predictions[0].path.read_text())
+    calibration = json.loads(first.fp_calibration_path.read_text())
+    assert calibration["completed_retro_through_round"] == 8
+    assert calibration["calibration_status"] == "diagnostic_only"
+    assert calibration["production_weight_selected"] is False
     assert set(prediction["regression_predictions"]) == {"P0", "P1", "D0", "D1"}
     assert prediction["production_policy"]["performance"]["weighting_policy"] == "uniform"
     assert prediction["production_policy"]["degradation"]["weighting_policy"] == "uniform"

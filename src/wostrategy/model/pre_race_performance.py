@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field, replace
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Iterable, Mapping, Sequence
 
@@ -272,12 +272,7 @@ def run_joint_weekend_model(
             session_sse[session][sample_index] = sse
             session_costs[session][sample_index] = sse / (sigma**2)
     total_cost = np.sum(np.vstack(tuple(session_costs.values())), axis=0)
-    log_weights = -0.5 * (total_cost - float(total_cost.min()))
-    weights = np.exp(log_weights - float(log_weights.max()))
-    weight_sum = float(weights.sum())
-    if not np.isfinite(weight_sum) or weight_sum <= 0:
-        raise ValueError("Joint candidate weights are numerically invalid.")
-    weights /= weight_sum
+    weights = _posterior_weights(total_cost)
     ess = float(1.0 / np.sum(weights**2))
     contributing = tuple(prepared_by_session)
     input_fingerprints = {
@@ -363,17 +358,109 @@ def run_joint_weekend_model(
         session_weighted_costs=weighted_session_costs,
     )
     session_snapshots = {}
-    shared = estimates[0]
     for session in contributing:
-        rows = [shared] + [row for row in estimates[1:] if row.session == session]
+        causal_weights = _posterior_weights(session_costs[session])
+        causal_ess = float(1.0 / np.sum(causal_weights**2))
+        causal_rmse = float(
+            np.sqrt(
+                np.sum(causal_weights * session_sse[session])
+                / max(len(prepared_by_session[session]), 1)
+            )
+        )
+        causal_input = canonical_hash({session: input_fingerprints[session]})
+        causal_analysis_id = "analysis-" + canonical_hash(
+            {
+                "input": causal_input,
+                "config": config_hash,
+                "bank": bank.sample_bank_id,
+            }
+        )[:20]
+        causal_rows = [
+            _estimate(
+                bank.candidates[:, fuel_index],
+                causal_weights,
+                bank.bounds[fuel_index],
+                parameter="fuel_rate",
+                compound=None,
+                analysis_id=causal_analysis_id,
+                bank=bank,
+                scope=session,
+                reference=reference,
+                prepared=prepared_by_session[session],
+                ess=causal_ess,
+                weighted_rmse=causal_rmse,
+                input_fingerprint=input_fingerprints[session],
+                config_hash=config_hash,
+                created_at=created_at,
+                as_of_leader_lap=as_of_leader_lap,
+                boundary_fraction=config.boundary_fraction,
+                session_label=session,
+            )
+        ]
+        for dimension_index, (name, bounds) in enumerate(
+            zip(bank.dimension_names, bank.bounds)
+        ):
+            parts = name.split(":")
+            if len(parts) < 2 or parts[1] != session:
+                continue
+            parameter = parts[0]
+            compound = parts[2] if len(parts) == 3 else None
+            causal_rows.append(
+                _estimate(
+                    bank.candidates[:, dimension_index],
+                    causal_weights,
+                    bounds,
+                    parameter=parameter,
+                    compound=compound,
+                    analysis_id=causal_analysis_id,
+                    bank=bank,
+                    scope=session,
+                    reference=reference,
+                    prepared=prepared_by_session[session],
+                    ess=causal_ess,
+                    weighted_rmse=causal_rmse,
+                    input_fingerprint=input_fingerprints[session],
+                    config_hash=config_hash,
+                    created_at=created_at,
+                    as_of_leader_lap=as_of_leader_lap,
+                    boundary_fraction=config.boundary_fraction,
+                    session_label=session,
+                )
+            )
+        causal_rows.append(
+            _estimate(
+                np.zeros(len(causal_weights)),
+                causal_weights,
+                (0.0, 0.0),
+                parameter="compound_delta",
+                compound=reference,
+                analysis_id=causal_analysis_id,
+                bank=bank,
+                scope=session,
+                reference=reference,
+                prepared=prepared_by_session[session],
+                ess=causal_ess,
+                weighted_rmse=causal_rmse,
+                input_fingerprint=input_fingerprints[session],
+                config_hash=config_hash,
+                created_at=created_at,
+                as_of_leader_lap=as_of_leader_lap,
+                boundary_fraction=config.boundary_fraction,
+                session_label=session,
+            )
+        )
         session_snapshots[session] = ModelSnapshot(
-            analysis_id, bank.sample_bank_id, session, as_of_leader_lap,
-            tuple(replace(row, source_scope=session) for row in rows),
+            causal_analysis_id, bank.sample_bank_id, session, as_of_leader_lap,
+            tuple(causal_rows),
             input_fingerprints[session], config_hash, created_at,
-            contributing_sessions=contributing,
+            contributing_sessions=(session,),
             excluded_sessions=tuple(excluded.items()),
-            joint_weighted_cost=weighted_total_cost,
-            session_weighted_costs=weighted_session_costs,
+            joint_weighted_cost=float(
+                np.sum(causal_weights * session_costs[session])
+            ),
+            session_weighted_costs=((session, float(
+                np.sum(causal_weights * session_costs[session])
+            )),),
         )
     candidate_cost_rows = {"SampleId": np.arange(len(weights)), "Weight": weights,
                            "TotalCost": total_cost}
@@ -383,6 +470,15 @@ def run_joint_weekend_model(
     return JointWeekendModelResult(
         aggregate, session_snapshots, bank, candidate_costs, contributing, excluded
     )
+
+
+def _posterior_weights(costs: np.ndarray) -> np.ndarray:
+    log_weights = -0.5 * (costs - float(costs.min()))
+    weights = np.exp(log_weights - float(log_weights.max()))
+    weight_sum = float(weights.sum())
+    if not np.isfinite(weight_sum) or weight_sum <= 0:
+        raise ValueError("Candidate weights are numerically invalid.")
+    return weights / weight_sum
 
 
 def generate_fixed_sample_bank(
