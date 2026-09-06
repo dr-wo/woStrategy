@@ -678,7 +678,9 @@ The command records direct degradation error, leave-one-compound-out event-K tra
 team-compound topology, HARD-relative same-team and baseline-corrected cross-team
 performance, and constrained joint-fit diagnostics. See
 [`doc/CROSS_EVENT_TYRE_PREDICTION_V1.md`](doc/CROSS_EVENT_TYRE_PREDICTION_V1.md#historical-fp-to-race-diagnostic)
-for the eligibility contract, current one-event evidence, and limitations. These outputs
+for the eligibility contract and artifact layout, and
+[`doc/FP_TYRE_ESTIMATION_STATUS_AND_ROADMAP.md`](doc/FP_TYRE_ESTIMATION_STATUS_AND_ROADMAP.md)
+for the evolving calibration evidence, reporting policy, and limitations. These outputs
 remain diagnostic and are not consumed by Strategy Prediction.
 
 Pirelli descriptor levels remain a V1 ordinal 1-5 numerical approximation. Diagnostics

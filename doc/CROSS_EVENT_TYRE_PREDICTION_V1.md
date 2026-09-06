@@ -315,13 +315,18 @@ useful information beyond the frozen P0/P1 and D0/D1 pre-race predictions. It do
 change those regressions, rerun Race Retro, or write FP-derived values into Strategy
 Prediction.
 
-An event is eligible only when all of the following already exist:
+An event/session state is eligible only when all of the following already exist:
 
 - chronological P0/P1 and D0/D1 rolling predictions;
-- separate persisted FP1, FP2, and FP3 parameter snapshots;
+- a persisted causal parameter snapshot for the FP session being scored;
 - canonical cached FP lap data used by the existing strict long-run selector;
-- the later completed Race Retro tyre observation;
-- a leakage-safe preceding-race team baseline for cross-team comparisons.
+- the later completed Race Retro tyre observation.
+
+The sessions available for an event are scored independently. A missing FP1, FP2, or
+FP3 does not invalidate another persisted session. Leakage-safe preceding-race team
+baselines are used where available for cross-team performance comparisons; target-race
+team baselines are retained only for retrospective programme-offset research and never
+construct that event's FP prediction.
 
 The diagnostic writes deterministic long-form records for direct FP degradation,
 leave-one-compound-out event-severity transfer, information topology, HARD-relative
@@ -343,25 +348,19 @@ Outputs are written below:
 woData/wostrategy/tyre_prediction/schema_v1/year=<year>/fp_race_diagnostic/
 ```
 
-The current complete persisted population contains only the 2026 Hungarian Grand Prix.
-Its FP2 state covers all three compounds but has a disconnected cross-team-only graph:
-there is no same-team compound bridge. In this event, direct FP2 degradation improved the
-historical D0 MAE from `0.0856` to `0.0665 s/lap` and was neutral against D1. Held-out K
-transfer improved D0 RMSE from `0.0871` to `0.0638 s/lap`, but worsened D1 RMSE from
-`0.0719` to `0.0863 s/lap`.
+The diagnostic also evaluates fixed partial-update weights, leave-one-event-out
+stability, corrected-intercept variants, and strictly historical team/session programme
+offsets. Calibration history is versioned by Retro cutoff and remains
+`diagnostic_only`; it cannot rewrite a frozen prediction or promote a weight into
+Strategy Prediction.
 
-Cross-team baseline-corrected FP2 performance was not useful: its paired MAE was
-`1.0462 s`, compared with `0.0730 s` for P0 and `0.0711 s` for P1 on the same cases.
-There was no same-team Perf-1 case. None of the six session/prior-family joint-fit states
-was identifiable without regularization, and the FP2 joint estimates underperformed the
-simpler comparators.
-
-These are one-event diagnostic observations, not production thresholds. Direct FP2
-degradation and K transfer merit testing on a larger genuinely historical population;
-cross-team performance replacement and the joint fit do not currently merit promotion.
-No cumulative FP1+FP2 result is emitted because no leakage-safe persisted cumulative
-snapshot exists, and no compound-specific Deg-3 residual is forced without connected
-compound topology.
+The population and calibration metrics evolve as causal historical backfills and new
+Race Retro results become available. Do not copy an event count or selected grid point
+from this document into a production decision. Read the canonical diagnostic summary
+and compact cutoff snapshot, and use
+[`FP_TYRE_ESTIMATION_STATUS_AND_ROADMAP.md`](FP_TYRE_ESTIMATION_STATUS_AND_ROADMAP.md)
+for the current evidence interpretation, reporting contract, rejected approaches, and
+prospective validation gate.
 
 ## Deliberately deferred work
 
