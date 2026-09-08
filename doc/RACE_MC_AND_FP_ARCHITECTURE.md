@@ -1,6 +1,6 @@
 # Race Monte Carlo and FP Tyre Architecture
 
-Last reviewed: 2026-08-22
+Last reviewed: 2026-09-08
 
 This document records the assumptions and compromises behind the current Race
 Monte Carlo, live-retro model, experimental Race-specific model, and production
@@ -31,7 +31,8 @@ Race-informed values remain controlled by the existing Race evidence path.
 
 The model-quality payload intentionally separates:
 
-- numerical quality: ESS, ESS fraction, max/top-five weight, evaluator timing;
+- numerical quality: best and posterior-weighted RMSE, ESS, ESS fraction,
+  max/top-five weight, and evaluator timing;
 - information: clean Race laps/runs, observed compounds, tyre-age support and
   posterior P10-P90 widths.
 

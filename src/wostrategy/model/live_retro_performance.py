@@ -210,6 +210,8 @@ def run_live_retro_model(
         "independent_coordinate_count": len(dimension_names),
         "sample_count": config.sample_count,
         "ess": ess, "ess_fraction": ess / config.sample_count,
+        "best_rmse_seconds": float(np.min(rmse)),
+        "weighted_rmse_seconds": weighted_rmse,
         "max_weight": max_weight, "top5_weight": float(np.sort(weights)[-5:].sum()),
         "clean_race_laps": int(len(prepared)),
         "clean_race_runs": int(prepared["RunId"].nunique()),
