@@ -1861,9 +1861,9 @@ def _pit_track_status_type(value: object) -> str:
 
 
 def _combine_pit_status(in_status: str, out_status: str) -> str:
-    if "sc_vsc" in {in_status, out_status}:
-        return "sc_vsc"
-    return "normal"
+    if in_status != out_status:
+        return "mixed"
+    return "sc_vsc" if in_status == "sc_vsc" else "normal"
 
 
 def _timedelta_seconds(values: pd.Series) -> pd.Series:

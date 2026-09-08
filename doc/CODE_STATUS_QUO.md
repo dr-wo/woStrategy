@@ -95,6 +95,12 @@ entry point for applying the Retro lap preparation rules and then selecting
 either consecutive clean-air runs or whole stints. Downstream applications use
 it instead of importing the private `_prepare_laps` helper.
 
+`wostrategy.analysis.pit_loss` is the application-facing empirical pit-loss
+API. `pit_loss_split_summary` preserves the detailed established calculation;
+`median_pit_loss_by_state` returns compact normal and SC/VSC median splits.
+Stops whose pit-in and pit-out sectors have different state classes are labelled
+`mixed` and are excluded from both pure-state median groups.
+
 ## Algorithm Layer
 
 `src/wostrategy/algorithm/sampling.py`
@@ -625,6 +631,9 @@ Scripts are importable modules under `src/wostrategy/script`.
 - `--tyre-age-mode {stint,overall}` controls tyre-age correction input. `stint` is the default and uses `StintLapNumber - 1` or counted stint laps; `overall` uses `TyreLife - 1`.
 - `--limit-negative-track-correction` clamps sampled track-evolution rates to non-negative values so the correction cannot make later-race laps longer.
 - Wet/intermediate usage is summarized per driver; the race is skipped only when median driver wet proportion exceeds `--wet-lap-proportion-skip-threshold`.
+- Pit-loss summaries classify a stop as `mixed` when its pit-in and pit-out
+  sectors cross between normal and SC/VSC states; mixed stops do not contaminate
+  either pure-state summary.
 - Builds `MonteCarloRacePerformanceConfig` from CLI/default settings and delegates the sample loop to `algorithm.monte_carlo_race_performance`.
 - Supports `--sampling-strategy {random,latin-hypercube,halton}`.
 - Configurable correction bounds include:
