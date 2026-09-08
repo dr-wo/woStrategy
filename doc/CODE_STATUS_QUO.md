@@ -402,6 +402,15 @@ Return keys:
 - Average mode uses one driver only if a team has one result, or if teammate delta exceeds the configured threshold.
 - Best-sector mode preserves each lap's original S1/S2/S3 ratio during correction, then builds a team lap from best corrected sector values across eligible team laps/drivers.
 
+`src/wostrategy/analysis/live_qualifying.py`
+
+- Exposes the qualifying-only track-evolution calculation used by weekend
+  orchestration.
+- Accepts only qualifying push-lap times, so free-practice and operational
+  out/cool/in durations cannot enter the live fit.
+- Returns the rate, evidence count, and `QUALIFYING_ONLY` source scope in a
+  frozen `LiveQualifyingTrackEstimate`.
+
 `src/wostrategy/analysis/race_performance_review.py`
 
 - Contains the analysis wrapper for Monte Carlo race performance review.
