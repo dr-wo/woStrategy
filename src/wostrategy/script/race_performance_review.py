@@ -77,7 +77,7 @@ def range_output_dir(
 
 SCRIPT_CONFIG = {
     "year": 2026,
-    "race_range": [11, 11],
+    "race_range": [12, 12],
     "session": "R",
     "sample_count": 80000,
     "sampling_strategy": LATIN_HYPERCUBE_SAMPLER,
