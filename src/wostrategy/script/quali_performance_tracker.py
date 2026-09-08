@@ -51,7 +51,7 @@ SCRIPT_CONFIG = {
     "target_team": "Mercedes",
     "quick_lap_threshold": 1.07,
     "clean_min_time_delta_seconds": None,
-    "clean_mean_time_delta_seconds": 3.0,
+    "clean_mean_time_delta_seconds": None,
     "dry_compounds": ("SOFT", "MEDIUM", "HARD"),
     "new_tyre_only": True,
     "last_quali_part_only": True,
@@ -126,37 +126,15 @@ def run_quali_performance_tracker(
     test: bool = SCRIPT_CONFIG["test"],
 ) -> QualiPerformanceResult | str:
     """Load quali laps/telemetry, calculate track-evolution-corrected team bests."""
-    lap_time_only = False
-    try:
-        laps = load_all_session_laps_with_telemetry_gap_summary(
-            year=year,
-            rounds=[race],
-            session_names=[FORMAL_QUALIFYING_SESSION],
-            test=test,
-            telemetry_cache_dir=telemetry_cache_dir,
-            force_refresh_telemetry=force_refresh_telemetry,
-        )
-    except Exception as exc:
-        if not allow_lap_time_only:
-            raise
-        print(
-            f"{year} race {race} {FORMAL_QUALIFYING_SESSION}: "
-            f"telemetry loading failed ({exc}), falling back to lap-time-only mode."
-        )
-        laps = _load_quali_lap_times(year=year, race=race, test=test)
-        lap_time_only = True
-
-    if not lap_time_only and allow_lap_time_only and not _has_clean_gap_columns(
-        laps,
-        clean_min_time_delta_seconds=clean_min_time_delta_seconds,
-        clean_mean_time_delta_seconds=clean_mean_time_delta_seconds,
-    ):
-        print(
-            f"{year} race {race} {FORMAL_QUALIFYING_SESSION}: "
-            "telemetry gap columns unavailable, falling back to lap-time-only mode."
-        )
-        laps = _load_quali_lap_times(year=year, race=race, test=test)
-        lap_time_only = True
+    del (
+        clean_min_time_delta_seconds,
+        clean_mean_time_delta_seconds,
+        allow_lap_time_only,
+        telemetry_cache_dir,
+        force_refresh_telemetry,
+    )
+    laps = _load_quali_lap_times(year=year, race=race, test=test)
+    lap_time_only = True
 
     if laps.empty:
         raise ValueError(
@@ -166,8 +144,8 @@ def run_quali_performance_tracker(
 
     analyzer = QualiPerformanceAnalyzer(
         quick_lap_threshold=quick_lap_threshold,
-        clean_min_time_delta_seconds=clean_min_time_delta_seconds,
-        clean_mean_time_delta_seconds=clean_mean_time_delta_seconds,
+        clean_min_time_delta_seconds=None,
+        clean_mean_time_delta_seconds=None,
         dry_compounds=dry_compounds,
         new_tyre_only=new_tyre_only,
         last_quali_part_only=last_quali_part_only,

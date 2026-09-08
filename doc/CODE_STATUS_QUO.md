@@ -391,7 +391,9 @@ Return keys:
   - optionally restricts final performance laps to each driver's latest entered qualifying part via `last_quali_part_only`; this latest part is determined from all prepared session laps, not only valid push laps
   - adds corrected sector times when sector data is present
   - produces corrected quickest driver and team summaries
-- `relative_team_pace_rows` builds long-form summary rows for relative team pace plots and includes event metadata when available.
+- `relative_team_pace_rows` builds long-form summary rows for relative team pace
+  plots, includes event metadata when available, and publishes only the
+  fastest/better-driver team metric.
 - Team aggregation helpers include:
   - `team_fastest_and_average_rows`
   - `team_best_sector_rows`
@@ -567,26 +569,23 @@ Scripts are importable modules under `src/wostrategy/script`.
 `quali_performance_tracker.py`
 
 - CLI for dry formal qualifying (`Q`) performance tracking across a race range.
-- Loads lap data plus cached telemetry gap summaries; wet or intermediate tyre usage returns/skips `Wet`.
-- Supports `--allow-lap-time-only`, which tries telemetry first and falls back to plain lap-time push-lap selection only when telemetry loading fails or the requested gap summary column is unavailable.
-- Prints a final one-line fallback summary, for example `Lap-time-only races: R6` or `Lap-time-only races: none`.
+- Loads plain lap timing and always uses lap-time-only push-lap selection; wet or intermediate tyre usage returns/skips `Wet`.
+- Legacy telemetry-cache, clean-gap, and `--allow-lap-time-only` options remain accepted for command-line compatibility but are ignored by this workflow.
+- Prints a final lap-time-only summary for the processed races.
 - Delegates qualifying correction and aggregation to `analysis.quali_performance`.
 - Delegates relative pace figure rendering/saving to `plots.quali_performance`.
 - Filters to clean dry push laps, optionally requiring `FreshTyre` new-tyre laps only; default is new tyres only.
 - Uses `SessionLapOrder` and a dominant dry compound (>50% of selected laps) to fit track evolution.
 - Optional `top_driver_count` filters only the evolution-fit sample; the fitted model is then applied to all eligible laps, including drivers not used in the fit.
 - Supports `--last-quali-part-only` / `--no-last-quali-part-only`; the current script config enables it by default.
-- When `last_quali_part_only` is enabled, track evolution is still fitted from all eligible quali push laps across Q1/Q2/Q3, but final fastest/average/best-sector presentation uses only each driver's latest entered qualifying part. If a driver entered Q3 but has no valid Q3 push lap, their Q2 laps are not used as a fallback.
+- When `last_quali_part_only` is enabled, track evolution is still fitted from all eligible quali push laps across Q1/Q2/Q3, but the final fastest-driver presentation uses only each driver's latest entered qualifying part. If a driver entered Q3 but has no valid Q3 push lap, their Q2 laps are not used as a fallback.
 - Supports `--track-evolution-fit {linear,exponential}`.
 - The current script config uses `exponential`; selecting it runs and saves both linear and exponential result plots for comparison.
 - Corrects lap times relative to the last eligible push lap of the quali and adds track-evolution corrected lap-time columns.
 - Tags each selected lap as `Q1`, `Q2`, or `Q3` using FastF1 qualifying splits when available, with a time-order fallback for plain DataFrames.
-- Produces separate relative pace plots for:
-  - team fastest driver result
-  - team average result from both drivers' corrected fastest laps
-  - optional best-sector result when `calculate_best_sectors` is enabled
-- Writes a `<output-stem>_usage.csv` beside saved plots. It includes plotted rows plus a `SourceLaps` column showing the driver/lap/Q-part or sector composition used for each plotted point.
-- Printed summaries include evolution-fit drivers, team driver/lap/Q-part usage, average-mode fallback notes, and best-sector composition.
+- Produces one relative pace plot from each team's fastest/better-driver result.
+- Writes a `<output-stem>_usage.csv` beside the saved plot. It includes plotted rows plus a `SourceLaps` column showing the driver/lap/Q-part used for each point.
+- Printed summaries include evolution-fit drivers and team driver/lap/Q-part usage.
 
 `long_run_performance.py`
 
@@ -724,6 +723,8 @@ Current tests:
   - New-tyre filtering
   - Top-driver filtered evolution applied to all drivers
   - Lap-time-only qualifying calculation without telemetry gap columns
+  - Fastest traffic-affected lap retained in explicit lap-time-only mode
+  - Fastest-only published team rows
   - Requested telemetry gap column availability for fallback
   - Exponential track-evolution fit path
   - Q1/Q2/Q3 qualifying-part propagation

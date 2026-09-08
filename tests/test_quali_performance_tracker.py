@@ -19,6 +19,7 @@ from wostrategy.script.quali_performance_tracker import (
     _team_best_sector_rows,
     _team_fastest_and_average_rows,
     calculate_quali_performance,
+    relative_team_pace_rows,
 )
 
 
@@ -92,7 +93,7 @@ def test_calculate_quali_performance_reports_two_driver_team_bests():
 
     assert result != "Wet"
     assert result.dominant_compound == "SOFT"
-    assert result.reference_session_lap_order == 11
+    assert result.reference_session_lap_order == 4
     assert result.quickest_teams["Team"].tolist() == ["Ferrari", "McLaren"]
 
     ferrari = result.quickest_teams.loc[result.quickest_teams["Team"] == "Ferrari"].iloc[0]
@@ -167,6 +168,65 @@ def test_calculate_quali_performance_can_use_lap_time_only_without_telemetry_gap
     assert set(result.quickest_drivers["Driver"]) == {"LEC", "HAM", "NOR"}
 
 
+def test_calculate_quali_performance_keeps_fastest_tow_lap():
+    laps = _laps(
+        [
+            ("Ferrari", "LEC", "SOFT", 80.0, 2, True, 1),
+            ("Mercedes", "RUS", "SOFT", 80.5, 5, True, 2),
+        ]
+    )
+    laps.loc[
+        (laps["Driver"] == "LEC") & (laps["LapTime"] == pd.Timedelta(seconds=80.0)),
+        "MeanTimeDeltaToDriverAhead",
+    ] = 1.5
+
+    result = calculate_quali_performance(
+        laps,
+        quick_lap_threshold=1.07,
+        clean_min_time_delta_seconds=None,
+        clean_mean_time_delta_seconds=3.0,
+        lap_time_only=True,
+        last_quali_part_only=False,
+        track_evolution_fit=LINEAR_TRACK_EVOLUTION_MODEL,
+    )
+
+    assert result != "Wet"
+    assert set(result.quickest_drivers["Driver"]) == {"LEC", "RUS"}
+    assert result.laps.loc[
+        (result.laps["Driver"] == "LEC") & (result.laps["LapNumber"] == 2),
+        "IsPushLap",
+    ].item()
+
+
+def test_published_relative_team_pace_contains_fastest_only():
+    laps = _laps(
+        [
+            ("Ferrari", "LEC", "SOFT", 80.0, 2, True, 1),
+            ("Ferrari", "HAM", "SOFT", 81.0, 5, True, 2),
+            ("Mercedes", "RUS", "SOFT", 79.0, 8, True, 3),
+        ]
+    )
+    result = calculate_quali_performance(
+        laps,
+        quick_lap_threshold=1.07,
+        clean_min_time_delta_seconds=None,
+        clean_mean_time_delta_seconds=3.0,
+        track_evolution_fit=LINEAR_TRACK_EVOLUTION_MODEL,
+    )
+    assert result != "Wet"
+
+    rows = relative_team_pace_rows(
+        result=result,
+        year=2026,
+        race=13,
+        target_team="Mercedes",
+        teammate_delta_threshold_percent=0.6,
+        calculate_best_sectors=True,
+    )
+
+    assert {row["ResultType"] for row in rows} == {"fastest"}
+
+
 def test_has_clean_gap_columns_requires_requested_telemetry_column_with_data():
     laps = pd.DataFrame({"MeanTimeDeltaToDriverAhead": [pd.NA, 4.5]})
 
@@ -207,7 +267,7 @@ def test_calculate_quali_performance_uses_top_drivers_for_evolution_fit():
 
     assert result != "Wet"
     assert result.evolution_drivers == ["LEC", "NOR"]
-    assert result.evolution_rate_seconds_per_lap == pytest.approx(0.1)
+    assert result.evolution_rate_seconds_per_lap == pytest.approx(0.3)
     ver = result.quickest_drivers.loc[result.quickest_drivers["Driver"] == "VER"].iloc[0]
     assert ver[TRACK_EVO_CORRECTED_LAP_TIME_SECONDS] == pytest.approx(69.7)
 
@@ -233,7 +293,11 @@ def test_calculate_quali_performance_can_use_exponential_evolution_fit():
     assert result.evolution_fit_model == EXPONENTIAL_TRACK_EVOLUTION_MODEL
     assert result.evolution_fit_parameters["decay_rate"] > 0
     assert set(result.laps[TRACK_EVOLUTION_FIT_MODEL]) == {EXPONENTIAL_TRACK_EVOLUTION_MODEL}
-    assert result.laps[TRACK_EVO_CORRECTED_LAP_TIME_SECONDS].notna().all()
+    quick_laps = result.laps.loc[result.laps["IsQuickLap"]]
+    assert quick_laps[TRACK_EVO_CORRECTED_LAP_TIME_SECONDS].notna().all()
+    assert result.laps.loc[
+        ~result.laps["IsQuickLap"], TRACK_EVO_CORRECTED_LAP_TIME_SECONDS
+    ].isna().all()
 
 
 def test_calculate_quali_performance_can_fit_evolution_by_quick_lap_number():

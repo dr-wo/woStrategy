@@ -30,17 +30,16 @@ python -m wostrategy.script.quali_performance_tracker \
   --target-team Mercedes \
   --new-tyre-only \
   --last-quali-part-only \
-  --allow-lap-time-only \
   --track-evolution-fit exponential \
   --output doc/assets/quali_performance_tracker_2026_1-8_mercedes.png
 ```
 
-This command writes one plot per result type:
+The published tracker uses plain qualifying lap timing and writes one
+fastest/better-driver team result. Average and best-sector helpers remain
+available for internal diagnostics, but are not additional published series.
 
 <p>
-  <img src="doc/assets/quali_performance_tracker_2026_1-8_mercedes_exponential_fastest.png" alt="Qualifying performance fastest tracker example" width="32%">
-  <img src="doc/assets/quali_performance_tracker_2026_1-8_mercedes_exponential_average.png" alt="Qualifying performance average tracker example" width="32%">
-  <img src="doc/assets/quali_performance_tracker_2026_1-8_mercedes_exponential_best_sectors.png" alt="Qualifying performance best sectors tracker example" width="32%">
+  <img src="doc/assets/quali_performance_tracker_2026_1-8_mercedes_exponential_fastest.png" alt="Qualifying performance fastest tracker example" width="70%">
 </p>
 
 ### 0.2 Race performance tracker
@@ -422,18 +421,16 @@ for track evolution.
   - with  `--track-evolution-quick-lap-number`, the x-axis can be quick-lap count
   instead of total session lap order.
 - Track evolution is assumed to apply the same to all cars.
-- Driver error is not explicitly modelled. The workflow partly mitigates this
-  by using fastest laps, teammate delta checks, optional best-sector views, and
-  last-session selection.
+- Driver error is not explicitly modelled. The published workflow partly
+  mitigates this by using the faster driver result and last-session selection.
 
 #### 2.1.2 Algorithm
 
-1. Load qualifying laps, preferring telemetry gap summaries for clean-lap
-   selection.
-2. Fall back to lap-time-only mode only when `--allow-lap-time-only` is set and
-   telemetry loading or requested gap columns are unavailable.
-3. Add push-lap flags from quick-lap threshold, clean-air gap, out/in lap
-   status, and out-push-in run pattern.
+1. Load plain qualifying lap timing without telemetry gap summaries.
+2. Run in lap-time-only mode. The legacy telemetry and clean-gap command-line
+   options remain accepted for compatibility but do not change this workflow.
+3. Add push-lap flags from the quick-lap threshold, out/in lap status, and
+   out-push-in run pattern.
 4. Keep configured dry compounds and, by default, only new tyres.
 5. Fit track evolution from eligible push laps on the dominant compound. The fit
    can be linear or exponential (`y = A * exp(-k x) + B`).
@@ -441,11 +438,10 @@ for track evolution.
 7. For the final displayed performance, optionally use only each driver's last
    qualifying part (`--last-quali-part-only`). Track evolution is still fitted
    from all eligible Q1/Q2/Q3 push laps.
-8. Aggregate team pace as fastest driver, average of up to two drivers, and
-   optional best-sector sum. The average falls back to the faster driver when
-   teammate delta exceeds the configured threshold.
+8. Publish one team pace value from the faster driver's corrected lap. Average
+   and best-sector calculations remain internal helpers only.
 9. Plot each team as a percentage of the target team and save a usage CSV with
-   the source laps/sectors behind each plotted point.
+   the source lap behind each plotted point.
 
 Example:
 
@@ -456,16 +452,13 @@ python -m wostrategy.script.quali_performance_tracker \
   --target-team Mercedes \
   --new-tyre-only \
   --last-quali-part-only \
-  --allow-lap-time-only \
   --track-evolution-fit exponential
 ```
 
 Full-range final tracker plots generated for the example above:
 
 <p>
-  <img src="doc/assets/quali_performance_tracker_2026_1-8_mercedes_exponential_fastest.png" alt="Qualifying performance fastest tracker example" width="32%">
-  <img src="doc/assets/quali_performance_tracker_2026_1-8_mercedes_exponential_average.png" alt="Qualifying performance average tracker example" width="32%">
-  <img src="doc/assets/quali_performance_tracker_2026_1-8_mercedes_exponential_best_sectors.png" alt="Qualifying performance best sectors tracker example" width="32%">
+  <img src="doc/assets/quali_performance_tracker_2026_1-8_mercedes_exponential_fastest.png" alt="Qualifying performance fastest tracker example" width="70%">
 </p>
 
 Push-lap track development is a diagnostic workflow, not the final qualifying

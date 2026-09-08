@@ -223,11 +223,11 @@ def relative_team_pace_rows(
         result.quickest_drivers,
         teammate_delta_threshold_percent=teammate_delta_threshold_percent,
     )
-    if calculate_best_sectors:
-        team_pace = pd.concat(
-            [team_pace, team_best_sector_rows(result.eligible_laps)],
-            ignore_index=True,
-        )
+    # The published tracker is a single fastest/better-driver metric. Keep the
+    # average and best-sector calculations available internally, but do not let
+    # either produce a second team-facing performance value.
+    del calculate_best_sectors
+    team_pace = team_pace.loc[team_pace[RESULT_TYPE] == "fastest"].copy()
 
     records: list[dict[str, object]] = []
     for result_type, result_type_rows in team_pace.groupby(RESULT_TYPE, sort=False):
