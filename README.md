@@ -29,9 +29,13 @@ Italian Grand Prix** weekend.
 - **Question:** how should the pre-race degradation assumptions change as usable
   Race evidence arrives?
 - **Method:** causal leader-lap cuts update directly informed compounds while
-  retaining explicit assumed/derived values for unsupported coordinates.
+  retaining explicit assumed/derived values for unsupported coordinates. In
+  this R13 replay, MEDIUM is directly informed, HARD changes from derived to
+  direct once supported, and unsupported SOFT remains derived from MEDIUM using
+  the implemented pre-race compound relationship.
 - **Interpretation:** an informed point is still an estimate; sampler adequacy
   and identifiability are reported separately from apparent curve stability.
+  Dotted, dashed and solid lines denote base, derived and direct values.
 
 ## What strategy implications follow?
 
