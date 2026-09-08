@@ -1,23 +1,61 @@
 # woStrategy
 
-For the current Race Monte Carlo, live-retro, identifiability, accelerated
-evaluator, and production FP tyre-evidence assumptions, see
-[`doc/RACE_MC_AND_FP_ARCHITECTURE.md`](doc/RACE_MC_AND_FP_ARCHITECTURE.md).
-For the fixed-stop degradation envelope, automatic lower-bound search, result
-statuses, and current limitations, see
-[`doc/DEGRADATION_CUTOFF.md`](doc/DEGRADATION_CUTOFF.md).
-For causal FP session snapshots, rolling degradation calibration, report-only
-FP evidence, the performance programme-offset findings, and the deliberate
-production compromises, see
-[`doc/FP_TYRE_ESTIMATION_STATUS_AND_ROADMAP.md`](doc/FP_TYRE_ESTIMATION_STATUS_AND_ROADMAP.md).
+`woStrategy` models Formula 1 performance, tyre behaviour and race-strategy
+trade-offs from public data. It includes qualifying and race performance
+tracking, Monte Carlo Race/Retro inference, cross-event pre-race tyre
+prediction, causal live tyre-model updating, exact compound-sequence search and
+fixed-stop degradation envelopes. The project keeps uncertainty,
+identifiability limits and deliberate production compromises visible.
 
-woStrategy is an independent F1 race-performance analysis project built on
-public FastF1 data. It is currently a Monte Carlo-based performance tracker
-that aims to estimate underlying team pace by separating fuel effect, track
-evolution, tyre degradation, and race noise from lap-time data.
+The season-level performance figure uses the validated 2026 results through
+R12. The event-specific tyre and strategy figures use the completed **2026-R13
+Italian Grand Prix** weekend.
 
-The next development focus is to extend this into race planning and strategy 
-decision-support tools.
+## How competitive is each team?
+
+![2026 race-corrected baseline team pace through R12](doc/assets/race_performance_tracker_2026_r1-r12.png)
+
+- **Question:** how does underlying race pace compare after accounting for the
+  major observable lap-time effects?
+- **Method:** the Race Monte Carlo separates team baseline, fuel, track,
+  compound degradation and residual noise, then plots pace relative to Mercedes.
+- **Interpretation:** this is a model-relative baseline from public lap data;
+  changing identifiability and clean-lap support varies by event.
+
+## What tyre behaviour should be assumed before or during the race?
+
+![2026-R13 causal live tyre-degradation evolution](doc/assets/tyre_degradation_evolution_2026_r13.png)
+
+- **Question:** how should the pre-race degradation assumptions change as usable
+  Race evidence arrives?
+- **Method:** causal leader-lap cuts update directly informed compounds while
+  retaining explicit assumed/derived values for unsupported coordinates.
+- **Interpretation:** an informed point is still an estimate; sampler adequacy
+  and identifiability are reported separately from apparent curve stability.
+
+## What strategy implications follow?
+
+![2026-R13 rules-compliant strategy envelope versus MEDIUM degradation](doc/assets/strategy_degradation_cutoff_2026_r13_rules_compliant.png)
+
+- **Question:** at what MEDIUM degradation does the best fixed stop count change?
+- **Method:** the exact optimiser evaluates rules-compliant 1-, 2- and 3-stop
+  envelopes while preserving predicted compound ratios and pace deltas.
+- **Interpretation:** FP markers are diagnostics, not automatic strategy inputs;
+  the envelope is conditional on pit loss, race distance and tyre assumptions.
+
+## Technical documentation
+
+- [`doc/RACE_MC_AND_FP_ARCHITECTURE.md`](doc/RACE_MC_AND_FP_ARCHITECTURE.md) —
+  Race MC, live-retro, identifiability and accelerated evaluation.
+- [`doc/DEGRADATION_CUTOFF.md`](doc/DEGRADATION_CUTOFF.md) — fixed-stop envelopes,
+  lower-bound search, statuses and limitations.
+- [`doc/FP_TYRE_ESTIMATION_STATUS_AND_ROADMAP.md`](doc/FP_TYRE_ESTIMATION_STATUS_AND_ROADMAP.md)
+  — causal FP snapshots, tyre evidence and current compromises.
+- [`doc/CROSS_EVENT_TYRE_PREDICTION_V1.md`](doc/CROSS_EVENT_TYRE_PREDICTION_V1.md)
+  — the production pre-race prediction boundary.
+
+All analysis uses public F1 data. These are engineering models for comparison
+and decision support, not privileged team data or definitive causal estimates.
 
 ## 0. Examples
 
@@ -766,3 +804,10 @@ Additional points included:
   diagnostics, cached Monte Carlo reuse, uncertainty bands, and RMSE plot
   backgrounds.
 - Durable README plot links now point to `doc/assets/` instead of `temp/`.
+
+## Development context
+
+This project is developed extensively with coding agents. The detailed
+architecture, status and investigation documents are intentional engineering
+infrastructure: they preserve assumptions, identifiability limits, interfaces,
+known compromises and validation requirements across development sessions.
