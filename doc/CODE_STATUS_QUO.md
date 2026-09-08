@@ -73,6 +73,12 @@ Plot functions are exposed through `wostrategy.plots`, not through the root pack
 
 `wostrategy.analysis` re-exports selected model objects for convenience, but new model implementation imports should use `wostrategy.model`.
 
+`wostrategy.model.tyre_prediction` defines the provider-neutral
+`PreRaceTyrePrediction` and `TyreCompoundPrediction` application contracts. The
+pre-race adapter enforces MEDIUM as the zero-delta reference, preserves
+uncertainty/provenance metadata, and optionally asks the owning producer to
+refresh a missing or stale artifact.
+
 Race performance review helpers are also exported from `wostrategy.analysis`:
 
 - `MonteCarloRacePerformanceAlgorithm`

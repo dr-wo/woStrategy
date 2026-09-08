@@ -622,6 +622,13 @@ invoking or changing Retro MC, joins them to validated Pirelli preview descripto
 checks model readiness, and writes rolling pre-race predictions under
 `woData/wostrategy/tyre_prediction/schema_v1/`.
 
+Application code consumes the latest artifact through
+`wostrategy.analysis.pre_race_tyre_prediction.get_pre_race_tyre_prediction`.
+The adapter returns provider-neutral `PreRaceTyrePrediction` and
+`TyreCompoundPrediction` contracts, normalizes all performance deltas to MEDIUM,
+and can invoke the owning producer when a caller proves the cached artifact is
+stale.
+
 ```bash
 python -m wostrategy.script.tyre_prediction_pipeline --year 2026
 ```
