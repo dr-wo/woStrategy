@@ -14,9 +14,7 @@ from wostrategy.algorithm.monte_carlo_race_performance import (
 from wostrategy.analysis.long_run_performance import (
     TYRE_AGE_MODE_STINT,
     WET_COMPOUNDS,
-    _prepare_laps,
-    select_clean_air_stints_as_whole,
-    select_consecutive_clean_air_runs,
+    prepare_and_select_clean_air_laps,
 )
 from wostrategy.model.fuel_consumption import FUEL_LAP_NUMBER_COLUMN
 
@@ -66,24 +64,18 @@ def calculate_monte_carlo_race_performance_review(
     ):
         return "Wet"
 
-    prepared = _prepare_laps(
+    prepared, clean_laps = prepare_and_select_clean_air_laps(
         laps,
+        min_clean_air_laps=min_clean_air_laps,
         clean_mean_time_delta_seconds=clean_mean_time_delta_seconds,
         clean_mean_time_delta_behind_seconds=clean_mean_time_delta_behind_seconds,
         quick_lap_threshold=quick_lap_threshold,
         dry_compounds=dry_compounds,
         tyre_age_mode=tyre_age_mode,
+        treat_stint_as_whole=treat_stint_as_whole,
     )
     prepared = _add_race_fuel_proxy(prepared)
-    selector = (
-        select_clean_air_stints_as_whole
-        if treat_stint_as_whole
-        else select_consecutive_clean_air_runs
-    )
-    clean_laps = selector(
-        prepared,
-        min_clean_air_laps=min_clean_air_laps,
-    )
+    clean_laps = _add_race_fuel_proxy(clean_laps)
     if clean_laps.empty:
         raise ValueError("No consecutive clean-air race laps matched the configured filters.")
 

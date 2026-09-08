@@ -84,6 +84,11 @@ Race performance review helpers are also exported from `wostrategy.analysis`:
 - `wet_lap_proportion_by_driver`
 - `is_wet_race`
 
+`long_run_performance.prepare_and_select_clean_air_laps` is the shared public
+entry point for applying the Retro lap preparation rules and then selecting
+either consecutive clean-air runs or whole stints. Downstream applications use
+it instead of importing the private `_prepare_laps` helper.
+
 ## Algorithm Layer
 
 `src/wostrategy/algorithm/sampling.py`
@@ -398,9 +403,8 @@ Return keys:
 `src/wostrategy/analysis/race_performance_review.py`
 
 - Contains the analysis wrapper for Monte Carlo race performance review.
-- Reuses existing long-run preparation and clean-air run selection:
-  - `_prepare_laps`
-  - `select_consecutive_clean_air_runs`
+- Reuses `prepare_and_select_clean_air_laps` for the shared Retro preparation
+  and consecutive-run or whole-stint clean-air selection rules.
 - Adds a simple race-lap fuel proxy as laps remaining.
 - Requires telemetry-backed clean-air gap columns through the script layer; missing telemetry should produce an empty skipped result rather than falling back to misleading lap-time-only race analysis.
 - `wet_lap_proportion_by_driver` reports each driver's wet/intermediate lap proportion.

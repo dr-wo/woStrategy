@@ -265,6 +265,34 @@ def select_consecutive_clean_air_runs(
     return output
 
 
+def prepare_and_select_clean_air_laps(
+    laps: pd.DataFrame,
+    *,
+    min_clean_air_laps: int,
+    clean_mean_time_delta_seconds: float,
+    clean_mean_time_delta_behind_seconds: float | None,
+    quick_lap_threshold: float,
+    dry_compounds: tuple[str, ...] = ("SOFT", "MEDIUM", "HARD"),
+    tyre_age_mode: str = TYRE_AGE_MODE_STINT,
+    treat_stint_as_whole: bool = False,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Prepare and select race clean laps through the shared Retro definition."""
+    prepared = _prepare_laps(
+        laps,
+        clean_mean_time_delta_seconds=clean_mean_time_delta_seconds,
+        clean_mean_time_delta_behind_seconds=clean_mean_time_delta_behind_seconds,
+        quick_lap_threshold=quick_lap_threshold,
+        dry_compounds=dry_compounds,
+        tyre_age_mode=tyre_age_mode,
+    )
+    selector = (
+        select_clean_air_stints_as_whole
+        if treat_stint_as_whole
+        else select_consecutive_clean_air_runs
+    )
+    return prepared, selector(prepared, min_clean_air_laps=min_clean_air_laps)
+
+
 def select_clean_air_stints_as_whole(
     laps: pd.DataFrame,
     *,
@@ -897,6 +925,7 @@ __all__ = [
     "add_fitted_lap_times",
     "calculate_long_run_performance",
     "fit_long_run_components",
+    "prepare_and_select_clean_air_laps",
     "select_clean_air_stints_as_whole",
     "select_consecutive_clean_air_runs",
 ]
