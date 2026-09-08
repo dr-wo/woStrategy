@@ -89,6 +89,26 @@ This command writes the final team-baseline tracker plot:
   <img src="doc/assets/race_performance_tracker_2026_1-8_mercedes_team_baseline.png" alt="Race performance baseline tracker example" width="70%">
 </p>
 
+### Offline local pairwise race-performance diagnostic
+
+The local pairwise diagnostic compares teams only on exact overlapping race
+laps, corrects each pair for production posterior-median tyre effects, and
+solves each short race window independently:
+
+```bash
+python -m wostrategy.script.local_pairwise_race_performance \
+  --year 2026 --first-round 1 --last-round 13 \
+  --window-sizes 3 5 10 \
+  --input-root ../woData/wostrategy/race_performance_review/schema_v1 \
+  --output-dir ../temp/local_pairwise_race_performance
+```
+
+It is an offline diagnostic rather than a replacement estimator: it reads
+persisted production clean laps and posterior medians, never loads FastF1, does
+not refit fuel or tyre parameters, and does not link separate windows. See
+[`doc/LOCAL_PAIRWISE_RACE_PERFORMANCE.md`](doc/LOCAL_PAIRWISE_RACE_PERFORMANCE.md)
+for graph semantics, outputs, and interpretation limits.
+
 ### 0.3 Pure lap-time trace
 
 ```bash

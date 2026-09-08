@@ -443,6 +443,16 @@ Return keys:
   - weighted P10/median/P90 summaries
 - `summarize_monte_carlo_race_performance` uses the sample weights to summarize fuel rate, track rate, degradation rates, and corrected baseline pace.
 
+`src/wostrategy/analysis/local_pairwise_race_performance.py`
+
+- Implements the offline contemporaneous pairwise diagnostic documented in
+  `doc/LOCAL_PAIRWISE_RACE_PERFORMANCE.md`.
+- Builds exact-race-lap team edges, applies only differential production tyre
+  effects, solves independent weighted window graphs, and reports connectivity,
+  residual, uncertainty, and triangle-cycle diagnostics.
+- Keeps components without Mercedes locally relative and never links separate
+  race windows.
+
 ## Pre-Season Data Preparation
 
 `src/wostrategy/tools/pre_season_test/prepare_cumulative_laps_by_day.py`
@@ -685,6 +695,16 @@ Scripts are importable modules under `src/wostrategy/script`.
   - sample diagnostics
   - weighted summary tables
 - For race ranges, also writes aggregate sample and team baseline summaries across produced race results.
+
+`local_pairwise_race_performance.py`
+
+- Offline CLI over persisted production Race artifacts; it performs no FastF1
+  or session access.
+- Runs configurable 3/5/10-lap window sizes across an event range and writes
+  observation, edge, team, component, cycle, coverage, variation, known-case,
+  and production-comparison CSVs.
+- Defaults to `temp/local_pairwise_race_performance`, keeping generated
+  diagnostic tables outside version control.
 
 `race_performance_weight_predict.py`
 
