@@ -121,6 +121,13 @@ def analyze_pre_quali(
             "lap_start_time": output["LapStartTime"],
             "lap_end_time": _lap_end(output),
             "compound": output["_compound"],
+            "stint_id": output.get("Stint", pd.Series(pd.NA, index=output.index)),
+            "fresh_tyre": output.get("FreshTyre", pd.Series(pd.NA, index=output.index)),
+            "clean_air": output.get("CleanAir", pd.Series(pd.NA, index=output.index)),
+            "is_driver_fp_reference": output.get("IsDriverFpReference", pd.Series(False, index=output.index)).fillna(False).astype(bool),
+            "fp_start_to_5pct_s": output.get("FpStartTo5PctS", pd.Series(np.nan, index=output.index)),
+            "fp_start_to_s1_s": output.get("FpStartToS1S", pd.Series(np.nan, index=output.index)),
+            "fp_s1_to_s2_s": output.get("FpS1ToS2S", pd.Series(np.nan, index=output.index)),
         }
     ).reset_index(drop=True)
     durations = summarize_planning_durations(result_laps)
@@ -240,23 +247,60 @@ def estimate_track_progression(laps: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for session, group in laps.loc[laps["lap_role"].eq("PUSH") & laps["is_valid_run"]].groupby("session"):
         fit_laps = group.copy().sort_values(["lap_start_time", "driver"])
-        fit_laps["SessionLapOrder"] = np.arange(1, len(fit_laps) + 1)
-        fit_laps["LapTimeSeconds"] = fit_laps["raw_lap_time_s"]
-        fit_laps["Compound"] = fit_laps["compound"]
-        compound = _dominant(fit_laps["Compound"])
-        try:
-            fit = fit_compound_track_evolution(
-                fit_laps, compound=compound,
-                model=get_track_evolution_model(LINEAR_TRACK_EVOLUTION_MODEL),
-                x_column="SessionLapOrder", y_column="LapTimeSeconds", slope_unit="s/field push",
+        # Clean/fresh provenance is optional in legacy artifacts; unknown is
+        # explicitly rejected once the source provides the column.
+        if "clean_air" in fit_laps and fit_laps["clean_air"].notna().any():
+            fit_laps = fit_laps.loc[fit_laps["clean_air"].fillna(False)]
+        if "fresh_tyre" in fit_laps and fit_laps["fresh_tyre"].notna().any():
+            fit_laps = fit_laps.loc[fit_laps["fresh_tyre"].fillna(False)]
+        fit_laps["global_push_index"] = np.arange(1, len(fit_laps) + 1)
+        slopes = []
+        for driver, driver_laps in fit_laps.groupby("driver"):
+            # Do not blend compound changes (e.g. LAW M→S) into evolution.
+            compound = dominant_track_compound(driver_laps["compound"])
+            stable = driver_laps.loc[driver_laps["compound"].eq(compound)].copy()
+            if len(stable) < 2:
+                continue
+            slope = fit_driver_track_progression(
+                stable["global_push_index"], stable["raw_lap_time_s"]
             )
-            rate = fit.evolution_rate_seconds_per_lap
-            quality = "estimated"
-        except (ValueError, np.linalg.LinAlgError):
-            rate, quality = np.nan, "insufficient_support"
-        rows.append({"session": session, "rate_s_per_field_push": rate,
-                     "sample_count": len(fit_laps), "compound": compound, "quality": quality})
-    return pd.DataFrame(rows, columns=["session", "rate_s_per_field_push", "sample_count", "compound", "quality"])
+            slopes.append((str(driver), slope, len(stable), compound))
+            rows.append({"session": session, "driver": str(driver), "rate_s_per_field_push": slope,
+                         "sample_count": len(stable), "compound": compound, "quality": "estimated"})
+        if slopes:
+            weight = sum(value[2] for value in slopes)
+            aggregate = aggregate_driver_track_progression(
+                (value[1], value[2]) for value in slopes
+            )
+            rows.append({"session": session, "driver": "aggregate", "rate_s_per_field_push": aggregate,
+                         "sample_count": weight, "compound": "driver-average", "quality": "estimated"})
+        else:
+            rows.append({"session": session, "driver": "aggregate", "rate_s_per_field_push": np.nan,
+                         "sample_count": 0, "compound": "", "quality": "insufficient_support"})
+    return pd.DataFrame(rows, columns=["session", "driver", "rate_s_per_field_push", "sample_count", "compound", "quality"])
+
+
+def fit_driver_track_progression(indices, lap_times_s) -> float:
+    """Shared linear driver slope on the supplied global PUSH indices."""
+    x = np.asarray(tuple(indices), dtype="float64")
+    y = np.asarray(tuple(lap_times_s), dtype="float64")
+    if len(x) < 2 or len(np.unique(x)) < 2 or len(x) != len(y):
+        raise ValueError("A driver progression fit requires two distinct PUSH indices")
+    return float(np.polyfit(x, y, 1)[0])
+
+
+def dominant_track_compound(compounds) -> str:
+    """Use the existing modal compound rule for one driver-level fit."""
+    return _dominant(pd.Series(tuple(compounds)))
+
+
+def aggregate_driver_track_progression(slopes_and_counts) -> float:
+    """Use the established sample-weighted aggregate of driver slopes."""
+    values = tuple(slopes_and_counts)
+    if not values or sum(count for _, count in values) <= 0:
+        raise ValueError("No supported driver progression fits")
+    return float(sum(slope * count for slope, count in values)
+                 / sum(count for _, count in values))
 
 
 def estimate_push_sequence_track_progression(lap_times_s: Iterable[float]) -> float:
@@ -281,9 +325,14 @@ def _base_validity(laps: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
     partial_pit_lap = laps["PitOutTime"].notna() | laps["PitInTime"].notna()
     valid = laps["_lap_time_s"].notna() | partial_pit_lap
     reason = pd.Series("", index=laps.index, dtype=object)
+    # FastF1 marks partial pit laps inaccurate because they are not complete
+    # timing laps.  OUT/IN duration evidence is still operationally valid when
+    # its two timestamps exist, so apply full-lap validity flags only to rows
+    # without a pit boundary.
+    full_lap = ~partial_pit_lap
     for column in ("IsAccurate", "IsValid"):
         if column in laps:
-            bad = laps[column].notna() & ~laps[column].astype(bool)
+            bad = full_lap & laps[column].notna() & ~laps[column].astype(bool)
             valid &= ~bad
             reason.loc[bad] = "INACCURATE_OR_INVALID"
     if "Deleted" in laps:

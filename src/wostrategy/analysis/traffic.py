@@ -26,6 +26,16 @@ NORMALIZED_REQUIRED_COLUMNS = (
 
 
 @dataclass(frozen=True)
+class TrafficCoveragePolicy:
+    """Required physical telemetry coverage for a usable lap metric."""
+
+    require_ahead: bool = True
+    require_behind: bool = True
+    min_ahead_coverage: float = 0.5
+    min_behind_coverage: float = 0.5
+
+
+@dataclass(frozen=True)
 class TrafficEvaluationConfig:
     circuit_length_m: float
     interpolation_tolerance_seconds: float = 0.5
@@ -35,6 +45,7 @@ class TrafficEvaluationConfig:
     minimum_lap_samples: int = 2
     combination_mode: str = COMBINATION_MODE_COMPATIBILITY_MIN
     evaluator_version: str = TRAFFIC_EVALUATOR_VERSION
+    coverage_policy: TrafficCoveragePolicy | None = None
 
 
 @dataclass(frozen=True)
@@ -212,6 +223,7 @@ def evaluate_physical_traffic(
     *,
     config: TrafficEvaluationConfig,
     group_columns: tuple[str, ...] | None = None,
+    target_lap: tuple[str, int] | None = None,
 ) -> TrafficEvaluationResult:
     """Evaluate nearest physical cars from original timestamped speed samples.
 
@@ -238,7 +250,7 @@ def evaluate_physical_traffic(
         else [((), prepared)]
     )
     for _, session in sessions:
-        sample_frames.extend(_evaluate_session(session, config=config))
+        sample_frames.extend(_evaluate_session(session, config=config, target_lap=target_lap))
     if not sample_frames:
         return TrafficEvaluationResult(
             _empty_samples(groups), _unknown_laps(prepared, groups, config)
@@ -663,6 +675,7 @@ def _evaluate_session(
     session: pd.DataFrame,
     *,
     config: TrafficEvaluationConfig,
+    target_lap: tuple[str, int] | None = None,
 ) -> list[pd.DataFrame]:
     frames: list[pd.DataFrame] = []
     by_driver = {
@@ -670,6 +683,12 @@ def _evaluate_session(
         for driver, data in session.groupby("Driver", dropna=False, sort=False)
     }
     for target_driver, target in by_driver.items():
+        if target_lap is not None:
+            if target_driver != target_lap[0]:
+                continue
+            target = target.loc[target["LapNumber"].eq(target_lap[1])]
+            if target.empty:
+                continue
         target = target.copy()
         times = target["_SessionSeconds"].to_numpy(dtype="float64")
         target_phase = target["_CircuitPhase"].to_numpy(dtype="float64")
@@ -678,6 +697,10 @@ def _evaluate_session(
         for other_driver, other in by_driver.items():
             if other_driver == target_driver:
                 continue
+            if "CandidateEligible" in other:
+                other = other.loc[other["CandidateEligible"].eq(True)]
+                if other.empty:
+                    continue
             interpolation = _interpolate_driver(other, times, config=config)
             valid = interpolation["valid"]
             if not valid.any():
@@ -855,10 +878,28 @@ def _summarize_physical_samples(
         ["AheadCoverageFraction", "BehindCoverageFraction"]
     ].min(axis=1)
     summary["TrafficMethod"] = PHYSICAL_CIRCULAR
+    policy = config.coverage_policy or TrafficCoveragePolicy(
+        min_ahead_coverage=config.minimum_coverage_fraction,
+        min_behind_coverage=config.minimum_coverage_fraction,
+    )
+    passed = pd.Series(True, index=summary.index)
+    if policy.require_ahead:
+        passed &= summary["AheadCoverageFraction"] >= policy.min_ahead_coverage
+    if policy.require_behind:
+        passed &= summary["BehindCoverageFraction"] >= policy.min_behind_coverage
+    required_fractions = []
+    if policy.require_ahead:
+        required_fractions.append(summary["AheadCoverageFraction"])
+    if policy.require_behind:
+        required_fractions.append(summary["BehindCoverageFraction"])
+    required_coverage = (
+        pd.concat(required_fractions, axis=1).min(axis=1)
+        if required_fractions else summary["CoverageFraction"]
+    )
     summary["TrafficStatus"] = np.select(
         [
-            summary["CoverageFraction"] >= config.minimum_coverage_fraction,
-            summary["CoverageFraction"] > 0,
+            passed,
+            required_coverage > 0,
         ],
         [TRAFFIC_STATUS_OK, TRAFFIC_STATUS_PARTIAL],
         default=TRAFFIC_STATUS_UNKNOWN,
@@ -1034,6 +1075,11 @@ def _validate_config(config: TrafficEvaluationConfig) -> None:
         raise ValueError("maximum_bracketing_interval_seconds must be positive")
     if not 0 <= config.minimum_coverage_fraction <= 1:
         raise ValueError("minimum_coverage_fraction must be between zero and one")
+    if config.coverage_policy is not None:
+        for value in (config.coverage_policy.min_ahead_coverage,
+                      config.coverage_policy.min_behind_coverage):
+            if not 0 <= value <= 1:
+                raise ValueError("coverage policy fractions must be between zero and one")
 
 
 def traffic_clean_mask(

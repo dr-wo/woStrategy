@@ -63,6 +63,16 @@ def test_invalid_deleted_and_wet_push_laps_are_excluded_from_averages():
     assert set(result.laps.invalid_reason) >= {"INACCURATE_OR_INVALID", "WET_COMPOUND", "DELETED"}
 
 
+def test_partial_pit_laps_remain_usable_when_fastf1_marks_them_inaccurate():
+    rows = _laps([("OUT", 100), ("PUSH", 90), ("IN", 100)])
+    rows[0]["IsAccurate"] = False
+    rows[2]["IsAccurate"] = False
+    result = analyze_pre_quali(pd.DataFrame(rows), year=2026, round_number=1)
+    assert result.laps.is_valid_run.all()
+    assert result.laps.loc[result.laps.lap_role.eq("OUT"), "planning_duration_s"].iloc[0] == 90
+    assert result.laps.loc[result.laps.lap_role.eq("IN"), "planning_duration_s"].iloc[0] == 92
+
+
 def test_representative_summary_combines_prep_and_cool_and_uses_overall_weekend():
     rows = _laps([("OUT", 100), ("PREP", 110), ("PUSH", 90), ("COOL", 108), ("PUSH", 89), ("IN", 100)])
     rows += _laps([("OUT", 102), ("PUSH", 88), ("IN", 104)], driver="BBB", session="FP2", start=500)
@@ -71,4 +81,3 @@ def test_representative_summary_combines_prep_and_cool_and_uses_overall_weekend(
     assert summary.loc["cool_lap_s", "count"] == 2
     assert summary.loc["out_lap_s", "count"] == 2
     assert summary.loc["push_lap_s", "count"] == 3
-
