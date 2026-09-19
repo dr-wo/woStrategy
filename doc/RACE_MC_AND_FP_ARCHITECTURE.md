@@ -1,6 +1,6 @@
 # Race Monte Carlo and FP Tyre Architecture
 
-Last reviewed: 2026-09-08
+Last reviewed: 2026-09-19
 
 This document records the assumptions and compromises behind the current Race
 Monte Carlo, live-retro model, experimental Race-specific model, and production
@@ -70,6 +70,22 @@ current leader lap fallback
 The fallback is only for incomplete input and becomes progressively less useful
 early in a Race. Never replace scheduled distance with the maximum currently
 completed `LapNumber` when `TotalLaps` is available.
+
+## Clean-lap traffic evidence
+
+Unified traffic is resolved independently for each lap/group. The shared direct
+estimator reports `VALID_RESULT`, `RAN_NO_VALID_AHEAD`, or `UNAVAILABLE`.
+Direct-ahead candidates must be strictly positive: zero or negative time/distance
+is not evidence of a car ahead. A valid positive legacy FastF1 gap may fill a lap
+only when shared direct estimation is `UNAVAILABLE`; after shared direct runs and
+authoritatively finds no valid candidate, legacy data remains diagnostic-only.
+Physical circular traffic is an independent valid source and can still identify
+nearby or lapped cars.
+
+The traffic evaluator version is `unified-traffic-v3`. Traffic-dependent session
+and Monte Carlo caches must match that evaluator metadata before reuse, including
+normal cached runs as well as paths with explicit overrides. A version mismatch
+or missing metadata requires regeneration rather than silent reuse.
 
 ## Identifiability
 

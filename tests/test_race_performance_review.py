@@ -16,6 +16,7 @@ from wostrategy.analysis.race_performance_review import (
     wet_lap_proportion_by_driver,
 )
 from wostrategy.script.race_performance_review import missing_clean_gap_columns
+from wostrategy.script.race_performance_review import run_race_performance_review
 from wostrategy.script.race_performance_review import apply_lap_compound_overrides
 from wostrategy.script.race_performance_review import lap_compound_overrides_for_race
 from wostrategy.script.race_performance_review import parse_lap_compound_overrides
@@ -1104,7 +1105,7 @@ def test_load_cached_monte_carlo_outputs_requires_matching_metadata_when_expecte
         dry_compounds=("MEDIUM", "HARD"),
         team_baseline_mode="average-drivers",
     )
-    assert metadata["traffic_evaluator_version"] == "unified-traffic-v2"
+    assert metadata["traffic_evaluator_version"] == "unified-traffic-v3"
     assert metadata["traffic_combination_mode"] == "compatibility_min"
     with cached_metadata_path(
         output_dir=tmp_path,
@@ -1170,6 +1171,114 @@ def test_load_cached_monte_carlo_outputs_rejects_missing_metadata_when_expected(
     )
 
     assert cached is None
+
+
+def test_run_rejects_v2_cache_without_compound_overrides(tmp_path, monkeypatch):
+    import wostrategy.script.race_performance_review as review
+
+    race_output = review.event_output_dir(
+        tmp_path, year=2026, race=3, session="R"
+    )
+    race_output.mkdir(parents=True)
+    prefix = race_output / "race_performance_2026_3_R"
+    pd.DataFrame(
+        [
+            {
+                "Team": "Stale",
+                "P10": 89.5,
+                "Median": 90.0,
+                "P90": 90.5,
+                "SampleCount": 10,
+                "WeightSum": 4.0,
+                "MeanRMSESeconds": 0.2,
+                "TeamBaselineMode": "average-drivers",
+            }
+        ]
+    ).to_csv(f"{prefix}_team_baseline_summary.csv", index=False)
+    with cached_metadata_path(
+        output_dir=race_output,
+        year=2026,
+        race=3,
+        session="R",
+    ).open("w", encoding="utf-8") as file:
+        json.dump(
+            {
+                "cache_schema": 2,
+                "traffic_evaluator_version": "unified-traffic-v2",
+                "traffic_combination_mode": "compatibility_min",
+                "lap_compound_overrides": [],
+            },
+            file,
+        )
+
+    monkeypatch.setattr(
+        review,
+        "monte_carlo_cache_metadata",
+        lambda **_kwargs: {
+            "cache_schema": 2,
+            "traffic_evaluator_version": "unified-traffic-v3",
+            "traffic_combination_mode": "compatibility_min",
+        },
+    )
+    monkeypatch.setattr(review, "LEGACY_OUTPUT_DIR", tmp_path / "legacy")
+    load_calls = []
+
+    def load_fresh(**kwargs):
+        load_calls.append((kwargs["rounds"], kwargs["session_names"]))
+        return pd.DataFrame()
+
+    monkeypatch.setattr(
+        review,
+        "load_all_session_laps_with_telemetry_gap_summary",
+        load_fresh,
+    )
+
+    result = run_race_performance_review(
+        year=2026,
+        races=[3],
+        session="R",
+        sample_count=10,
+        sampling_strategy=LATIN_HYPERCUBE_SAMPLER,
+        fuel_rate_bounds=(0.0, 0.1),
+        track_rate_bounds=(-0.05, 0.05),
+        limit_negative_track_correction=True,
+        default_compound_degradation_bounds=(0.0, 0.5),
+        compound_degradation_bounds={},
+        default_compound_delta_bounds=(-1.2, 0.5),
+        compound_delta_bounds={},
+        compound_delta_reference="HARD",
+        team_variation_fraction=0.5,
+        team_variation_absolute_min=0.005,
+        clean_lap_noise_sigma=0.5,
+        weight_strategy="gaussian",
+        weight_effective_sample_count=20,
+        team_baseline_mode="average-drivers",
+        fuel_ref=0.0,
+        race_lap_ref=None,
+        tyre_age_ref=0.0,
+        tyre_age_mode="stint",
+        track_temperature=None,
+        degradation_order_track_temperature=15.0,
+        random_seed=1,
+        progress_interval=None,
+        quick_lap_threshold=1.1,
+        min_clean_air_laps=4,
+        treat_stint_as_whole=False,
+        clean_mean_time_delta_seconds=2.5,
+        clean_mean_time_delta_behind_seconds=1.0,
+        wet_lap_proportion_skip_threshold=0.5,
+        dry_compounds=("SOFT", "MEDIUM", "HARD"),
+        lap_compound_overrides=[],
+        output_dir=tmp_path,
+        telemetry_cache_dir=None,
+        force_refresh_session_cache=False,
+        force_refresh_telemetry=False,
+        use_cached_monte_carlo=True,
+        test=False,
+    )
+
+    assert load_calls == [([3], ["R"])]
+    assert result["team_baseline_summaries"] == {}
 
 
 def test_load_cached_monte_carlo_outputs_rebuilds_best_driver_from_driver_baselines(tmp_path):

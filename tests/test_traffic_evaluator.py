@@ -92,6 +92,36 @@ def test_shared_direct_estimator_matches_finish_line_anchored_constant_speed_cas
     assert np.isclose(row["DirectTimeDeltaToDriverAhead"], 2.0)
 
 
+def test_shared_direct_estimator_ignores_zero_and_keeps_positive_candidate():
+    telemetry = _phase_frame(
+        [
+            ("TARGET", 5, 500.0),
+            ("COINCIDENT", 5, 500.0),
+            ("AHEAD", 5, 600.0),
+        ]
+    )
+
+    result = evaluate_direct_fastf1_style(telemetry)
+    row = _sample(result, "TARGET")
+
+    assert row["DirectDriverAhead"] == "AHEAD"
+    assert np.isclose(row["DirectDistanceToDriverAhead"], 100.0)
+    assert np.isclose(row["DirectTimeDeltaToDriverAhead"], 2.0)
+
+
+def test_shared_direct_estimator_leaves_only_non_positive_candidates_unavailable():
+    telemetry = _phase_frame(
+        [("TARGET", 5, 500.0), ("COINCIDENT", 5, 500.0), ("BEHIND", 5, 425.0)]
+    )
+
+    result = evaluate_direct_fastf1_style(telemetry)
+    row = _sample(result, "TARGET")
+
+    assert pd.isna(row["DirectDriverAhead"])
+    assert np.isnan(row["DirectDistanceToDriverAhead"])
+    assert np.isnan(row["DirectTimeDeltaToDriverAhead"])
+
+
 def test_shared_direct_estimator_is_independent_of_batch_delivery_order():
     telemetry = _phase_frame([("TARGET", 5, 500.0), ("AHEAD", 5, 600.0)])
 
@@ -138,7 +168,7 @@ def test_combination_preserves_partial_direct_coverage_status():
         ]
         + [
             {"Driver": "OTHER", "SessionTime": time, "LapNumber": 1, "Speed": 180.0}
-            for time in np.arange(0.0, 1.5, 0.5)
+            for time in np.arange(-1.0, 1.5, 0.5)
         ]
     )
     direct = evaluate_direct_fastf1_style(telemetry).laps

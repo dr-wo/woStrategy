@@ -314,9 +314,7 @@ def run_race_performance_review(
                 session=session,
                 output_dir=race_output_dir,
                 team_baseline_mode=team_baseline_mode,
-                expected_metadata=(
-                    cache_metadata if race_lap_compound_overrides else None
-                ),
+                expected_metadata=cache_metadata,
             )
             cache_was_legacy = False
             if cached is None and race_output_dir != LEGACY_OUTPUT_DIR:
@@ -326,9 +324,7 @@ def run_race_performance_review(
                     session=session,
                     output_dir=LEGACY_OUTPUT_DIR,
                     team_baseline_mode=team_baseline_mode,
-                    expected_metadata=(
-                        cache_metadata if race_lap_compound_overrides else None
-                    ),
+                    expected_metadata=cache_metadata,
                 )
                 cache_was_legacy = cached is not None
             if cached is not None:

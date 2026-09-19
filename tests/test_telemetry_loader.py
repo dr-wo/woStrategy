@@ -2,8 +2,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
-from wostrategy.analysis.traffic import summarize_lap_gap_metrics
+from wostrategy.analysis.traffic import (
+    PHYSICAL_CIRCULAR,
+    SHARED_DIRECT_RAN_NO_VALID_AHEAD,
+    SHARED_DIRECT_UNAVAILABLE,
+    SHARED_DIRECT_VALID_RESULT,
+    TRAFFIC_EVALUATOR_VERSION,
+    summarize_lap_gap_metrics,
+)
 
 from wostrategy.core.telemetry_loader import (
     DEFAULT_TELEMETRY_CACHE_DIR,
@@ -211,6 +219,51 @@ def test_load_or_cache_session_telemetry_refreshes_stale_cache_without_time_delt
     assert "TimeDeltaToDriverAhead" in refreshed.columns
 
 
+def test_load_or_cache_session_telemetry_refreshes_v2_traffic_cache(tmp_path):
+    cache_path = get_session_telemetry_cache_path(
+        year=2026,
+        round_number=1,
+        session_name="R",
+        cache_dir=tmp_path,
+    )
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    stale = pd.DataFrame(
+        {
+            "Distance": [0.0, 100.0],
+            "DistanceToDriverAhead": [999.0, 999.0],
+            "TimeDeltaToDriverAhead": [99.9, 99.9],
+        }
+    )
+    stale.attrs["traffic_evaluator_version"] = "unified-traffic-v2"
+    stale.attrs["traffic_combination_mode"] = "compatibility_min"
+    stale.to_pickle(cache_path)
+    session = FakeSession(
+        [
+            FakeLap(
+                {"Driver": "LEC", "LapNumber": 1},
+                pd.DataFrame(
+                    {
+                        "Distance": [0.0, 100.0],
+                        "DistanceToDriverAhead": [50.0, 50.0],
+                        "Time": pd.to_timedelta([0.0, 10.0], unit="s"),
+                    }
+                ),
+            )
+        ]
+    )
+
+    result = load_or_cache_session_telemetry(
+        session,
+        year=2026,
+        round_number=1,
+        session_name="R",
+        cache_dir=tmp_path,
+    )
+
+    assert result["DistanceToDriverAhead"].tolist() == [50.0, 50.0]
+    assert result.attrs["traffic_evaluator_version"] == TRAFFIC_EVALUATOR_VERSION
+
+
 def test_load_or_cache_session_telemetry_refreshes_empty_cache_with_time_delta(tmp_path):
     cache_path = get_session_telemetry_cache_path(
         year=2026,
@@ -320,11 +373,131 @@ def test_summarize_lap_gap_metrics_uses_smaller_direct_driver_ahead_gap():
     assert rus["MinDistanceToDriverAhead"] == 40.0
     assert rus["MeanDistanceToDriverAhead"] == 42.5
     assert round(rus["DirectMeanTimeDeltaToDriverAhead"], 6) == 0.85
+    assert round(rus["LegacyFastF1MeanTimeDeltaToDriverAhead"], 6) == 0.85
     assert pd.notna(rus["PhysicalMeanTimeDeltaToDriverAhead"])
     assert rus["TrafficCombinationMode"] == "compatibility_min"
     assert rus["DirectTrafficStatus"] == "ok"
     assert rus["PhysicalTrafficStatus"] == "ok"
     assert rus["MeanTimeDeltaToDriverAheadMethod"] == "DIRECT_FASTF1_STYLE"
+
+
+def test_summarize_lap_gap_metrics_does_not_restore_rejected_zero_from_legacy():
+    telemetry = pd.DataFrame(
+        {
+            "Year": [2026] * 6,
+            "Round": [14] * 6,
+            "SessionName": ["R"] * 6,
+            "Driver": ["NOR"] * 3 + ["OTHER"] * 3,
+            "DriverNumber": ["4"] * 3 + ["81"] * 3,
+            "DriverAhead": ["81"] * 3 + [pd.NA] * 3,
+            "LapNumber": [7] * 6,
+            "SessionTime": pd.to_timedelta([0.0, 1.0, 2.0] * 2, unit="s"),
+            "Distance": [0.0, 50.0, 100.0, 100.0, 150.0, 200.0],
+            "Speed": [180.0] * 6,
+            "TimeDeltaToDriverAhead": [0.0, 0.0, 0.0, pd.NA, pd.NA, pd.NA],
+            "DistanceToDriverAhead": [0.0, 0.0, 0.0, pd.NA, pd.NA, pd.NA],
+        }
+    )
+
+    result = summarize_lap_gap_metrics(telemetry)
+    nor = result.loc[result["Driver"].eq("NOR")].iloc[0]
+
+    assert np.isnan(nor["DirectMeanTimeDeltaToDriverAhead"])
+    assert nor["LegacyFastF1MeanTimeDeltaToDriverAhead"] == 0.0
+    assert nor["PhysicalMeanTimeDeltaToDriverAhead"] == 2.0
+    assert nor["MeanTimeDeltaToDriverAhead"] == 2.0
+    assert nor["MeanDistanceToDriverAhead"] == 100.0
+    assert nor["MeanTimeDeltaToDriverAheadMethod"] == PHYSICAL_CIRCULAR
+    assert nor["SharedDirectState"] == SHARED_DIRECT_RAN_NO_VALID_AHEAD
+
+
+def test_summarize_lap_gap_metrics_resolves_shared_availability_per_lap():
+    rows = []
+
+    def add_lap(driver, other, lap_number, target_times, other_times, legacy_time, legacy_distance):
+        for time in target_times:
+            rows.append(
+                {
+                    "Year": 2026,
+                    "Round": 14,
+                    "SessionName": "R",
+                    "Driver": driver,
+                    "DriverNumber": driver,
+                    "DriverAhead": other,
+                    "LapNumber": lap_number,
+                    "SessionTime": time,
+                    "Distance": np.nan,
+                    "Speed": 180.0,
+                    "TimeDeltaToDriverAhead": legacy_time,
+                    "DistanceToDriverAhead": legacy_distance,
+                }
+            )
+        for time in other_times:
+            rows.append(
+                {
+                    "Year": 2026,
+                    "Round": 14,
+                    "SessionName": "R",
+                    "Driver": other,
+                    "DriverNumber": other,
+                    "DriverAhead": pd.NA,
+                    "LapNumber": lap_number,
+                    "SessionTime": time,
+                    "Distance": np.nan,
+                    "Speed": 180.0,
+                    "TimeDeltaToDriverAhead": pd.NA,
+                    "DistanceToDriverAhead": pd.NA,
+                }
+            )
+
+    add_lap("VALID", "VALID_AHEAD", 7, [0.0, 1.0, 2.0], [-2.0, -1.0, 0.0], 9.0, 450.0)
+    add_lap("LEGACY", "LEGACY_OTHER", 8, [10.0, 11.0], [10.0, 11.0], 1.5, 75.0)
+    add_lap("ZERO", "ZERO_OTHER", 9, [20.0, 21.0], [20.0, 21.0], 0.0, 0.0)
+
+    result = summarize_lap_gap_metrics(pd.DataFrame(rows))
+    selected = result.set_index("Driver")
+
+    valid = selected.loc["VALID"]
+    assert valid["SharedDirectState"] == SHARED_DIRECT_VALID_RESULT
+    assert valid["MeanTimeDeltaToDriverAhead"] == 2.0
+    assert valid["MeanTimeDeltaToDriverAheadMethod"] == "DIRECT_FASTF1_STYLE"
+
+    legacy = selected.loc["LEGACY"]
+    assert legacy["SharedDirectState"] == SHARED_DIRECT_UNAVAILABLE
+    assert legacy["MeanTimeDeltaToDriverAhead"] == 1.5
+    assert legacy["MeanDistanceToDriverAhead"] == 75.0
+    assert legacy["MeanTimeDeltaToDriverAheadMethod"] == "DIRECT_FASTF1_STYLE"
+
+    zero = selected.loc["ZERO"]
+    assert zero["SharedDirectState"] == SHARED_DIRECT_UNAVAILABLE
+    assert np.isnan(zero["MeanTimeDeltaToDriverAhead"])
+    assert zero["LegacyFastF1MeanTimeDeltaToDriverAhead"] == 0.0
+
+
+def test_summarize_lap_gap_metrics_shared_no_ahead_blocks_positive_legacy():
+    telemetry = pd.DataFrame(
+        {
+            "Year": [2026] * 6,
+            "Round": [14] * 6,
+            "SessionName": ["R"] * 6,
+            "Driver": ["TARGET"] * 3 + ["COINCIDENT"] * 3,
+            "DriverNumber": ["1"] * 3 + ["2"] * 3,
+            "DriverAhead": ["2"] * 3 + [pd.NA] * 3,
+            "LapNumber": [7] * 6,
+            "SessionTime": [0.0, 1.0, 2.0] * 2,
+            "Distance": [np.nan] * 6,
+            "Speed": [180.0] * 6,
+            "TimeDeltaToDriverAhead": [1.5] * 3 + [pd.NA] * 3,
+            "DistanceToDriverAhead": [75.0] * 3 + [pd.NA] * 3,
+        }
+    )
+
+    result = summarize_lap_gap_metrics(telemetry)
+    target = result.loc[result["Driver"].eq("TARGET")].iloc[0]
+
+    assert target["SharedDirectState"] == SHARED_DIRECT_RAN_NO_VALID_AHEAD
+    assert np.isnan(target["MeanTimeDeltaToDriverAhead"])
+    assert target["LegacyFastF1MeanTimeDeltaToDriverAhead"] == 1.5
 
 
 def test_summarize_lap_gap_metrics_uses_smaller_physical_ahead_gap():

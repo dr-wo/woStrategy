@@ -6,7 +6,7 @@ from typing import Protocol
 import numpy as np
 import pandas as pd
 
-TRAFFIC_EVALUATOR_VERSION = "unified-traffic-v2"
+TRAFFIC_EVALUATOR_VERSION = "unified-traffic-v3"
 COMBINATION_MODE_COMPATIBILITY_MIN = "compatibility_min"
 
 DIRECT_FASTF1_STYLE = "DIRECT_FASTF1_STYLE"
@@ -16,6 +16,10 @@ SECTOR_BOUNDARY_FALLBACK = "SECTOR_BOUNDARY_FALLBACK"
 TRAFFIC_STATUS_OK = "ok"
 TRAFFIC_STATUS_PARTIAL = "partial_coverage"
 TRAFFIC_STATUS_UNKNOWN = "unknown"
+
+SHARED_DIRECT_VALID_RESULT = "VALID_RESULT"
+SHARED_DIRECT_RAN_NO_VALID_AHEAD = "RAN_NO_VALID_AHEAD"
+SHARED_DIRECT_UNAVAILABLE = "UNAVAILABLE"
 
 NORMALIZED_REQUIRED_COLUMNS = (
     "Driver",
@@ -400,7 +404,12 @@ def _evaluate_direct_session(
             frame["DirectDistanceToDriverAhead"] = np.nan
             if candidates:
                 delta = np.column_stack(candidates)
-                delta[~np.isfinite(delta) | (delta < 0.0)] = np.inf
+                # A coincident trace is not a vehicle ahead.  In particular,
+                # FastF1-style classification anchoring can collapse another
+                # driver's progress onto the target trace and produce an exact
+                # zero.  Leave that candidate unavailable so the component
+                # combiner can use physical circular traffic instead.
+                delta[~np.isfinite(delta) | (delta <= 0.0)] = np.inf
                 nearest = np.argmin(delta, axis=1)
                 nearest_distance = delta[np.arange(len(delta)), nearest]
                 valid = np.isfinite(nearest_distance)
@@ -1157,10 +1166,21 @@ def summarize_lap_gap_metrics(
         )
 
     legacy_direct_summary = pd.DataFrame()
+    valid_legacy_direct_summary = pd.DataFrame()
     direct_required = {*group_columns, time_delta_column, distance_delta_column}
     if not direct_required.difference(telemetry.columns):
         legacy_direct_summary = _summarize_lap_gaps_from_driver_ahead(
             telemetry,
+            group_columns=group_columns,
+            time_delta_column=time_delta_column,
+            distance_delta_column=distance_delta_column,
+        )
+        valid_legacy_direct_summary = _summarize_lap_gaps_from_driver_ahead(
+            _without_non_positive_legacy_ahead_candidates(
+                telemetry,
+                time_delta_column=time_delta_column,
+                distance_delta_column=distance_delta_column,
+            ),
             group_columns=group_columns,
             time_delta_column=time_delta_column,
             distance_delta_column=distance_delta_column,
@@ -1172,16 +1192,16 @@ def summarize_lap_gap_metrics(
         shared_direct = evaluate_direct_fastf1_style(
             telemetry,
             group_columns=group_columns,
-        ).laps
-        if (
-            not shared_direct.empty
-            and shared_direct[[metric for metric in _METRICS if metric in shared_direct]]
-            .notna()
-            .any(axis=None)
-        ):
-            direct_summary = shared_direct
+        )
+        direct_summary = _shared_direct_with_legacy_fallback(
+            shared_direct,
+            valid_legacy_direct_summary,
+            group_columns=group_columns,
+        )
     if direct_summary.empty:
-        direct_summary = legacy_direct_summary
+        direct_summary = valid_legacy_direct_summary.copy()
+        if not direct_summary.empty:
+            direct_summary["SharedDirectState"] = SHARED_DIRECT_UNAVAILABLE
 
     physical_required = {*group_columns, "SessionTime", "Distance", "Speed"}
     physical_summary = pd.DataFrame()
@@ -1216,12 +1236,76 @@ def summarize_lap_gap_metrics(
         missing = ", ".join(sorted(missing_columns))
         raise ValueError(f"Telemetry is missing required columns: {missing}")
 
-    return _summarize_lap_gaps_from_driver_ahead(
-        telemetry,
+    legacy_only = _summarize_lap_gaps_from_driver_ahead(
+        _without_non_positive_legacy_ahead_candidates(
+            telemetry,
+            time_delta_column=time_delta_column,
+            distance_delta_column=distance_delta_column,
+        ),
         group_columns=group_columns,
         time_delta_column=time_delta_column,
         distance_delta_column=distance_delta_column,
     )
+    legacy_only["SharedDirectState"] = SHARED_DIRECT_UNAVAILABLE
+    return legacy_only
+
+
+def _without_non_positive_legacy_ahead_candidates(
+    telemetry: pd.DataFrame,
+    *,
+    time_delta_column: str,
+    distance_delta_column: str,
+) -> pd.DataFrame:
+    output = telemetry.copy()
+    time_delta = pd.to_numeric(output[time_delta_column], errors="coerce")
+    distance_delta = pd.to_numeric(output[distance_delta_column], errors="coerce")
+    invalid = (time_delta.notna() & time_delta.le(0.0)) | (
+        distance_delta.notna() & distance_delta.le(0.0)
+    )
+    output.loc[invalid, [time_delta_column, distance_delta_column]] = np.nan
+    return output
+
+
+def _shared_direct_with_legacy_fallback(
+    shared: TrafficEvaluationResult,
+    valid_legacy: pd.DataFrame,
+    *,
+    group_columns: tuple[str, ...],
+) -> pd.DataFrame:
+    ran_groups = shared.samples.loc[:, list(group_columns)].drop_duplicates()
+    if ran_groups.empty:
+        fallback = valid_legacy.copy()
+        if not fallback.empty:
+            fallback["SharedDirectState"] = SHARED_DIRECT_UNAVAILABLE
+        return fallback
+
+    shared_laps = shared.laps.copy()
+    ahead_metrics = [metric for metric in _METRICS[:4] if metric in shared_laps]
+    has_valid_ahead = (
+        shared_laps.loc[:, ahead_metrics].notna().any(axis=1)
+        if ahead_metrics
+        else pd.Series(False, index=shared_laps.index)
+    )
+    shared_laps["SharedDirectState"] = np.where(
+        has_valid_ahead,
+        SHARED_DIRECT_VALID_RESULT,
+        SHARED_DIRECT_RAN_NO_VALID_AHEAD,
+    )
+    if valid_legacy.empty:
+        return shared_laps
+
+    unavailable = valid_legacy.merge(
+        ran_groups.assign(_SharedDirectRan=True),
+        on=list(group_columns),
+        how="left",
+    )
+    unavailable = unavailable.loc[unavailable["_SharedDirectRan"].isna()].drop(
+        columns="_SharedDirectRan"
+    )
+    if unavailable.empty:
+        return shared_laps
+    unavailable["SharedDirectState"] = SHARED_DIRECT_UNAVAILABLE
+    return pd.concat([shared_laps, unavailable], ignore_index=True, sort=False)
 
 
 def _attach_legacy_direct_comparison(
