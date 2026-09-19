@@ -34,6 +34,8 @@ def test_non_monotonic_cutoff_keeps_primary_references_and_warning() -> None:
         {"SOFT": 0.2, "MEDIUM": 0.1, "HARD": 0.05},
     )
     def evaluator(value, stops, rules):
+        if stops == 0:
+            return 100.0
         if stops == 1:
             return 2.0 + value if value < 0.2 else 1.0 + 8.0 * value
         if stops == 2:
@@ -58,6 +60,8 @@ def _cutoff_model() -> StrategyModel:
 
 def _crossing_evaluator(crossing: float):
     def evaluator(value, stops, rules):
+        if stops == 0:
+            return 2.0 * value - 0.075
         if stops == 1:
             return value
         if stops == 2:
@@ -94,7 +98,12 @@ def test_no_positive_one_to_two_crossing_extends_to_zero_with_clear_status() -> 
 
     def evaluator(value, stops, rules):
         evaluated.append(value)
-        return 1.0 if stops == 1 else 0.0 if stops == 2 else 2.0
+        return (
+            2.0 * value - 0.075 if stops == 0
+            else 1.0 if stops == 1
+            else 0.0 if stops == 2
+            else 2.0
+        )
 
     result = calculate_degradation_cutoffs(
         model=_cutoff_model(), state=_state(), pit_loss=2.0,
@@ -128,7 +137,7 @@ def test_explicit_scan_min_is_a_hard_lower_bound() -> None:
 
 def test_cutoff_plot_labels_prediction_and_both_crossings() -> None:
     def evaluator(value, stops, rules):
-        return {1: value, 2: 0.1, 3: 0.4 - value}[stops]
+        return {0: 2.0 * value - 0.075, 1: value, 2: 0.1, 3: 0.4 - value}[stops]
 
     result = calculate_degradation_cutoffs(
         model=_cutoff_model(), state=_state(), pit_loss=2.0,
@@ -138,6 +147,7 @@ def test_cutoff_plot_labels_prediction_and_both_crossings() -> None:
     try:
         labels = axis.get_legend_handles_labels()[1]
         assert "Predicted MEDIUM degradation" in labels
+        assert "0→1 cutoff" in labels
         assert "1→2 cutoff" in labels
         assert "2→3 cutoff" in labels
     finally:
@@ -149,7 +159,12 @@ def test_cutoff_plot_labels_fp_diagnostic_markers() -> None:
     result = calculate_degradation_cutoffs(
         model=_cutoff_model(), state=_state(), pit_loss=2.0,
         scan_min=0.05, scan_max=0.4, coarse_step=0.01,
-        evaluator=lambda value, stops, rules: {1: value, 2: 0.1, 3: 0.4 - value}[stops],
+        evaluator=lambda value, stops, rules: {
+            0: 2.0 * value - 0.075,
+            1: value,
+            2: 0.1,
+            3: 0.4 - value,
+        }[stops],
     )
     markers = [
         {"session": "FP1", "medium_degradation": 0.06},
@@ -162,6 +177,65 @@ def test_cutoff_plot_labels_fp_diagnostic_markers() -> None:
         assert "FP1 diagnostic" in labels
         assert "FP2 diagnostic" in labels
         assert "FP3 diagnostic" in labels
+    finally:
+        import matplotlib.pyplot as plt
+        plt.close(figure)
+
+
+def test_unrestricted_cutoff_calculates_serializes_and_plots_zero_to_one() -> None:
+    result = calculate_degradation_cutoffs(
+        model=_cutoff_model(), state=_state(), pit_loss=2.0,
+        scan_min=0.05, scan_max=0.4, coarse_step=0.01,
+        evaluator=lambda value, stops, rules: {
+            0: 2.0 * value - 0.075,
+            1: value,
+            2: 0.1,
+            3: 0.4 - value,
+        }[stops],
+    )
+
+    assert result.primary_0_to_1 == pytest.approx(0.075, abs=0.001)
+    assert result.primary_1_to_2 == pytest.approx(0.1, abs=0.001)
+    assert result.primary_2_to_3 == pytest.approx(0.3, abs=0.001)
+    payload = result.to_dict()
+    assert payload["primary_0_to_1"] == result.primary_0_to_1
+    assert payload["cutoff_table"][0] == {
+        "transition": "0_to_1",
+        "display_label": "0→1",
+        "cutoff_medium_degradation": result.primary_0_to_1,
+        "status": "found_initial_scan",
+    }
+    figure, axis = plot_degradation_cutoff(result)
+    try:
+        labels = axis.get_legend_handles_labels()[1]
+        assert "Best 0-stop" in labels
+        assert "0→1 cutoff" in labels
+    finally:
+        import matplotlib.pyplot as plt
+        plt.close(figure)
+
+
+def test_rules_compliant_cutoff_marks_zero_to_one_unavailable() -> None:
+    result = calculate_degradation_cutoffs(
+        model=_cutoff_model(), state=_state(), pit_loss=2.0,
+        strategy_rules=StrategyRules(minimum_distinct_dry_compounds=2),
+        scan_min=0.05, scan_max=0.4, coarse_step=0.01,
+        evaluator=lambda value, stops, rules: {
+            1: value,
+            2: 0.1,
+            3: 0.4 - value,
+        }[stops],
+    )
+
+    assert result.primary_0_to_1 is None
+    assert result.primary_0_to_1_status == "unavailable_rules_compliant"
+    assert result.to_dict()["cutoff_table"][0]["cutoff_medium_degradation"] is None
+    figure, axis = plot_degradation_cutoff(result)
+    try:
+        labels = axis.get_legend_handles_labels()[1]
+        assert "0-stop unavailable (rules)" in labels
+        assert "0→1 cutoff N/A (rules)" in labels
+        assert "0→1 cutoff" not in labels
     finally:
         import matplotlib.pyplot as plt
         plt.close(figure)

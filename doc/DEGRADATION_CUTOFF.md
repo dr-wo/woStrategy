@@ -1,10 +1,10 @@
 # Degradation cutoff analysis
 
 `wostrategy.analysis.degradation_cutoff.calculate_degradation_cutoffs` compares
-the best exact one-, two-, and three-stop strategies while varying MEDIUM tyre
-degradation. It produces the strategy-envelope sweep, refined primary 1→2 and
-2→3 crossings, non-monotonic reversal regions, warnings, and the rules used by
-the fixed-stop optimiser.
+the best exact zero-, one-, two-, and three-stop strategies while varying MEDIUM
+tyre degradation. It produces the strategy-envelope sweep, refined primary
+0→1, 1→2 and 2→3 crossings, non-monotonic reversal regions, warnings, and the
+rules used by the fixed-stop optimiser.
 
 ## Function behaviour
 
@@ -18,14 +18,14 @@ prediction-centred:
 3. Every scan point scales all compound degradations by the same
    `candidate_medium / predicted_medium` factor. This preserves S:M:H ratios.
 4. Compound performance deltas are not changed.
-5. The existing exact fixed-stop optimiser evaluates the best one-, two-, and
-   three-stop strategy under either unrestricted or supplied sporting rules.
+5. The existing exact fixed-stop optimiser evaluates the best zero-, one-, two-,
+   and three-stop strategy under either unrestricted or supplied sporting rules.
 6. Crossings are refined with the existing bisection refinement.
 
-If the initial automatic range has no positive 1→2 bracket, the lower bound is
-progressively halved. Each added interval uses the configured coarse step as a
-maximum point spacing. The search stops when it brackets a positive crossing or
-evaluates zero. It never evaluates negative degradation.
+If the initial automatic range has no positive 0→1 or 1→2 bracket, the lower
+bound is progressively halved. Each added interval uses the configured coarse
+step as a maximum point spacing. The search stops when it brackets the required
+positive crossings or evaluates zero. It never evaluates negative degradation.
 
 An explicitly supplied `scan_min` is a hard lower bound. In that case no
 automatic extension occurs below the supplied value.
@@ -42,18 +42,24 @@ In addition to the cutoffs and sweep, `DegradationCutoffResult` records:
   range is constructed;
 - `initial_scan_min`: the lower bound before any extension;
 - `effective_scan_min`: the lowest value actually scanned;
+- `primary_0_to_1` and `primary_0_to_1_status`: the unrestricted zero-to-one
+  crossing, or `unavailable_rules_compliant` when the two-dry-compound rule
+  makes a zero-stop race invalid;
 - `primary_1_to_2_status`: one of:
   - `found_initial_scan`;
   - `found_after_lower_extension`;
   - `no_positive_degradation_crossing`;
   - `not_found_above_explicit_scan_min`.
 
-`no_positive_degradation_crossing` means the automatic search reached zero and
-found no crossing at positive degradation. Equality exactly at zero does not
-count as a positive cutoff.
+`cutoff_table` serializes all three transitions as report-ready rows with the
+supplied value and status. `no_positive_degradation_crossing` means the automatic
+search reached zero and found no crossing at positive degradation. Equality
+exactly at zero does not count as a positive cutoff.
 
-The cutoff plot labels predicted MEDIUM degradation and each available 1→2 and
-2→3 cutoff. Existing reversal shading and non-monotonic warnings are retained.
+The cutoff plot labels predicted MEDIUM degradation and each available 0→1,
+1→2 and 2→3 cutoff. Rules-compliant plots explicitly label zero-stop and 0→1 as
+unavailable rather than drawing a false crossing. Existing reversal shading and
+non-monotonic warnings are retained.
 
 ## FP diagnostic reference markers
 
@@ -86,13 +92,13 @@ presentation once fuel/load estimation and FP identifiability are stronger.
 
 ## Compromises
 
-- Lower-bound extension targets only the missing 1→2 cutoff. It does not expand
+- Lower-bound extension targets missing 0→1 and 1→2 cutoffs. It does not expand
   the search for 2→3, by design, to preserve existing 2→3 output semantics.
 - Extension uses deterministic halving rather than an adaptive model-derived
   lower bound. This is simple, reproducible, and guarantees termination at zero,
   but may evaluate more points than a specialised bracketing method.
-- Extension points contain costs for all three stop counts so the emitted sweep
-  remains internally consistent, although only the 1→2 bracket drives extension.
+- Extension points contain costs for all four stop counts so the emitted sweep
+  remains internally consistent.
 - Status values are strings for artifact compatibility rather than a dedicated
   enum type.
 

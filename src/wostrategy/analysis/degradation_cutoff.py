@@ -28,6 +28,8 @@ class DegradationCutoffResult:
     predicted_medium_degradation: float
     initial_scan_min: float
     effective_scan_min: float
+    primary_0_to_1: float | None
+    primary_0_to_1_status: str
     primary_1_to_2: float | None
     primary_1_to_2_status: str
     primary_2_to_3: float | None
@@ -38,7 +40,32 @@ class DegradationCutoffResult:
     rules: StrategyRules
 
     def to_dict(self) -> dict[str, object]:
-        return asdict(self)
+        payload = asdict(self)
+        payload["cutoff_table"] = [
+            {
+                "transition": "0_to_1",
+                "display_label": "0→1",
+                "cutoff_medium_degradation": self.primary_0_to_1,
+                "status": self.primary_0_to_1_status,
+            },
+            {
+                "transition": "1_to_2",
+                "display_label": "1→2",
+                "cutoff_medium_degradation": self.primary_1_to_2,
+                "status": self.primary_1_to_2_status,
+            },
+            {
+                "transition": "2_to_3",
+                "display_label": "2→3",
+                "cutoff_medium_degradation": self.primary_2_to_3,
+                "status": (
+                    "found_initial_scan"
+                    if self.primary_2_to_3 is not None
+                    else "not_found_in_scan_range"
+                ),
+            },
+        ]
+        return payload
 
 
 def calculate_degradation_cutoffs(
@@ -71,6 +98,8 @@ def calculate_degradation_cutoffs(
     def cost(value: float, stops: int) -> float | None:
         if value < 0:
             raise ValueError("MEDIUM degradation scan cannot evaluate negative values")
+        if stops == 0 and rules.minimum_distinct_dry_compounds > 1:
+            return None
         if evaluator is not None:
             return evaluator(value, stops, rules)
         ratio = value / predicted
@@ -84,37 +113,76 @@ def calculate_degradation_cutoffs(
 
     initial_minimum = minimum
     values = _scan_values(minimum, maximum, step)
-    points = [_point(value, {stops: cost(value, stops) for stops in (1, 2, 3)}) for value in values]
+    stop_counts = (0, 1, 2, 3)
+    zero_stop_rules_available = rules.minimum_distinct_dry_compounds <= 1
+    points = [
+        _point(value, {stops: cost(value, stops) for stops in stop_counts})
+        for value in values
+    ]
     initial_crossings = _crossing_brackets(points)
+    brackets_01 = (
+        _positive_crossing_brackets(initial_crossings[(0, 1)], (0, 1), cost)
+        if zero_stop_rules_available else []
+    )
     brackets_12 = _positive_crossing_brackets(
         initial_crossings[(1, 2)], (1, 2), cost,
     )
     brackets_23 = initial_crossings[(2, 3)]
+    primary_01_status = (
+        "found_initial_scan" if brackets_01
+        else "unavailable_rules_compliant" if not zero_stop_rules_available
+        else "not_found"
+    )
     primary_12_status = "found_initial_scan" if brackets_12 else "not_found"
 
     # An automatic prediction-centred range is only an initial search window.
-    # Progressively extend it toward zero for the 1→2 crossing. An explicit
-    # scan_min remains a hard engineering constraint and is never crossed.
-    if not brackets_12 and scan_min is None and minimum > 0:
-        while not brackets_12 and minimum > 0:
+    # Progressively extend it toward zero for missing 0→1 and 1→2 crossings.
+    # An explicit scan_min remains a hard engineering constraint and is never crossed.
+    needs_lower_extension = (
+        not brackets_12 or (zero_stop_rules_available and not brackets_01)
+    )
+    if needs_lower_extension and scan_min is None and minimum > 0:
+        while (
+            not brackets_12 or (zero_stop_rules_available and not brackets_01)
+        ) and minimum > 0:
             next_minimum = 0.0 if minimum <= step else minimum / 2.0
             extension_values = _scan_values(next_minimum, minimum, step)
             extension_points = [
-                _point(value, {stops: cost(value, stops) for stops in (1, 2, 3)})
+                _point(value, {stops: cost(value, stops) for stops in stop_counts})
                 for value in extension_values[:-1]
             ]
             points = extension_points + points
             minimum = next_minimum
-            brackets_12 = _positive_crossing_brackets(
-                _crossing_brackets(points)[(1, 2)], (1, 2), cost,
+            extended_crossings = _crossing_brackets(points)
+            if not brackets_01 and zero_stop_rules_available:
+                brackets_01 = _positive_crossing_brackets(
+                    extended_crossings[(0, 1)], (0, 1), cost,
+                )
+            if not brackets_12:
+                brackets_12 = _positive_crossing_brackets(
+                    extended_crossings[(1, 2)], (1, 2), cost,
+                )
+        if primary_01_status == "not_found":
+            primary_01_status = (
+                "found_after_lower_extension"
+                if brackets_01 else "no_positive_degradation_crossing"
             )
-        primary_12_status = (
-            "found_after_lower_extension"
-            if brackets_12 else "no_positive_degradation_crossing"
-        )
-    elif not brackets_12 and scan_min is not None:
+        if primary_12_status == "not_found":
+            primary_12_status = (
+                "found_after_lower_extension"
+                if brackets_12 else "no_positive_degradation_crossing"
+            )
+    if (not brackets_01 and zero_stop_rules_available and scan_min is not None
+            and primary_01_status == "not_found"):
+        primary_01_status = "not_found_above_explicit_scan_min"
+    if (not brackets_12 and scan_min is not None
+            and primary_12_status == "not_found"):
         primary_12_status = "not_found_above_explicit_scan_min"
 
+    refined_01 = [
+        _refine_crossing(a, b, (0, 1), cost, tolerance)
+        for a, b in brackets_01
+    ]
     refined_12 = [
         _refine_crossing(a, b, (1, 2), cost, tolerance)
         for a, b in brackets_12
@@ -125,6 +193,7 @@ def calculate_degradation_cutoffs(
         _refine_crossing(a, b, (2, 3), cost, tolerance)
         for a, b in brackets_23
     ]
+    primary_01 = refined_01[0] if refined_01 else None
     primary_12 = refined_12[0] if refined_12 else None
     primary_23 = refined_23[0] if refined_23 else None
     preferred = [point.preferred_stop_count for point in points if point.preferred_stop_count is not None]
@@ -137,6 +206,17 @@ def calculate_degradation_cutoffs(
     warnings = []
     if non_monotonic:
         warnings.append("Strategy envelope is non-monotonic; primary cutoffs are simplified references.")
+    if primary_01 is None and zero_stop_rules_available:
+        if primary_01_status == "no_positive_degradation_crossing":
+            warnings.append(
+                "No positive-degradation 0→1 stop crossing was found after "
+                "extending the automatic scan to zero."
+            )
+        else:
+            warnings.append(
+                "No 0→1 stop crossing was found at or above the explicit "
+                "scan_min hard lower bound."
+            )
     if primary_12 is None:
         if primary_12_status == "no_positive_degradation_crossing":
             warnings.append(
@@ -151,9 +231,19 @@ def calculate_degradation_cutoffs(
     if primary_23 is None:
         warnings.append("No 2→3 stop crossing was found inside the scan range.")
     return DegradationCutoffResult(
-        predicted, initial_minimum, minimum, primary_12, primary_12_status,
-        primary_23, non_monotonic, tuple(reversals), tuple(points),
-        tuple(warnings), rules,
+        predicted_medium_degradation=predicted,
+        initial_scan_min=initial_minimum,
+        effective_scan_min=minimum,
+        primary_0_to_1=primary_01,
+        primary_0_to_1_status=primary_01_status,
+        primary_1_to_2=primary_12,
+        primary_1_to_2_status=primary_12_status,
+        primary_2_to_3=primary_23,
+        non_monotonic=non_monotonic,
+        reversal_regions=tuple(reversals),
+        sweep=tuple(points),
+        warnings=tuple(warnings),
+        rules=rules,
     )
 
 
@@ -191,7 +281,7 @@ def _point(value: float, costs: Mapping[int, float | None]) -> CutoffPoint:
 
 
 def _crossing_brackets(points: list[CutoffPoint]) -> dict[tuple[int, int], list[tuple[float, float]]]:
-    output = {(1, 2): [], (2, 3): []}
+    output = {(0, 1): [], (1, 2): [], (2, 3): []}
     for left, right in zip(points, points[1:]):
         for pair in output:
             a0, b0 = left.costs[pair[0]], left.costs[pair[1]]

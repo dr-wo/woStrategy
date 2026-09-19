@@ -687,9 +687,13 @@ checks model readiness, and writes rolling pre-race predictions under
 Application code consumes the latest artifact through
 `wostrategy.analysis.pre_race_tyre_prediction.get_pre_race_tyre_prediction`.
 The adapter returns provider-neutral `PreRaceTyrePrediction` and
-`TyreCompoundPrediction` contracts, normalizes all performance deltas to MEDIUM,
-and can invoke the owning producer when a caller proves the cached artifact is
-stale.
+`TyreCompoundPrediction` contracts. Raw cache loading preserves the producer's
+common additive performance gauge. The shared operational contract then
+validates event identity, complete SOFT/MEDIUM/HARD coverage, finite required
+values, and non-negative degradation before subtracting the MEDIUM performance
+value once. Strategy, Planner, reports, and plots therefore consume MEDIUM=0
+without imposing that gauge on producer/source artifacts. The adapter can invoke
+the owning producer when a caller proves the cached artifact is stale.
 
 ```bash
 python -m wostrategy.script.tyre_prediction_pipeline --year 2026

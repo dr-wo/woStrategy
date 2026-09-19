@@ -9,7 +9,11 @@ from typing import Callable
 
 from wodata import get_data_root
 
-from wostrategy.model.tyre_prediction import PreRaceTyrePrediction, TyreCompoundPrediction
+from wostrategy.model.tyre_prediction import (
+    PreRaceTyrePrediction,
+    TyreCompoundPrediction,
+    canonicalize_operational_tyre_prediction,
+)
 
 
 class MissingPreRaceTyrePrediction(FileNotFoundError):
@@ -28,11 +32,35 @@ def get_pre_race_tyre_prediction(
     fresh_after: str | datetime | None = None,
     refresh: Callable[[], object] | None = None,
 ) -> PreRaceTyrePrediction:
-    """Load and normalize the current cache without exposing provider details.
+    """Load the current cache as a validated canonical operational prediction.
 
     If `fresh_after` proves the cache stale, the owning producer callback is used
     when supplied. No orchestration-layer timestamp interpretation is required.
     """
+    source = load_pre_race_tyre_prediction_source(
+        season=season,
+        round_number=round_number,
+        data_root=data_root,
+        fresh_after=fresh_after,
+        refresh=refresh,
+    )
+    return canonicalize_operational_tyre_prediction(
+        source,
+        expected_season=season,
+        expected_round_number=round_number,
+        expected_event_id=f"{int(season):04d}-{int(round_number):02d}",
+    )
+
+
+def load_pre_race_tyre_prediction_source(
+    *,
+    season: int,
+    round_number: int,
+    data_root: str | Path | None = None,
+    fresh_after: str | datetime | None = None,
+    refresh: Callable[[], object] | None = None,
+) -> PreRaceTyrePrediction:
+    """Load source values and provenance without changing their additive gauge."""
     path = _prediction_path(season, round_number, data_root)
     payload = _read(path) if path.exists() else None
     if payload is None or not _is_fresh(payload, fresh_after):
@@ -48,7 +76,7 @@ def get_pre_race_tyre_prediction(
             raise StalePreRaceTyrePrediction(
                 f"Pre-race tyre prediction {path} predates required source evidence."
             )
-    return _normalize(payload, path)
+    return _source_prediction(payload, path)
 
 
 def _prediction_path(season: int, round_number: int, data_root) -> Path:
@@ -76,23 +104,18 @@ def _is_fresh(payload: dict[str, object], fresh_after: str | datetime | None) ->
     return timestamp is not None and _as_time(str(timestamp)) >= _as_time(fresh_after)
 
 
-def _normalize(payload: dict[str, object], path: Path) -> PreRaceTyrePrediction:
+def _source_prediction(payload: dict[str, object], path: Path) -> PreRaceTyrePrediction:
     allocation = {str(k).upper(): str(v) for k, v in dict(payload["compound_allocation"]).items()}
     raw = dict(payload["compounds"])
     by_role = {str(row["compound_role"]).upper(): dict(row) for row in raw.values()}
-    if "MEDIUM" not in by_role:
-        raise ValueError(f"{path} has no MEDIUM role")
-    medium_performance = by_role["MEDIUM"].get("performance_mean")
-    if medium_performance is None:
-        raise ValueError(f"{path} has no MEDIUM performance estimate")
     compounds = {}
     for role in ("SOFT", "MEDIUM", "HARD"):
         row = by_role.get(role)
-        if row is None or row.get("degradation_mean") is None or row.get("performance_mean") is None:
+        if row is None:
             continue
         compounds[role] = TyreCompoundPrediction(
-            performance_delta_to_medium=float(row["performance_mean"]) - float(medium_performance),
-            degradation_seconds_per_lap=float(row["degradation_mean"]),
+            performance_delta_to_medium=row.get("performance_mean"),
+            degradation_seconds_per_lap=row.get("degradation_mean"),
             performance_uncertainty=_optional_float(row.get("performance_std")),
             degradation_uncertainty=_optional_float(row.get("degradation_std")),
             # Legacy field retained for compatibility.  It describes descriptor
@@ -128,5 +151,5 @@ def _optional_float(value: object) -> float | None:
 
 __all__ = [
     "MissingPreRaceTyrePrediction", "StalePreRaceTyrePrediction",
-    "get_pre_race_tyre_prediction",
+    "get_pre_race_tyre_prediction", "load_pre_race_tyre_prediction_source",
 ]

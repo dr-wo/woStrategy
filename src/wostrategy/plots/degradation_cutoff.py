@@ -17,17 +17,25 @@ def plot_degradation_cutoff(
 ):
     figure, axis = plt.subplots(figsize=(9, 5.5))
     x = [point.medium_degradation for point in result.sweep]
-    colours = {1: "#1f77b4", 2: "#ff7f0e", 3: "#2ca02c"}
-    for stops in (1, 2, 3):
+    colours = {0: "#17becf", 1: "#1f77b4", 2: "#ff7f0e", 3: "#2ca02c"}
+    for stops in (0, 1, 2, 3):
         y = [point.costs.get(stops) for point in result.sweep]
-        axis.plot(x, y, label=f"Best {stops}-stop", color=colours[stops], linewidth=2)
+        if any(value is not None for value in y):
+            axis.plot(x, y, label=f"Best {stops}-stop", color=colours[stops], linewidth=2)
+        elif stops == 0:
+            axis.plot([], [], color=colours[stops], linewidth=2,
+                      label="0-stop unavailable (rules)")
     axis.axvline(result.predicted_medium_degradation, color="black", linestyle="--", label="Predicted MEDIUM degradation")
     for value, label, colour in (
+        (result.primary_0_to_1, "0→1 cutoff", "#e377c2"),
         (result.primary_1_to_2, "1→2 cutoff", "#9467bd"),
         (result.primary_2_to_3, "2→3 cutoff", "#8c564b"),
     ):
         if value is not None:
             axis.axvline(value, color=colour, linestyle=":", label=label)
+    if result.primary_0_to_1_status == "unavailable_rules_compliant":
+        axis.plot([], [], color="#e377c2", linestyle=":",
+                  label="0→1 cutoff N/A (rules)")
     fp_styles = {
         "FP1": ("#555555", "-.", "o"),
         "FP2": ("#777777", (0, (5, 2, 1, 2)), "s"),
