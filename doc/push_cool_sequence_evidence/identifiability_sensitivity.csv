@@ -1,0 +1,14 @@
+AnalysisType,Assumption,Rho,Rank,ColumnCount,ScaledConditionNumber,RMSESeconds,CombinationA_TyreMinusFuel,CombinationB_TyreMinusRhoFuel,SessionSPerMin,ThermalCoefficient,NormalizedFuelCoefficient,LinearTyreCoefficient,ObservationCount,CoolCountTyreAgeCorrelation,IntervalCoolElapsedCorrelation
+fixed_rho_design,no thermal term; rho fixed,0,3,3,101.80618011,,,,,,,,8,1,0.999786424739
+fixed_rho_design,no thermal term; rho fixed,0.25,3,3,104.03264534,,,,,,,,8,1,0.999786424739
+fixed_rho_design,no thermal term; rho fixed,0.5,3,3,109.438809703,,,,,,,,8,1,0.999786424739
+fixed_rho_design,no thermal term; rho fixed,0.75,3,3,141.331116974,,,,,,,,8,1,0.999786424739
+fixed_rho_design,no thermal term; rho fixed,1,2,3,inf,,,,,,,,8,1,0.999786424739
+combination_fit,unknown rho; no thermal term,,3,3,86.8812634976,0.504639395582,-3.52101849424,-3.48700705364,1.46023259923,,,,8,1,0.999786424739
+combination_fit,unknown rho; thermal linear in cool duration,,4,4,735.366364121,0.322766725656,33.9146607971,0.311985158799,-21.8128797607,21.8072220873,,,8,1,0.999786424739
+combination_fit,unknown rho; thermal linear in low-throttle elapsed,,4,4,172.707674655,0.461482164867,0.580431888055,0.0710695203894,-1.08912333533,1.61006588908,,,8,1,0.999786424739
+assumed_rho_mapping,mapping from the same no-thermal combination fit,0,,,,,,,,,0.0340114405975,-3.48700705364,8,1,0.999786424739
+assumed_rho_mapping,mapping from the same no-thermal combination fit,0.25,,,,,,,,,0.0453485874633,-3.47566990678,8,1,0.999786424739
+assumed_rho_mapping,mapping from the same no-thermal combination fit,0.5,,,,,,,,,0.0680228811949,-3.45299561305,8,1,0.999786424739
+assumed_rho_mapping,mapping from the same no-thermal combination fit,0.75,,,,,,,,,0.13604576239,-3.38497273185,8,1,0.999786424739
+assumed_rho_mapping,mapping from the same no-thermal combination fit,0.9,,,,,,,,,0.340114405975,-3.18090408827,8,1,0.999786424739

@@ -168,6 +168,17 @@ not refit fuel or tyre parameters, and does not link separate windows. See
 [`doc/LOCAL_PAIRWISE_RACE_PERFORMANCE.md`](doc/LOCAL_PAIRWISE_RACE_PERFORMANCE.md)
 for graph semantics, outputs, and interpretation limits.
 
+### Offline FP push–cool sequence evidence
+
+This completed R&D diagnostic preserves five manually reviewed, pit-bounded
+2026 R14 FP2 HAM/RUS/GAS/TSU/SAI runs and eight push-to-push intervals. It is an
+auxiliary within-run net-change constraint and model-consistency check, not
+fuel/tyre truth or an independent decomposition model. Physical decomposition
+is deferred unless new independent information or a specific testable assumption
+justifies re-evaluation. See
+[`doc/push_cool_sequence_evidence/REPORT.md`](doc/push_cool_sequence_evidence/REPORT.md)
+for the tables, identifiability limits and exact offline reproduction command.
+
 ### 0.3 Pure lap-time trace
 
 ```bash
