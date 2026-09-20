@@ -196,17 +196,40 @@ def _normalize(
     quality_rows = pd.read_csv(paths["quality"]).to_dict("records")
     teams = pd.read_csv(paths["teams"]).to_dict("records")
     pit_rows = pd.read_csv(paths["pit"]).to_dict("records")
-    empirical = {}
+    empirical = {
+        state: {
+            "status": "unavailable",
+            "reason": "insufficient_evidence",
+            "sample_count": 0,
+            "samples": [],
+            "statistic": "median",
+        }
+        for state in ("normal", "sc", "vsc")
+    }
     for row in pit_rows:
         status = str(row["TrackStatusType"])
-        if status not in {"normal", "sc_vsc"}:
+        if status == "sc_vsc":
+            empirical["legacy_sc_vsc"] = {
+                "status": "legacy_combined",
+                "sample_count": int(row["SampleCount"]),
+                "pit_in_s3": float(row["PitInS3LossMedianSeconds"]),
+                "pit_out_s1": float(row["PitOutS1LossMedianSeconds"]),
+                "total": float(row["PitTotalLossMedianSeconds"]),
+                "statistic": "median",
+                "samples": _sample_details(row.get("SampleDetailsJson")),
+                "not_separate_sc_or_vsc": True,
+            }
+            continue
+        if status not in empirical:
             continue
         empirical[status] = {
+            "status": "available",
             "sample_count": int(row["SampleCount"]),
             "pit_in_s3": float(row["PitInS3LossMedianSeconds"]),
             "pit_out_s1": float(row["PitOutS1LossMedianSeconds"]),
             "total": float(row["PitTotalLossMedianSeconds"]),
             "statistic": "median",
+            "samples": _sample_details(row.get("SampleDetailsJson")),
         }
     metadata = json.loads(paths["metadata"].read_text(encoding="utf-8"))
     provenance = {
@@ -238,8 +261,28 @@ def _normalize(
             "retro_is_estimate_not_ground_truth": True,
             "provenance": provenance,
         },
-        "empirical_pit_loss": empirical,
+        "empirical_pit_loss": {
+            **empirical,
+            "provenance": {
+                "semantic_role": "post_race_empirical_evidence_only",
+                "operational_input": False,
+                "season": season,
+                "round_number": round_number,
+                "producer": "run_race_performance_review",
+                "artifact": str(paths["pit"]),
+            },
+        },
     }
+
+
+def _sample_details(value: object) -> list[dict[str, object]]:
+    if value is None or pd.isna(value):
+        return []
+    try:
+        parsed = json.loads(str(value))
+    except (TypeError, ValueError):
+        return []
+    return [dict(item) for item in parsed if isinstance(item, Mapping)] if isinstance(parsed, list) else []
 
 
 __all__ = [

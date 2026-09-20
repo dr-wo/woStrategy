@@ -61,6 +61,21 @@ Italian Grand Prix** weekend.
 All analysis uses public F1 data. These are engineering models for comparison
 and decision support, not privileged team data or definitive causal estimates.
 
+### Empirical pit-loss evidence
+
+Post-race pit-loss output is empirical evidence, never operational configuration.
+GREEN, SC, and VSC are summarized separately. A VSC sample is accepted only when
+the defined pit interval has clean, consistent VSC status; GREEN/VSC transitions,
+VSC ending, SC/VSC mixtures, red flags or suspension, and malformed or unknown
+states are rejected. Required GREEN baselines must exist and be finite—missing
+baseline data is not converted to zero.
+
+Each available result records the driver/lap sample identity, sample count,
+aggregation statistic, support, and provenance with an explicit non-operational
+role. If no valid sample remains, the result is unavailable with `sample_count`
+equal to zero and no fabricated numeric total. These artifacts may be reported beside
+operational assumptions, but never overwrite them.
+
 ## 0. Examples
 
 ### 0.1 Qualifying performance tracker

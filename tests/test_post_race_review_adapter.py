@@ -36,6 +36,38 @@ def test_cached_review_normalizes_medium_reference_and_median_pit_loss(tmp_path:
     assert result["retro_tyre_estimate"]["compounds"]["MEDIUM"]["performance_delta_to_medium"] == 0.0
     assert result["empirical_pit_loss"]["normal"]["total"] == 20.5
     assert result["empirical_pit_loss"]["normal"]["statistic"] == "median"
+    assert result["empirical_pit_loss"]["vsc"]["status"] == "unavailable"
+    assert result["empirical_pit_loss"]["vsc"]["sample_count"] == 0
+    assert result["empirical_pit_loss"]["provenance"]["operational_input"] is False
+
+
+def test_cached_review_exposes_vsc_samples_with_provenance(tmp_path: Path) -> None:
+    root = tmp_path / "wostrategy/race_performance_review/schema_v1/year=2026/round=7/session=R"
+    root.mkdir(parents=True)
+    prefix = "race_performance_2026_7_R"
+    pd.DataFrame([{
+        "Scope": "global", "Compound": "MEDIUM",
+        "CompoundDeltaMedianSeconds": 0.0, "CompoundDeltaP10Seconds": -0.1,
+        "CompoundDeltaP90Seconds": 0.1, "DegradationP10SecondsPerLap": 0.05,
+        "DegradationMedianSecondsPerLap": 0.1, "DegradationP90SecondsPerLap": 0.15,
+        "DeltaSampleCount": 10, "DegradationSampleCount": 10,
+    }]).to_csv(root / "tyre_information.csv", index=False)
+    pd.DataFrame([{"Team": "A"}]).to_csv(root / f"{prefix}_team_baseline_summary.csv", index=False)
+    pd.DataFrame([{"WeightedRMSESeconds": 0.5}]).to_csv(root / f"{prefix}_sample_diagnostics.csv", index=False)
+    details = json.dumps([{"driver": "AAA", "pit_in_lap": 20, "pit_out_lap": 21}])
+    pd.DataFrame([{
+        "TrackStatusType": "vsc", "SampleCount": 1,
+        "SampleDetailsJson": details,
+        "PitInS3LossMedianSeconds": 4.8, "PitOutS1LossMedianSeconds": 7.0,
+        "PitTotalLossMedianSeconds": 11.8,
+    }]).to_csv(root / f"{prefix}_pit_loss_summary.csv", index=False)
+    (root / f"{prefix}_metadata.json").write_text("{}")
+
+    result = get_post_race_review(season=2026, round_number=7, data_root=tmp_path)
+
+    assert result["empirical_pit_loss"]["vsc"]["total"] == 11.8
+    assert result["empirical_pit_loss"]["vsc"]["sample_count"] == 1
+    assert result["empirical_pit_loss"]["vsc"]["samples"][0]["driver"] == "AAA"
 
 
 def test_force_refresh_requires_and_records_fresh_monte_carlo(

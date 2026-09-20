@@ -15,20 +15,37 @@ def pit_loss_split_summary(laps: pd.DataFrame) -> pd.DataFrame:
     return calculate(laps)
 
 
-def median_pit_loss_by_state(laps: pd.DataFrame) -> dict[str, dict[str, float | int]]:
+def median_pit_loss_by_state(laps: pd.DataFrame) -> dict[str, dict[str, object]]:
     summary = pit_loss_split_summary(laps)
-    output: dict[str, dict[str, float | int]] = {}
+    output: dict[str, dict[str, object]] = {
+        state: {"status": "unavailable", "sample_count": 0, "samples": []}
+        for state in ("normal", "sc", "vsc")
+    }
     for row in summary.to_dict("records"):
         status = str(row["TrackStatusType"])
-        if status not in {"normal", "sc_vsc"}:
+        if status not in output:
             continue
         output[status] = {
+            "status": "available",
             "sample_count": int(row["SampleCount"]),
             "pit_in_s3": float(row["PitInS3LossMedianSeconds"]),
             "pit_out_s1": float(row["PitOutS1LossMedianSeconds"]),
             "total": float(row["PitTotalLossMedianSeconds"]),
+            "samples": _sample_details(row.get("SampleDetailsJson")),
         }
     return output
+
+
+def _sample_details(value: object) -> list[dict[str, object]]:
+    import json
+
+    if value is None or pd.isna(value):
+        return []
+    try:
+        parsed = json.loads(str(value))
+    except (TypeError, ValueError):
+        return []
+    return [dict(item) for item in parsed if isinstance(item, dict)] if isinstance(parsed, list) else []
 
 
 __all__ = ["median_pit_loss_by_state", "pit_loss_split_summary"]

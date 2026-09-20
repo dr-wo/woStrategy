@@ -1719,7 +1719,7 @@ def pit_loss_split_summary(laps: pd.DataFrame) -> pd.DataFrame:
     if "TrackStatus" in data.columns:
         data["TrackStatusType"] = data["TrackStatus"].map(_pit_track_status_type)
     else:
-        data["TrackStatusType"] = "normal"
+        data["TrackStatusType"] = "invalid"
 
     sector_baseline = _pit_sector_baseline(data)
     samples = []
@@ -1741,9 +1741,19 @@ def pit_loss_split_summary(laps: pd.DataFrame) -> pd.DataFrame:
         if pd.isna(in_sector) or pd.isna(out_sector):
             continue
         status = _combine_pit_status(
-            str(in_lap.get("TrackStatusType") or "normal"),
-            str(out_lap.get("TrackStatusType") or "normal"),
+            str(in_lap.get("TrackStatusType") or "invalid"),
+            str(out_lap.get("TrackStatusType") or "invalid"),
         )
+        if status not in {"normal", "sc", "vsc"}:
+            continue
+        in_baseline = _sector_baseline_value(
+            sector_baseline, driver=driver, sector="S3"
+        )
+        out_baseline = _sector_baseline_value(
+            sector_baseline, driver=driver, sector="S1"
+        )
+        if in_baseline is None or out_baseline is None:
+            continue
         samples.append(
             {
                 "TrackStatusType": status,
@@ -1752,13 +1762,11 @@ def pit_loss_split_summary(laps: pd.DataFrame) -> pd.DataFrame:
                 "PitOutLap": int(out_lap["LapNumber"]),
                 "PitInS3LossSeconds": max(
                     0.0,
-                    float(in_sector)
-                    - _sector_baseline_value(sector_baseline, driver=driver, sector="S3"),
+                    float(in_sector) - in_baseline,
                 ),
                 "PitOutS1LossSeconds": max(
                     0.0,
-                    float(out_sector)
-                    - _sector_baseline_value(sector_baseline, driver=driver, sector="S1"),
+                    float(out_sector) - out_baseline,
                 ),
             }
         )
@@ -1777,6 +1785,17 @@ def pit_loss_split_summary(laps: pd.DataFrame) -> pd.DataFrame:
             {
                 "TrackStatusType": status,
                 "SampleCount": int(len(group)),
+                "SampleDetailsJson": json.dumps(
+                    [
+                        {
+                            "driver": str(sample["Driver"]),
+                            "pit_in_lap": int(sample["PitInLap"]),
+                            "pit_out_lap": int(sample["PitOutLap"]),
+                        }
+                        for sample in group.to_dict("records")
+                    ],
+                    sort_keys=True,
+                ),
                 "PitInS3LossMedianSeconds": float(in_loss.median()),
                 "PitOutS1LossMedianSeconds": float(out_loss.median()),
                 "PitTotalLossMedianSeconds": float(total.median()),
@@ -1793,6 +1812,7 @@ def _empty_pit_loss_summary() -> pd.DataFrame:
         columns=[
             "TrackStatusType",
             "SampleCount",
+            "SampleDetailsJson",
             "PitInS3LossMedianSeconds",
             "PitOutS1LossMedianSeconds",
             "PitTotalLossMedianSeconds",
@@ -1829,37 +1849,41 @@ def _sector_baseline_value(
     *,
     driver: str,
     sector: str,
-) -> float:
+) -> float | None:
     rows = sector_baseline.loc[
         (sector_baseline["Driver"].astype(str) == str(driver))
         & sector_baseline["Sector"].astype(str).eq(sector)
     ]
     if not rows.empty:
-        return float(rows.iloc[0]["SectorBaselineSeconds"])
+        value = float(rows.iloc[0]["SectorBaselineSeconds"])
+        return value if math.isfinite(value) else None
     fallback = sector_baseline.loc[sector_baseline["Sector"].astype(str).eq(sector)]
     if fallback.empty:
-        return 0.0
-    return float(pd.to_numeric(fallback["SectorBaselineSeconds"], errors="coerce").median())
+        return None
+    value = float(
+        pd.to_numeric(fallback["SectorBaselineSeconds"], errors="coerce").median()
+    )
+    return value if math.isfinite(value) else None
 
 
 def _pit_track_status_type(value: object) -> str:
-    status = str(value).upper()
-    if status in {"", "<NA>", "NAN", "NONE", "1"}:
+    status = " ".join(str(value).upper().split())
+    if status in {"1", "GREEN"}:
         return "normal"
-    if "VSC" in status or "VIRTUAL" in status:
-        return "sc_vsc"
-    if "SAFETY" in status or " SC" in f" {status}" or status == "SC":
-        return "sc_vsc"
-    codes = {char for char in status if char.isdigit()}
-    if codes.intersection({"4", "6", "7"}):
-        return "sc_vsc"
-    return "normal"
+    if status in {"6", "VSC", "VIRTUAL SAFETY CAR"}:
+        return "vsc"
+    if status in {"4", "SC", "SAFETY CAR"}:
+        return "sc"
+    # Multi-code lap statuses (for example 16, 67, 65), VSC ending (7),
+    # red flag (5), suspension and malformed/unknown values are ambiguous for
+    # the S3→S1 estimator and are deliberately rejected.
+    return "invalid"
 
 
 def _combine_pit_status(in_status: str, out_status: str) -> str:
     if in_status != out_status:
         return "mixed"
-    return "sc_vsc" if in_status == "sc_vsc" else "normal"
+    return in_status if in_status in {"normal", "sc", "vsc"} else "mixed"
 
 
 def _timedelta_seconds(values: pd.Series) -> pd.Series:

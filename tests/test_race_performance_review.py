@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from wostrategy.algorithm.sampling import LATIN_HYPERCUBE_SAMPLER
 from wostrategy.algorithm.monte_carlo_race_performance import RacePerformanceAlgorithmResult
@@ -15,6 +16,7 @@ from wostrategy.analysis.race_performance_review import (
     calculate_monte_carlo_race_performance_review,
     wet_lap_proportion_by_driver,
 )
+from wostrategy.analysis.pit_loss import median_pit_loss_by_state
 from wostrategy.script.race_performance_review import missing_clean_gap_columns
 from wostrategy.script.race_performance_review import run_race_performance_review
 from wostrategy.script.race_performance_review import apply_lap_compound_overrides
@@ -155,6 +157,7 @@ def test_pit_loss_split_summary_uses_sector_losses_against_driver_baseline():
         {
             "TrackStatusType": "normal",
             "SampleCount": 1,
+            "SampleDetailsJson": '[{"driver": "AAA", "pit_in_lap": 2, "pit_out_lap": 3}]',
             "PitInS3LossMedianSeconds": 5.0,
             "PitOutS1LossMedianSeconds": 14.0,
             "PitTotalLossMedianSeconds": 19.0,
@@ -163,6 +166,73 @@ def test_pit_loss_split_summary_uses_sector_losses_against_driver_baseline():
             "PitTotalLossMeanSeconds": 19.0,
         }
     ]
+
+
+def test_pit_loss_summary_keeps_vsc_sample_identity_separate() -> None:
+    laps = pd.DataFrame(
+        {
+            "Driver": ["AAA", "AAA", "AAA", "AAA"],
+            "LapNumber": [1, 2, 3, 4],
+            "PitInTime": [pd.NaT, pd.Timedelta(seconds=120), pd.NaT, pd.NaT],
+            "PitOutTime": [pd.NaT, pd.NaT, pd.Timedelta(seconds=180), pd.NaT],
+            "Sector1Time": pd.to_timedelta([20.0, 20.0, 27.0, 20.0], unit="s"),
+            "Sector3Time": pd.to_timedelta([25.0, 29.0, 25.0, 25.0], unit="s"),
+            "TrackStatus": ["1", "6", "6", "1"],
+        }
+    )
+
+    summary = pit_loss_split_summary(laps).iloc[0]
+
+    assert summary["TrackStatusType"] == "vsc"
+    assert summary["PitTotalLossMedianSeconds"] == 11.0
+    assert json.loads(summary["SampleDetailsJson"]) == [
+        {"driver": "AAA", "pit_in_lap": 2, "pit_out_lap": 3}
+    ]
+
+
+@pytest.mark.parametrize(
+    ("pit_in_status", "pit_out_status"),
+    [
+        ("1", "6"),       # GREEN -> VSC transition
+        ("6", "1"),       # VSC -> GREEN transition/end
+        ("6", "7"),       # VSC ending
+        ("64", "64"),     # VSC / SC mixed
+        ("65", "65"),     # VSC / red flag mixed
+        ("67", "67"),     # VSC / ending transition
+        ("unknown", "6"), # malformed / unknown
+        ("5", "5"),       # red flag / suspension
+    ],
+)
+def test_pit_loss_summary_rejects_ambiguous_vsc_status_intervals(
+    pit_in_status: str, pit_out_status: str,
+) -> None:
+    laps = pd.DataFrame({
+        "Driver": ["AAA"] * 4,
+        "LapNumber": [1, 2, 3, 4],
+        "PitInTime": [pd.NaT, pd.Timedelta(seconds=120), pd.NaT, pd.NaT],
+        "PitOutTime": [pd.NaT, pd.NaT, pd.Timedelta(seconds=180), pd.NaT],
+        "Sector1Time": pd.to_timedelta([20.0, 20.0, 27.0, 20.0], unit="s"),
+        "Sector3Time": pd.to_timedelta([25.0, 29.0, 25.0, 25.0], unit="s"),
+        "TrackStatus": ["1", pit_in_status, pit_out_status, "1"],
+    })
+
+    assert pit_loss_split_summary(laps).empty
+
+
+def test_pit_loss_summary_rejects_vsc_sample_without_green_sector_baseline() -> None:
+    laps = pd.DataFrame({
+        "Driver": ["AAA", "AAA"],
+        "LapNumber": [2, 3],
+        "PitInTime": [pd.Timedelta(seconds=120), pd.NaT],
+        "PitOutTime": [pd.NaT, pd.Timedelta(seconds=180)],
+        "Sector1Time": pd.to_timedelta([20.0, 27.0], unit="s"),
+        "Sector3Time": pd.to_timedelta([29.0, 25.0], unit="s"),
+        "TrackStatus": ["6", "6"],
+    })
+
+    assert pit_loss_split_summary(laps).empty
+    vsc = median_pit_loss_by_state(laps)["vsc"]
+    assert vsc == {"status": "unavailable", "sample_count": 0, "samples": []}
 
 
 def test_best_rmse_relative_weight_strategy_normalizes_weights():
