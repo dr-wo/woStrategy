@@ -8,9 +8,12 @@ from wostrategy.analysis.pre_race_tyre_prediction import (
     load_pre_race_tyre_prediction_source,
 )
 from wostrategy.model.tyre_prediction import (
+    COMMON_GAUGE_FRAME,
+    RELATIVE_PERFORMANCE_FRAME,
     PreRaceTyrePrediction,
     TyreCompoundPrediction,
     canonicalize_operational_tyre_prediction,
+    select_source_performance_reference,
 )
 
 
@@ -177,3 +180,135 @@ def test_source_loader_preserves_raw_baseline_while_public_loader_canonicalizes(
     assert operational.compounds["SOFT"].performance_delta_to_medium == pytest.approx(-0.5)
     assert operational.compounds["MEDIUM"].performance_delta_to_medium == 0.0
     assert operational.compounds["HARD"].performance_delta_to_medium == pytest.approx(0.5)
+
+
+def test_source_loader_honours_declared_hard_reference(tmp_path: Path) -> None:
+    _write_prediction(tmp_path, "2026-01-01T00:00:00+00:00")
+    path = (
+        tmp_path / "wostrategy/tyre_prediction/schema_v1/year=2026/"
+        "predictions/round=1/prediction.json"
+    )
+    payload = json.loads(path.read_text())
+    payload["performance_coordinate"] = "seconds relative to event HARD compound"
+    payload["compounds"]["C5"]["performance_mean"] = -0.5
+    payload["compounds"]["C4"]["performance_mean"] = -0.2
+    payload["compounds"]["C3"]["performance_mean"] = 0.0
+    path.write_text(json.dumps(payload))
+
+    source = load_pre_race_tyre_prediction_source(
+        season=2026, round_number=1, data_root=tmp_path,
+    )
+    operational = get_pre_race_tyre_prediction(
+        season=2026, round_number=1, data_root=tmp_path,
+    )
+
+    assert source.reference_compound == "HARD"
+    assert source.reference_declared is True
+    assert source.compounds["HARD"].performance_delta_to_medium == 0.0
+    assert operational.reference_compound == "MEDIUM"
+    assert operational.compounds["SOFT"].performance_delta_to_medium == pytest.approx(-.3)
+    assert operational.compounds["HARD"].performance_delta_to_medium == pytest.approx(.2)
+
+
+@pytest.mark.parametrize(
+    ("values", "expected", "rule"),
+    [
+        ({"SOFT": 0.0, "MEDIUM": .4, "HARD": .8}, "SOFT", "unique_zero"),
+        ({"SOFT": -.4, "MEDIUM": 0.0, "HARD": .4}, "MEDIUM", "unique_zero"),
+        ({"SOFT": -.8, "MEDIUM": -.4, "HARD": 0.0}, "HARD", "unique_zero"),
+        ({"SOFT": 0.0, "MEDIUM": 0.0, "HARD": 0.0}, "MEDIUM", "multiple_zeros_prefer_medium_then_hard_then_soft"),
+        ({"SOFT": 0.0, "MEDIUM": .4, "HARD": 0.0}, "HARD", "multiple_zeros_prefer_medium_then_hard_then_soft"),
+        ({"SOFT": -.3, "MEDIUM": .2, "HARD": .7}, "MEDIUM", "no_zero_default_medium"),
+    ],
+)
+def test_source_reference_selection_rules(values, expected, rule) -> None:
+    reference, selected_by, _ = select_source_performance_reference(values)
+    assert reference == expected
+    assert selected_by == rule
+
+
+def test_declared_reference_takes_priority_without_normalizing_values() -> None:
+    values = {"SOFT": -.3, "MEDIUM": .2, "HARD": .7}
+    reference, rule, _ = select_source_performance_reference(
+        values, declared_reference="HARD"
+    )
+    assert reference == "HARD"
+    assert rule == "declared"
+    assert values == {"SOFT": -.3, "MEDIUM": .2, "HARD": .7}
+
+
+def test_formal_relative_output_requires_declared_reference_zero() -> None:
+    with pytest.raises(ValueError, match="reference HARD must be zero"):
+        PreRaceTyrePrediction(
+            event="2026-01", season=2026, round_number=1,
+            reference_compound="HARD",
+            compounds={
+                "SOFT": _compound(-.5, .2),
+                "MEDIUM": _compound(0.0, .1),
+                "HARD": _compound(.5, .05),
+            },
+            generated_at="now", provider="test", artifact_id="test",
+            performance_frame=RELATIVE_PERFORMANCE_FRAME,
+            reference_declared=True,
+            formal_relative_output=True,
+        )
+
+
+def test_formal_relative_reference_validator_uses_documented_tolerance() -> None:
+    compounds = {
+        "SOFT": _compound(-.5, .2),
+        "MEDIUM": _compound(-.2, .1),
+        "HARD": _compound(1e-9, .05),
+    }
+    accepted = PreRaceTyrePrediction(
+        event="2026-01", season=2026, round_number=1,
+        reference_compound="HARD", compounds=compounds,
+        generated_at="now", provider="test", artifact_id="within-tolerance",
+        performance_frame=RELATIVE_PERFORMANCE_FRAME,
+        reference_declared=True, formal_relative_output=True,
+    )
+    assert accepted.compounds["HARD"].performance_delta_to_medium == 1e-9
+
+    with pytest.raises(ValueError, match="must be zero within"):
+        PreRaceTyrePrediction(
+            event="2026-01", season=2026, round_number=1,
+            reference_compound="HARD",
+            compounds={**compounds, "HARD": _compound(1.01e-9, .05)},
+            generated_at="now", provider="test", artifact_id="outside-tolerance",
+            performance_frame=RELATIVE_PERFORMANCE_FRAME,
+            reference_declared=True, formal_relative_output=True,
+        )
+
+
+def test_common_gauge_and_legacy_inputs_are_not_rejected_as_relative_outputs() -> None:
+    compounds = {
+        "SOFT": _compound(-.2, .2),
+        "MEDIUM": _compound(.3, .1),
+        "HARD": _compound(.8, .05),
+    }
+    common = PreRaceTyrePrediction(
+        event="2026-01", season=2026, round_number=1,
+        reference_compound="HARD", compounds=compounds,
+        generated_at="now", provider="test", artifact_id="common",
+        performance_frame=COMMON_GAUGE_FRAME, reference_declared=True,
+    )
+    legacy = _prediction(compounds)
+    assert common.compounds["HARD"].performance_delta_to_medium == .8
+    assert legacy.compounds["MEDIUM"].performance_delta_to_medium == .3
+
+
+def test_operational_output_carries_semantics_and_one_normalization_record() -> None:
+    result = canonicalize_operational_tyre_prediction(
+        _prediction({
+            "SOFT": _compound(-.2, .2),
+            "MEDIUM": _compound(.3, .1),
+            "HARD": _compound(.8, .05),
+        }),
+        expected_season=2026,
+        expected_round_number=1,
+        expected_event_id="2026-01",
+    )
+    assert result.performance_frame == RELATIVE_PERFORMANCE_FRAME
+    assert result.provenance["performance_semantics"]["reference_compound"] == "MEDIUM"
+    assert result.provenance["operational_normalization"]["normalization_count"] == 1
+    assert result.compounds["MEDIUM"].performance_delta_to_medium == 0.0

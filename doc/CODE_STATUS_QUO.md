@@ -712,8 +712,9 @@ Scripts are importable modules under `src/wostrategy/script`.
 - Loads a race or race range, one selected team, a plot `--reference-team`, a constant `--weight-delta-kg`, and `--full-fuel-weight-kg` defaulting to 100kg.
 - Reads per-race `*_team_baseline_summary.csv`, `*_summary_fuel_rate.csv`, and `*_clean_laps.csv` from `cache/race_performance_review/` by default.
 - Estimates total race laps from `LapNumber + FuelProxyLapsRemaining` when available, falling back to max clean `LapNumber`.
-- Converts the weighted median fuel correction rate from seconds per fuel-proxy lap to seconds per kilogram via `fuel_rate / (full_fuel_weight_kg / total_race_laps)`.
-- Projects the selected team's corrected baseline pace with `baseline + seconds_per_kg * weight_delta_kg`; positive weight delta is slower, negative is faster.
+- Computes an assumption-dependent equivalent rate via `fuel_proxy_rate / (full_fuel_weight_kg / total_race_laps)`. This preserves the original heuristic but is not an independently calibrated physical fuel sensitivity and does not resolve fuel/track confounding.
+- Publishes that rate as `EquivalentFuelSecondsPerKg`; `FuelSecondsPerKg` is retained only as an explicitly labelled legacy alias.
+- Projects the selected team's corrected baseline pace with `baseline + equivalent_seconds_per_kg * weight_delta_kg`; positive weight delta is slower, negative is faster.
 - Saves selected-team projection CSV, full plot-data CSV, and a plot in `temp/` by default, drawing all cached teams as solid lines and the selected team's weight-adjusted projection as a dashed line, all as percentages of the reference team.
 
 ## Tests
@@ -747,7 +748,7 @@ Current tests:
   - Clean-lap selection preserving otherwise clean laps with missing behind gap
 - `tests/test_race_performance_weight_predict.py`
   - Race-lap total derivation from cached fuel proxy columns
-  - Conversion of fuel correction rate into seconds per kilogram
+  - Assumption-dependent fuel-proxy conversion and explicit non-physical calibration metadata
   - Weight-delta projection of corrected baseline pace
 - `tests/test_clean_lap_track_development.py`
   - Push-lap pattern recognition between out-laps and in-laps

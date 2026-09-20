@@ -6,6 +6,7 @@ from wostrategy.model.pre_race_performance import (
     derive_race_seed,
     generate_joint_sample_bank,
     run_joint_weekend_model,
+    run_weekend_model,
 )
 
 
@@ -118,6 +119,80 @@ def test_joint_cost_is_additive_and_bank_stays_fixed_as_sessions_arrive():
         row.median for row in second_fp1.parameters
     ]
     assert second.session_snapshots["FP2"].contributing_sessions == ("FP2",)
+    semantics = dict(second.aggregate_snapshot.semantics)
+    quantities = semantics["quantities"]
+    assert quantities["fuel_rate"]["unit"] == "s/run-lap-index"
+    assert quantities["fuel_rate"]["formula_term"] == (
+        "fuel_rate * run_lap_index"
+    )
+    assert quantities["track_rate"]["unit"] == "s/track-index"
+    assert quantities["track_rate"]["formula_term"] == (
+        "track_rate[session] * track_index"
+    )
+    assert quantities["run_intercept"]["published"] is False
+    assert quantities["run_intercept"]["fit_scope"] == "one intercept per run"
+    assert "baseline_pace" not in quantities
+    assert semantics["track_index_construction"]["FP1"] == (
+        "provided numeric track_index"
+    )
+    assert semantics["published_quantities"] == (
+        "shared fuel_rate marginal",
+        "session-local track_rate/degradation/compound_delta marginals",
+    )
+    assert semantics["uncertainty"]["published_summary"] == "marginal_quantiles"
+    assert semantics["fuel_track_identifiability"]["status"] == "not_separately_diagnosed"
+    assert semantics["fuel_track_identifiability"][
+        "components_are_not_independent_measurements"
+    ] is True
+
+
+def test_single_session_fp_semantics_match_profiled_run_intercept_model():
+    model = run_weekend_model(
+        session_laps("FP1", .035, -.006, 1),
+        WeekendModelConfig(
+            sample_count=64,
+            random_seed=4,
+            fuel_rate_bounds=(0.0, .08),
+            track_rate_bounds=(-.02, .02),
+            default_degradation_bounds=(0.0, .15),
+            default_compound_delta_bounds=(-.5, .1),
+        ),
+        source_scope="FP1",
+    )
+    semantics = dict(model.semantics)
+    assert semantics["architecture"] == "single-session-fp-v1"
+    assert semantics["quantities"]["run_intercept"]["published"] is False
+    assert semantics["track_index_construction"]["FP1"] == (
+        "provided numeric track_index"
+    )
+    assert semantics["published_quantities"] == (
+        "fuel_rate marginal",
+        "track_rate/degradation/compound_delta marginals",
+    )
+
+
+def test_fp_semantics_records_dense_rank_session_time_track_index():
+    laps = session_laps("FP1", .035, -.006, 1).drop(columns="track_index")
+    laps["SessionTime"] = pd.to_timedelta(
+        np.arange(len(laps), dtype=float), unit="s"
+    )
+    model = run_weekend_model(
+        laps,
+        WeekendModelConfig(
+            sample_count=32,
+            random_seed=4,
+            fuel_rate_bounds=(0.0, .08),
+            track_rate_bounds=(-.02, .02),
+            default_degradation_bounds=(0.0, .15),
+            default_compound_delta_bounds=(-.5, .1),
+        ),
+        source_scope="FP1",
+    )
+
+    semantics = dict(model.semantics)
+    assert semantics["track_index_construction"]["FP1"] == (
+        "zero-based dense rank of parsed SessionTime order"
+    )
 
 
 def test_race_seed_is_stable_for_event_and_changes_by_race():

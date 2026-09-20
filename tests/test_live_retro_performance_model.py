@@ -42,6 +42,22 @@ def test_live_retro_wrapper_is_exact_retro_algorithm_on_same_laps():
                                   direct.compound_degradation)
     pd.testing.assert_frame_equal(live.retro_result.compound_delta, direct.compound_delta)
     pd.testing.assert_frame_equal(live.retro_result.baseline_pace, direct.baseline_pace)
+    semantics = dict(live.aggregate_snapshot.semantics)
+    fuel = semantics["quantities"]["fuel_rate"]
+    track = semantics["quantities"]["track_rate"]
+    baseline = semantics["quantities"]["baseline_pace"]
+    assert fuel["not_a_mass_sensitivity"] is True
+    assert fuel["independent_variable"] == "FuelProxyLapsRemaining"
+    assert fuel["formula_term"] == (
+        "fuel_rate * (FuelProxyLapsRemaining - FuelRef)"
+    )
+    assert fuel["reference_value"] == 0.0
+    assert track["independent_variable"] == "LapNumber"
+    assert track["formula_term"] == "track_rate * (LapNumber - RaceLapRef)"
+    assert baseline["published"] is True
+    assert baseline["scope"] == "configured driver/team baseline group"
+    assert semantics["quantities"]["compound_delta"]["reference_compound"] == "HARD"
+    assert semantics["uncertainty"]["joint_sample_bank_id"] == live.sample_bank.sample_bank_id
 
 
 def test_retro_fuel_and_track_are_aliased_after_baseline_profiling():

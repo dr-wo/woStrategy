@@ -10,6 +10,7 @@ import pandas as pd
 from wodata.contracts import ModelSnapshot, ParameterEstimate, canonical_hash
 
 from ..algorithm.sampling import LatinHypercubeSampler, scale_unit_sample
+from .pace_contract import fp_pace_semantics
 
 
 @dataclass(frozen=True)
@@ -226,6 +227,7 @@ def run_joint_weekend_model(
         raise ValueError("The joint bank dimensions/bounds do not match this weekend model.")
 
     prepared_by_session: dict[str, pd.DataFrame] = {}
+    track_index_construction: dict[str, str] = {}
     excluded: dict[str, str] = {
         str(name).upper(): str(reason)
         for name, reason in (excluded_session_reasons or {}).items()
@@ -237,6 +239,7 @@ def run_joint_weekend_model(
             excluded.setdefault(session, "unavailable")
             continue
         try:
+            track_index_construction[session] = _track_index_construction(laps)
             prepared = _prepare_analysis_laps(laps)
             if prepared.empty:
                 raise ValueError("no eligible runs remain")
@@ -356,6 +359,16 @@ def run_joint_weekend_model(
         excluded_sessions=tuple(excluded.items()),
         joint_weighted_cost=weighted_total_cost,
         session_weighted_costs=weighted_session_costs,
+        semantics=fp_pace_semantics(
+            reference_compound=reference,
+            sample_bank_id=bank.sample_bank_id,
+            architecture="joint-weekend-fp-v1",
+            track_index_construction={
+                session: track_index_construction[session]
+                for session in contributing
+            },
+            fuel_track_identifiability="not_separately_diagnosed",
+        ),
     )
     session_snapshots = {}
     for session in contributing:
@@ -461,6 +474,13 @@ def run_joint_weekend_model(
             session_weighted_costs=((session, float(
                 np.sum(causal_weights * session_costs[session])
             )),),
+            semantics=fp_pace_semantics(
+                reference_compound=reference,
+                sample_bank_id=bank.sample_bank_id,
+                architecture="joint-weekend-fp-v1-session-projection",
+                track_index_construction={session: track_index_construction[session]},
+                fuel_track_identifiability="not_separately_diagnosed",
+            ),
         )
     candidate_cost_rows = {"SampleId": np.arange(len(weights)), "Weight": weights,
                            "TotalCost": total_cost}
@@ -641,6 +661,13 @@ def run_weekend_model(
         input_fingerprint,
         config_hash,
         created_at,
+        semantics=fp_pace_semantics(
+            reference_compound=reference,
+            sample_bank_id=bank.sample_bank_id,
+            architecture="single-session-fp-v1",
+            track_index_construction={scope: _track_index_construction(session_laps)},
+            fuel_track_identifiability="not_separately_diagnosed",
+        ),
     )
 
 
@@ -713,7 +740,18 @@ def aggregate_weekend_models(
         config_hash,
         created_at,
         source_analysis_ids=source_ids,
+        semantics=latest.semantics,
     )
+
+
+def _track_index_construction(laps: pd.DataFrame) -> str:
+    if "track_index" in laps.columns:
+        return "provided numeric track_index"
+    if "SessionTime" in laps.columns:
+        return "zero-based dense rank of parsed SessionTime order"
+    if "Time" in laps.columns:
+        return "zero-based dense rank of parsed Time order"
+    return "LapNumber - minimum eligible LapNumber"
 
 
 def _prepare_analysis_laps(laps: pd.DataFrame) -> pd.DataFrame:

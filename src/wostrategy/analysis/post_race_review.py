@@ -249,6 +249,21 @@ def _normalize(
         "race_performance": {
             "team_performance": teams,
             "quality": quality_rows,
+            "pace_semantics": {
+                "contract": "canonical_pace_semantics_v1",
+                "quantity": "team_corrected_baseline_pace",
+                "unit": "s",
+                "frame": "producer_model_baseline",
+                "estimation_dependency": (
+                    "fuel, track, tyre degradation and compound effects were jointly "
+                    "considered by the existing Retro MC"
+                ),
+                "effect_removal_claim": (
+                    "only the producer's named corrected-baseline columns; joint "
+                    "estimation alone is not a removal claim"
+                ),
+                "uncertainty": "marginal summaries",
+            },
             "provenance": provenance,
         },
         "retro_tyre_estimate": {
@@ -256,6 +271,30 @@ def _normalize(
             "season": season,
             "round_number": round_number,
             "reference_compound": "MEDIUM",
+            "performance_semantics": {
+                "contract": "canonical_tyre_operational_semantics_v1",
+                "quantity": "compound_performance_delta",
+                "unit": "s",
+                "independent_variable": "dry_compound_choice",
+                "positive_sign": "compound is slower than MEDIUM",
+                "frame": "relative_to_compound",
+                "reference_compound": "MEDIUM",
+                "reference_value": 0.0,
+                "numerical_transformation": "subtract_MEDIUM_median_once",
+                "uncertainty": (
+                    "marginal quantiles shifted by the MEDIUM median; not a paired "
+                    "sample contrast and no joint covariance is claimed"
+                ),
+            },
+            "degradation_semantics": {
+                "contract": "canonical_tyre_operational_semantics_v1",
+                "quantity": "degradation_rate",
+                "unit": "s/tyre-age-lap",
+                "independent_variable": "tyre_age_laps",
+                "positive_sign": "greater tyre age increases modelled lap time",
+                "frame": "absolute_rate",
+                "uncertainty": "marginal quantiles",
+            },
             "compounds": compounds,
             "quality": quality_rows,
             "retro_is_estimate_not_ground_truth": True,

@@ -5,14 +5,18 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import re
 from typing import Callable
 
 from wodata import get_data_root
 
 from wostrategy.model.tyre_prediction import (
+    LEGACY_PERFORMANCE_FRAME,
+    RELATIVE_PERFORMANCE_FRAME,
     PreRaceTyrePrediction,
     TyreCompoundPrediction,
     canonicalize_operational_tyre_prediction,
+    select_source_performance_reference,
 )
 
 
@@ -124,10 +128,16 @@ def _source_prediction(payload: dict[str, object], path: Path) -> PreRaceTyrePre
             diagnostics={"absolute_compound": allocation.get(role), "selected_default": row.get("selected_default")},
         )
     artifact_id = str(payload.get("prediction_fingerprint") or path.resolve())
+    declared_reference = _declared_performance_reference(payload)
+    selected_reference, selection_rule, zero_candidates = (
+        select_source_performance_reference(
+            compounds, declared_reference=declared_reference
+        )
+    )
     return PreRaceTyrePrediction(
         event=str(payload.get("event") or f"{payload['season']}-{payload['round']}"),
         season=int(payload["season"]), round_number=int(payload["round"]),
-        reference_compound="MEDIUM", compounds=compounds,
+        reference_compound=selected_reference, compounds=compounds,
         generated_at=str(payload["prediction_timestamp"]), provider="current_pre_race_cache",
         artifact_id=artifact_id, model_version=str(payload.get("model") or "") or None,
         provenance={"path": str(path), "training_data_hash": payload.get("training_data_hash"),
@@ -140,9 +150,29 @@ def _source_prediction(payload: dict[str, object], path: Path) -> PreRaceTyrePre
                         "compound_allocation_only_for_selected_historical_baseline"
                         if payload.get("default_prediction_family") == "historical_baseline"
                         else "event_descriptors_and_compound_allocation"
-                    )},
+                    ),
+                    "source_reference_selection": {
+                        "rule": selection_rule,
+                        "zero_candidates": list(zero_candidates),
+                    }},
         freshness={"producer_metadata_available": True},
+        performance_frame=(
+            RELATIVE_PERFORMANCE_FRAME
+            if declared_reference is not None
+            else LEGACY_PERFORMANCE_FRAME
+        ),
+        reference_declared=declared_reference is not None,
+        formal_relative_output=declared_reference is not None,
     )
+
+
+def _declared_performance_reference(payload: dict[str, object]) -> str | None:
+    semantics = payload.get("performance_semantics")
+    if isinstance(semantics, dict) and semantics.get("reference_compound"):
+        return str(semantics["reference_compound"]).upper()
+    coordinate = str(payload.get("performance_coordinate") or "").upper()
+    match = re.search(r"RELATIVE TO (?:EVENT )?(SOFT|MEDIUM|HARD) COMPOUND", coordinate)
+    return match.group(1) if match else None
 
 
 def _optional_float(value: object) -> float | None:

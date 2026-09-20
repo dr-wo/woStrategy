@@ -59,6 +59,11 @@ def run_race_performance_weight_prediction(
     print(f"Weight delta: {weight_delta_kg:+.3f} kg")
     print(f"Full fuel weight: {full_fuel_weight_kg:.3f} kg")
     print(f"Input directory: {input_dir}")
+    print(
+        "Method: fuel-proxy rate / assumed kg per proxy lap gives a heuristic "
+        "equivalent s/kg; this is not a physical fuel-sensitivity calibration "
+        "and does not resolve fuel/track confounding."
+    )
 
     for race in races:
         try:
@@ -94,9 +99,9 @@ def run_race_performance_weight_prediction(
                 "OriginalBaselineSeconds",
                 "ReferenceBaselineSeconds",
                 "OriginalPercentageToReference",
-                "FuelRateSecondsPerLap",
+                "FuelProxyRateSecondsPerRemainingLap",
                 "TotalRaceLaps",
-                "FuelSecondsPerKg",
+                "EquivalentFuelSecondsPerKg",
                 "WeightDeltaKg",
                 "ProjectedBaselineSeconds",
                 "ProjectedDeltaSeconds",
@@ -183,10 +188,23 @@ def load_weight_prediction_race(
         "ReferenceBaselineSeconds": reference_baseline,
         "OriginalPercentageToReference": baseline / reference_baseline * 100.0,
         "FuelRateSecondsPerLap": fuel_rate,
+        "FuelProxyRateSecondsPerRemainingLap": fuel_rate,
         "TotalRaceLaps": total_laps,
         "FullFuelWeightKg": full_fuel_weight_kg,
         "FuelKgPerLap": kg_per_lap,
+        "AssumedKgPerFuelProxyLap": kg_per_lap,
+        "EquivalentFuelSecondsPerKg": fuel_seconds_per_kg,
+        # Compatibility only: this is the same heuristic equivalent, not a
+        # separately calibrated physical fuel sensitivity.
         "FuelSecondsPerKg": fuel_seconds_per_kg,
+        "FuelSecondsPerKgSemanticRole": "legacy_alias",
+        "FuelWeightProjectionMethod": (
+            "fuel_proxy_rate / assumed_kg_per_proxy_lap"
+        ),
+        "FuelWeightProjectionCalibrationStatus": (
+            "heuristic_equivalent_not_physical_calibration"
+        ),
+        "FuelTrackConfoundingStatus": "not_resolved_by_conversion",
         "WeightDeltaKg": weight_delta_kg,
         "ProjectedDeltaSeconds": projected_delta,
         "ProjectedBaselineSeconds": projected_baseline,
@@ -387,7 +405,7 @@ def plot_weight_prediction(summary: pd.DataFrame) -> tuple[plt.Figure, plt.Axes]
             linewidth=3,
             linestyle="--",
             color=F1_TEAM_COLORS.get(projected_team),
-            label=f"{projected_team} {weight_delta:+g} kg",
+            label=f"{projected_team} {weight_delta:+g} kg (heuristic equivalent)",
         )
     ax.axhline(100.0, color="black", linewidth=1, alpha=0.5)
     tick_frame = race_tick_labels(summary, round_column="Race")
@@ -398,7 +416,7 @@ def plot_weight_prediction(summary: pd.DataFrame) -> tuple[plt.Figure, plt.Axes]
     reference_team = str(summary["ReferenceTeam"].iloc[0])
     ax.set_ylabel(f"Corrected race baseline pace (% of {reference_team})")
     ax.set_title(
-        f"{int(summary['Year'].iloc[0])} Race Performance Weight Projection "
+        f"{int(summary['Year'].iloc[0])} Heuristic Race Performance Weight Projection "
         f"Relative to {reference_team}"
     )
     ax.grid(True, alpha=0.3)
@@ -427,7 +445,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Project race performance review baselines for a selected team "
-            "under a constant fuel-weight delta."
+            "under a constant fuel-weight delta using an assumption-dependent "
+            "fuel-proxy conversion, not a physical fuel calibration."
         )
     )
     parser.add_argument("--year", type=int, default=SCRIPT_CONFIG["year"])
@@ -458,7 +477,10 @@ def parse_args() -> argparse.Namespace:
         "--full-fuel-weight-kg",
         type=float,
         default=SCRIPT_CONFIG["full_fuel_weight_kg"],
-        help="Full race fuel weight assumption used to convert lap fuel proxy to kg.",
+        help=(
+            "Full race fuel-weight assumption used to derive kg per fuel-proxy "
+            "lap. The resulting equivalent s/kg is not a physical calibration."
+        ),
     )
     parser.add_argument("--input-dir", type=Path, default=SCRIPT_CONFIG["input_dir"])
     parser.add_argument(

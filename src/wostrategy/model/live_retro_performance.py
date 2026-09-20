@@ -19,6 +19,7 @@ from wostrategy.model.tyre_degragation import TYRE_AGE_LAPS_COLUMN
 from wostrategy.model.correction_identifiability import diagnose_retro_fuel_track
 
 from .pre_race_performance import FixedSampleBank
+from .pace_contract import race_pace_semantics
 from .race_specific_performance import numerical_quality_status
 
 
@@ -232,6 +233,18 @@ def run_live_retro_model(
         session_weighted_costs=(("R", float(np.sum(weights * rmse**2 /
                                                     config.clean_lap_noise_sigma**2))),),
         sampler_quality=tuple(quality.items()),
+        semantics=race_pace_semantics(
+            reference_compound=config.compound_delta_reference,
+            sample_bank_id=bank_id,
+            architecture="live-retro-v1",
+            fuel_reference=config.fuel_ref,
+            race_lap_reference=float(retro.sample_parameters["RaceLapRef"].iloc[0]),
+            fuel_track_identifiability=(
+                "exact_linear_alias; only track_rate - fuel_rate is identifiable"
+                if rank["fuel_track_alias"]
+                else "diagnostic_did_not_find_exact_alias"
+            ),
+        ),
     )
     costs = pd.DataFrame({"SampleId": retro.sample_parameters["SampleId"],
                           "Weight": weights,

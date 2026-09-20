@@ -34,6 +34,10 @@ def test_cached_review_normalizes_medium_reference_and_median_pit_loss(tmp_path:
     result = get_post_race_review(season=2026, round_number=7, data_root=tmp_path)
 
     assert result["retro_tyre_estimate"]["compounds"]["MEDIUM"]["performance_delta_to_medium"] == 0.0
+    performance_semantics = result["retro_tyre_estimate"]["performance_semantics"]
+    assert performance_semantics["reference_compound"] == "MEDIUM"
+    assert "not a paired" in performance_semantics["uncertainty"]
+    assert result["race_performance"]["pace_semantics"]["unit"] == "s"
     assert result["empirical_pit_loss"]["normal"]["total"] == 20.5
     assert result["empirical_pit_loss"]["normal"]["statistic"] == "median"
     assert result["empirical_pit_loss"]["vsc"]["status"] == "unavailable"

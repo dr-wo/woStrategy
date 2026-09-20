@@ -49,6 +49,8 @@ Italian Grand Prix** weekend.
 
 ## Technical documentation
 
+- [`../woData/CANONICAL_PACE_CONTRACT.md`](../woData/CANONICAL_PACE_CONTRACT.md)
+  — shared pace/tyre units, frames, reference, uncertainty and provenance rules.
 - [`doc/RACE_MC_AND_FP_ARCHITECTURE.md`](doc/RACE_MC_AND_FP_ARCHITECTURE.md) —
   Race MC, live-retro, identifiability and accelerated evaluation.
 - [`doc/DEGRADATION_CUTOFF.md`](doc/DEGRADATION_CUTOFF.md) — fixed-stop envelopes,
@@ -184,6 +186,13 @@ python -m wostrategy.script.pure_lap_time_trace \
 </p>
 
 ### 0.4 Race performance weight prediction
+
+This keeps the existing first-order heuristic: the fitted Race fuel-proxy rate
+is divided by the assumed kilograms per fuel-proxy lap. The resulting
+`EquivalentFuelSecondsPerKg` is assumption-dependent; it is not an independently
+calibrated physical fuel sensitivity and does not resolve the underlying
+fuel/track confounding. `FuelSecondsPerKg` remains in CSV output only as an
+explicitly labelled legacy alias of the same value.
 
 ```bash
 python -m wostrategy.script.race_performance_weight_predict \
