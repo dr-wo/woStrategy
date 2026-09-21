@@ -179,6 +179,15 @@ justifies re-evaluation. See
 [`doc/push_cool_sequence_evidence/REPORT.md`](doc/push_cool_sequence_evidence/REPORT.md)
 for the tables, identifiability limits and exact offline reproduction command.
 
+### Offline telemetry-intensity validation
+
+This closed R&D study found that local, within-run telemetry summaries and
+distance profiles add useful driving-state context beyond binary lap-timing
+labels, without validating a universal intensity scale or any relative fuel-burn
+calibration. See
+[`doc/telemetry_intensity_validation/REPORT.md`](doc/telemetry_intensity_validation/REPORT.md)
+for the fixed cross-event sample, artifacts and interpretation limits.
+
 ### 0.3 Pure lap-time trace
 
 ```bash
