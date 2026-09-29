@@ -181,6 +181,7 @@ def run_weekend_model_script(
         f"{', '.join(selected_sessions)} (woData cache first)"
     )
     source_status: dict[str, str] = {}
+    temperature_source_by_session: dict[str, dict[str, object]] = {}
     if input_csv_by_session:
         raw_sessions = {}
         normalized_csv = {
@@ -194,6 +195,10 @@ def run_weekend_model_script(
                 continue
             raw_sessions[session] = _read_session_csv(path, session)
             source_status[session] = f"CSV {path}"
+            temperature_source_by_session[session] = {
+                "cache_origin": "expert_csv",
+                "cache_path": str(path),
+            }
     else:
         loaded = load_cached_weekend_sessions(
             year=int(year), round_number=int(round_number), sessions=selected_sessions,
@@ -201,6 +206,13 @@ def run_weekend_model_script(
         )
         raw_sessions = dict(loaded.sessions)
         source_status.update(loaded.sources)
+        temperature_source_by_session.update({
+            session: {
+                "cache_origin": loaded.sources.get(session, "unavailable"),
+                "cache_path": str(path),
+            }
+            for session, path in loaded.cache_paths.items()
+        })
     for session in selected_sessions:
         raw_lap_count = len(raw_sessions.get(session, ()))
         print(
@@ -296,16 +308,25 @@ def run_weekend_model_script(
     )
     supported_compounds = {
         session: tuple(sorted(
-            laps["Compound"].dropna().astype(str).str.upper().unique()
+            laps["compound"].dropna().astype(str).str.upper().unique()
         ))
-        for session, laps in prepared_sessions.items()
-        if "Compound" in laps.columns
+        for session, laps in result.evidence_laps_by_session.items()
     }
     _, fp_report_path = write_fp_tyre_evidence_report(
         season=int(year),
         round_number=int(round_number),
         data_root=data_root,
         supported_compounds_by_session=supported_compounds,
+        temperature_evidence_by_session=result.evidence_laps_by_session,
+        temperature_analysis_id_by_session={
+            session: snapshot.analysis_id
+            for session, snapshot in result.session_snapshots.items()
+        },
+        temperature_model_created_at_by_session={
+            session: snapshot.created_at.isoformat()
+            for session, snapshot in result.session_snapshots.items()
+        },
+        temperature_source_by_session=temperature_source_by_session,
     )
     if plot_output:
         plot_path = Path(plot_output).expanduser()

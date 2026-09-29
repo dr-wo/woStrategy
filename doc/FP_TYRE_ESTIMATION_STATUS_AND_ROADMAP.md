@@ -159,6 +159,17 @@ D1 separately, the FP estimate, FP-minus-prior difference, and—when causally a
 clearly labelled experimental candidate. It also shows calibration version, Retro
 cutoff, event count and LOEO stability.
 
+Report v2 adds AirTemp and TrackTemp ranges and coverage for each session/compound
+from the exact post-normalisation laps and runs that support its FP tyre evidence.
+These lap-associated temperatures are reporting context only: they do not enter
+the tyre likelihood, model fingerprint, Monte Carlo output or strategy search.
+The context is bound to the persisted model artifact instance by both
+`analysis_id` and `model_created_at`. Missing, legacy, unbound or stale
+supporting-lap provenance is reported as unavailable rather than reconstructed
+from current filters. A recorded 0°C value is retained and flagged. Weather
+observations may be reused across laps; expert CSV sampling cadence is unknown,
+so associated lap values are not counted as independent weather samples.
+
 Missing sessions and unsupported compounds produce an explicit “prior unchanged” state.
 This includes sprint formats without the normal FP schedule. Report generation does not
 mutate planner-facing or Strategy Prediction inputs.

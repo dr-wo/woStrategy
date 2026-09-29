@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from wostrategy.analysis.fp_pre_race_report import (
     build_fp_tyre_evidence_report,
@@ -71,6 +72,159 @@ def test_report_without_calibration_does_not_fabricate_update(tmp_path):
     assert comparison["diagnostic_partial_update"] is None
     assert comparison["calibration_status"] == "unavailable"
     assert "No causal calibration history" in render_fp_tyre_evidence_report(report)
+
+
+def test_temperature_context_uses_only_persisted_supporting_laps(tmp_path):
+    _write_prediction(tmp_path, target_round=9)
+    _write_fp2_snapshot(tmp_path, target_round=9)
+    fp2_evidence = pd.DataFrame([
+        {
+            "run_id": "FP2:driver-a:1", "lap_number": 10,
+            "compound": "MEDIUM", "air_temp_c": 25.2, "track_temp_c": 0.0,
+        },
+        {
+            "run_id": "FP2:driver-a:1", "lap_number": 11,
+            "compound": "MEDIUM", "air_temp_c": None, "track_temp_c": 40.4,
+        },
+        {
+            "run_id": "FP2:driver-b:2", "lap_number": 20,
+            "compound": "SOFT", "air_temp_c": 26.0, "track_temp_c": None,
+        },
+        {
+            "run_id": "FP2:driver-b:2", "lap_number": 21,
+            "compound": "SOFT", "air_temp_c": 26.4, "track_temp_c": None,
+        },
+    ])
+    excluded_fp3 = pd.DataFrame([{
+        "run_id": "FP3:excluded:1", "lap_number": 99,
+        "compound": "MEDIUM", "air_temp_c": 99.0, "track_temp_c": 99.0,
+    }])
+
+    report = build_fp_tyre_evidence_report(
+        season=2026,
+        round_number=9,
+        data_root=tmp_path,
+        temperature_evidence_by_session={"FP2": fp2_evidence, "FP3": excluded_fp3},
+        temperature_analysis_id_by_session={"FP2": "fp2", "FP3": "excluded"},
+        temperature_model_created_at_by_session={"FP2": "2026-09-26T12:00:00+00:00"},
+        temperature_source_by_session={
+            "FP2": {"cache_origin": "wodata-cache", "cache_path": "fp2/laps.pkl"}
+        },
+    )
+
+    by_session = {row["session"]: row for row in report["sessions"]}
+    context = by_session["FP2"]["temperature_context"]
+    assert context["analysis_id"] == "fp2"
+    assert context["selection_stage"] == "post_normalisation_final_model_evidence"
+    assert context["coverage"] == {
+        "evidence_laps": 4, "air_temp_laps": 3, "track_temp_laps": 2,
+    }
+    medium = context["compound_contexts"][0]
+    assert [row["lap_number"] for row in medium["supporting_laps"]] == [10, 11]
+    assert medium["air_temp_c"]["status"] == "partial"
+    assert medium["track_temp_c"]["status"] == "available"
+    assert medium["track_temp_c"]["minimum"] == 0.0
+    assert medium["track_temp_c"]["recorded_zero_observed"] is True
+    soft = context["compound_contexts"][1]
+    assert soft["air_temp_c"]["status"] == "available"
+    assert soft["track_temp_c"]["status"] == "unavailable"
+    assert by_session["FP3"]["temperature_context"]["status"] == (
+        "unavailable_no_tyre_evidence"
+    )
+    assert "99.0" not in json.dumps(report)
+    rendered = render_fp_tyre_evidence_report(report)
+    assert "TrackTemp 0.0–40.4°C (2/2 laps, recorded 0.0°C retained as unusual)" in rendered
+    assert "AirTemp 25.2°C (1/2 laps)" in rendered
+    json_path, markdown_path = write_fp_tyre_evidence_report(
+        season=2026,
+        round_number=9,
+        data_root=tmp_path,
+        temperature_evidence_by_session={"FP2": fp2_evidence},
+        temperature_analysis_id_by_session={"FP2": "fp2"},
+        temperature_model_created_at_by_session={"FP2": "2026-09-26T12:00:00+00:00"},
+        temperature_source_by_session={
+            "FP2": {"cache_origin": "wodata-cache", "cache_path": "fp2/laps.pkl"}
+        },
+    )
+    persisted = json.loads(json_path.read_text())
+    assert persisted["sessions"][1]["temperature_context"]["coverage"] == (
+        context["coverage"]
+    )
+    assert "recorded 0.0°C retained as unusual" in markdown_path.read_text()
+
+
+def test_legacy_model_artifact_does_not_reconstruct_temperature(tmp_path):
+    _write_prediction(tmp_path, target_round=9)
+    _write_fp2_snapshot(tmp_path, target_round=9)
+    report = build_fp_tyre_evidence_report(
+        season=2026, round_number=9, data_root=tmp_path
+    )
+    context = report["sessions"][1]["temperature_context"]
+    assert context["status"] == "legacy_provenance_unavailable"
+    assert "not reconstructed" in context["reason"]
+
+
+def test_temperature_provenance_from_another_analysis_is_rejected(tmp_path):
+    _write_prediction(tmp_path, target_round=9)
+    _write_fp2_snapshot(tmp_path, target_round=9)
+    report = build_fp_tyre_evidence_report(
+        season=2026,
+        round_number=9,
+        data_root=tmp_path,
+        temperature_evidence_by_session={
+            "FP2": pd.DataFrame([{
+                "run_id": "old:1", "lap_number": 1, "compound": "MEDIUM",
+                "air_temp_c": 25.0, "track_temp_c": 40.0,
+            }])
+        },
+        temperature_analysis_id_by_session={"FP2": "older-analysis"},
+        temperature_model_created_at_by_session={"FP2": "2026-09-26T12:00:00+00:00"},
+    )
+    context = report["sessions"][1]["temperature_context"]
+    assert context["status"] == "stale_provenance_unavailable"
+    assert "compound_contexts" not in context
+
+
+@pytest.mark.parametrize("missing", ["manifest", "analysis_id", "created_at"])
+def test_missing_current_artifact_identity_leaves_temperature_unbound(tmp_path, missing):
+    _write_fp2_snapshot(tmp_path, target_round=9)
+    path = (tmp_path / "wostrategy/weekend_model/schema_v1/year=2026"
+            / "round=9/sessions/FP2/manifest.json")
+    if missing == "manifest":
+        path.unlink()
+    else:
+        manifest = json.loads(path.read_text())
+        del manifest[missing]
+        path.write_text(json.dumps(manifest))
+    report = build_fp_tyre_evidence_report(
+        season=2026, round_number=9, data_root=tmp_path,
+        temperature_evidence_by_session={"FP2": pd.DataFrame([{
+            "run_id": "FP2:1", "lap_number": 1, "compound": "MEDIUM",
+            "air_temp_c": 25.0, "track_temp_c": 40.0,
+        }])},
+        temperature_analysis_id_by_session={"FP2": "fp2"},
+        temperature_model_created_at_by_session={"FP2": "2026-09-26T12:00:00+00:00"},
+    )
+    context = report["sessions"][1]["temperature_context"]
+    assert context["status"] == "unavailable_unbound_provenance"
+    assert "compound_contexts" not in context
+
+
+def test_same_analysis_from_an_older_artifact_instance_is_rejected(tmp_path):
+    _write_fp2_snapshot(tmp_path, target_round=9)
+    report = build_fp_tyre_evidence_report(
+        season=2026, round_number=9, data_root=tmp_path,
+        temperature_evidence_by_session={"FP2": pd.DataFrame([{
+            "run_id": "FP2:1", "lap_number": 1, "compound": "MEDIUM",
+            "air_temp_c": 25.0, "track_temp_c": 40.0,
+        }])},
+        temperature_analysis_id_by_session={"FP2": "fp2"},
+        temperature_model_created_at_by_session={"FP2": "2026-09-25T12:00:00+00:00"},
+    )
+    context = report["sessions"][1]["temperature_context"]
+    assert context["status"] == "stale_provenance_unavailable"
+    assert context["analysis_id"] == context["evidence_analysis_id"]
+    assert "compound_contexts" not in context
 
 
 def test_race_n_refresh_does_not_rewrite_n_and_n_plus_one_reads_n(tmp_path):
@@ -196,7 +350,8 @@ def _write_fp2_snapshot(root, *, target_round):
     directory.mkdir(parents=True)
     (directory / "manifest.json").write_text(json.dumps({
         "analysis_id": "fp2", "included_sessions": ["FP2"],
-        "information_cutoff": "FP2",
+        "information_cutoff": "FP2", "input_fingerprint": "fp2-input",
+        "created_at": "2026-09-26T12:00:00+00:00",
     }), encoding="utf-8")
     pd.DataFrame([{
         "parameter": "degradation", "compound": "MEDIUM", "median": 0.10,

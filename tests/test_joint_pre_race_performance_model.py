@@ -146,6 +146,38 @@ def test_joint_cost_is_additive_and_bank_stays_fixed_as_sessions_arrive():
     ] is True
 
 
+def test_temperature_context_is_retained_without_changing_model_outputs():
+    laps = session_laps("FP2", 0.035, 0.004, 2)
+    created_at = pd.Timestamp("2026-09-26T12:00:00Z").to_pydatetime()
+    baseline = run_joint_weekend_model(
+        {"FP2": laps}, config(), created_at=created_at
+    )
+    contextual_laps = laps.assign(
+        AirTemp=np.linspace(25.0, 26.0, len(laps)),
+        TrackTemp=np.linspace(39.0, 43.0, len(laps)),
+    )
+    excluded = contextual_laps.iloc[[0]].assign(
+        RunId="excluded-run", LapNumber=999, LapTime=np.nan,
+        AirTemp=99.0, TrackTemp=99.0,
+    )
+    contextual_laps = pd.concat([contextual_laps, excluded], ignore_index=True)
+    contextual = run_joint_weekend_model(
+        {"FP2": contextual_laps}, config(), created_at=created_at
+    )
+
+    assert contextual.aggregate_snapshot == baseline.aggregate_snapshot
+    assert contextual.session_snapshots == baseline.session_snapshots
+    pd.testing.assert_frame_equal(contextual.candidate_costs, baseline.candidate_costs)
+    assert contextual.aggregate_snapshot.input_fingerprint == (
+        baseline.aggregate_snapshot.input_fingerprint
+    )
+    retained = contextual.evidence_laps_by_session["FP2"]
+    assert retained["air_temp_c"].notna().all()
+    assert retained["track_temp_c"].min() == 39.0
+    assert retained["track_temp_c"].max() == 43.0
+    assert 999 not in retained["lap_number"].values
+
+
 def test_single_session_fp_semantics_match_profiled_run_intercept_model():
     model = run_weekend_model(
         session_laps("FP1", .035, -.006, 1),

@@ -49,6 +49,10 @@ class JointWeekendModelResult:
     candidate_costs: pd.DataFrame
     contributing_sessions: tuple[str, ...]
     excluded_sessions: Mapping[str, str]
+    # Exact post-normalisation rows used by the likelihood.  Reporting may use
+    # these identities and lap-associated context, but model inputs and hashes
+    # deliberately remain limited to the established numerical columns.
+    evidence_laps_by_session: Mapping[str, pd.DataFrame] = field(default_factory=dict)
 
 
 def derive_race_seed(year: int, round_number: int) -> int:
@@ -488,7 +492,13 @@ def run_joint_weekend_model(
         candidate_cost_rows[f"{session}Cost"] = costs
     candidate_costs = pd.DataFrame(candidate_cost_rows)
     return JointWeekendModelResult(
-        aggregate, session_snapshots, bank, candidate_costs, contributing, excluded
+        aggregate,
+        session_snapshots,
+        bank,
+        candidate_costs,
+        contributing,
+        excluded,
+        {session: laps.copy() for session, laps in prepared_by_session.items()},
     )
 
 
@@ -774,6 +784,15 @@ def _prepare_analysis_laps(laps: pd.DataFrame) -> pd.DataFrame:
     output["tyre_age"] = pd.to_numeric(output["tyre_age"], errors="coerce")
     output["lap_number"] = pd.to_numeric(output["lap_number"], errors="coerce")
     output["compound"] = output["compound"].astype("string").str.upper()
+    for target, candidates in {
+        "air_temp_c": ("air_temp_c", "AirTemp"),
+        "track_temp_c": ("track_temp_c", "TrackTemp"),
+    }.items():
+        source = next((name for name in candidates if name in laps.columns), None)
+        if source is not None:
+            # These columns are retained solely as reporting context.  They are
+            # not included in the likelihood, model fingerprint, or any fit.
+            output[target] = pd.to_numeric(laps[source], errors="coerce")
     run_source = next((name for name in ("run_id", "RunId") if name in laps.columns), None)
     if run_source:
         output["run_id"] = laps[run_source].astype(str)
