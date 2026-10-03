@@ -306,6 +306,7 @@ def evaluate_direct_fastf1_style(
             _empty_direct_samples(groups), _unknown_direct_laps(prepared, groups, config)
         )
     samples = pd.concat(sample_frames, ignore_index=True)
+    samples = _attach_direct_rear_ownership(samples, prepared, config=config)
     laps = _summarize_direct_samples(samples, groups=groups, config=config)
     return TrafficEvaluationResult(samples=samples, laps=laps)
 
@@ -540,6 +541,52 @@ def _interpolate_direct_trace(
     return result
 
 
+def _attach_direct_rear_ownership(
+    samples: pd.DataFrame,
+    telemetry: pd.DataFrame,
+    *,
+    config: DirectTrafficEvaluationConfig,
+) -> pd.DataFrame:
+    """Associate each rear observation with the observed target's own lap.
+
+    Exact target sample labels take precedence. Between samples, ownership is
+    available only with a bounded bracket whose labels agree. Never extrapolate
+    across a target lap boundary, or borrow the follower's classification lap.
+    These remain telemetry labels, not independently measured finish crossings.
+    """
+    output = samples.copy()
+    output["DirectRearTargetDriver"] = output["DirectDriverAhead"]
+    output["DirectRearSampleTime"] = output["SessionTime"]
+    output["DirectRearTargetLapNumber"] = np.nan
+    session_columns = [c for c in ("Year", "Round", "SessionName") if c in telemetry]
+    keys = [*session_columns, "Driver"]
+    traces = {
+        key if isinstance(key, tuple) else (key,): group.sort_values("_SessionSeconds")
+        for key, group in telemetry.groupby(keys, dropna=False, sort=False)
+    }
+    for key, observations in output.dropna(subset=["DirectRearTargetDriver"]).groupby(
+        [*session_columns, "DirectRearTargetDriver"], dropna=False, sort=False
+    ):
+        trace = traces.get(key if isinstance(key, tuple) else (key,))
+        if trace is None:
+            continue
+        times = trace["_SessionSeconds"].to_numpy(float)
+        labels = trace["LapNumber"].to_numpy(float)
+        query = _seconds(observations["SessionTime"]).to_numpy(float)
+        right = np.searchsorted(times, query)
+        clipped = np.minimum(right, len(times) - 1)
+        exact = (right < len(times)) & (times[clipped] == query)
+        left = np.maximum(right - 1, 0)
+        bracket = (right > 0) & (right < len(times))
+        supported = bracket & (labels[left] == labels[clipped]) & (
+            times[clipped] - times[left] <= config.maximum_bracketing_interval_seconds
+        ) & (np.minimum(query - times[left], times[clipped] - query)
+             <= config.interpolation_tolerance_seconds)
+        valid = exact | supported
+        output.loc[observations.index[valid], "DirectRearTargetLapNumber"] = labels[clipped[valid]]
+    return output
+
+
 def _summarize_direct_samples(
     samples: pd.DataFrame,
     *,
@@ -555,10 +602,11 @@ def _summarize_direct_samples(
         DirectMatchedSampleCount=("DirectDistanceToDriverAhead", "count"),
     )
     behind = samples.dropna(
-        subset=["DirectDriverAhead", "DirectTimeDeltaToDriverAhead"]
+        subset=["DirectRearTargetDriver", "DirectRearTargetLapNumber", "DirectTimeDeltaToDriverAhead"]
     ).copy()
     if not behind.empty:
-        behind["Driver"] = behind["DirectDriverAhead"].astype(str)
+        behind["Driver"] = behind["DirectRearTargetDriver"].astype(str)
+        behind["LapNumber"] = behind["DirectRearTargetLapNumber"]
         behind = behind.groupby(list(groups), dropna=False, as_index=False).agg(
             MinTimeDeltaToDriverBehind=("DirectTimeDeltaToDriverAhead", "min"),
             MeanTimeDeltaToDriverBehind=("DirectTimeDeltaToDriverAhead", "mean"),

@@ -1,0 +1,793 @@
+{
+  "r12": {
+    "source": "/Users/zhxutong/dr-wo/woData/wodata/live_timing/schema_v1/year=2026/round=12/session=R/recovered_replay.jsonl",
+    "source_sha256": "a46c01d2bf6ae87549abedefed1da04b7c003457941cd3b416f25c64472a1a23",
+    "cut": {
+      "leader_lap_number": 18,
+      "leader_lap_end_session_time": 1787493462.431,
+      "ingress_sequence": 28404,
+      "session_generation": 0,
+      "leader_lap_end_source_timestamp": "2026-08-23 13:57:42.431000+00:00"
+    },
+    "reference": {
+      "coordinate_frame": "r12",
+      "source": "/Users/zhxutong/dr-wo/woData/wodata/live_archive/schema_v1/year=2026/round=12/session=Q/raw/Position.z.json",
+      "source_sha256": "bea15b8dc2ff0c324073c4065d46648e7a4da8372490c02d36f0fb2764fdf5ca",
+      "observed_until": 1787407644.278304,
+      "available_from": 1787407644.278304,
+      "availability_basis": "historical_preload_assumption; archive materialization does not prove live availability",
+      "raw_unit_to_m": 0.1
+    },
+    "reference_vertices": 271,
+    "reference_length_m": 4212.858784389058,
+    "replay_seconds": 43.191277750069275,
+    "shadow_seconds": 7.414062208030373,
+    "positions": 99638,
+    "position_span_s": {
+      "n": 99638,
+      "median": 1787492865.481948,
+      "p95": 1787493401.021718,
+      "max": 1787493461.241586,
+      "min": 1787492261.321602
+    },
+    "neighbour_status": {
+      "partial_field": 1167
+    },
+    "rear_counts": {
+      "RUS": 1167
+    },
+    "passage_status": {
+      "diagnostic_only": 1138,
+      "invalid_passage_bracket": 29
+    },
+    "timing_comparison": {
+      "eligible_position_observations": 927,
+      "difference_s": {
+        "n": 904,
+        "median": 0.029369556427001897,
+        "p95": 0.1607861546516419,
+        "max": 0.46292481231689453,
+        "min": -0.3188903617858887
+      },
+      "absolute_difference_s": {
+        "n": 904,
+        "median": 0.054608103752136206,
+        "p95": 0.17176326446533197,
+        "max": 0.46292481231689453,
+        "min": 0.00022439765930171163
+      },
+      "thresholds": {
+        "1.0": {
+          "n": 904,
+          "disagree": 71,
+          "passage_only": 37,
+          "timing_only": 34
+        },
+        "2.5": {
+          "n": 904,
+          "disagree": 0,
+          "passage_only": 0,
+          "timing_only": 0
+        }
+      }
+    },
+    "ahead_timing_comparison": {
+      "eligible_position_observations": 865,
+      "difference_s": {
+        "n": 842,
+        "median": 0.03297012233734131,
+        "p95": 0.2075049741744997,
+        "max": 0.3357499065399172,
+        "min": -0.20877653884887692
+      },
+      "absolute_difference_s": {
+        "n": 842,
+        "median": 0.059476931571960545,
+        "p95": 0.2075981190681458,
+        "max": 0.3357499065399172,
+        "min": 0.00013616180419928625
+      },
+      "thresholds": {
+        "1.0": {
+          "n": 842,
+          "disagree": 0,
+          "passage_only": 0,
+          "timing_only": 0
+        },
+        "2.5": {
+          "n": 842,
+          "disagree": 0,
+          "passage_only": 0,
+          "timing_only": 0
+        }
+      }
+    },
+    "production_status": {
+      "unknown": 306
+    },
+    "laps": [
+      {
+        "Driver": "PIA",
+        "LapNumber": 9.0,
+        "PositionSamples": 296,
+        "RearPassageSamples": 289,
+        "MeanDiagnosticRearPassageSeconds": 1.1700507332296932,
+        "MinDiagnosticRearPassageSeconds": 0.9359583854675293,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "PIA",
+        "LapNumber": 10.0,
+        "PositionSamples": 293,
+        "RearPassageSamples": 290,
+        "MeanDiagnosticRearPassageSeconds": 1.1923005136950262,
+        "MinDiagnosticRearPassageSeconds": 0.7111096382141113,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "PIA",
+        "LapNumber": 11.0,
+        "PositionSamples": 288,
+        "RearPassageSamples": 277,
+        "MeanDiagnosticRearPassageSeconds": 1.2609814538852402,
+        "MinDiagnosticRearPassageSeconds": 0.7223639488220215,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "PIA",
+        "LapNumber": 12.0,
+        "PositionSamples": 290,
+        "RearPassageSamples": 282,
+        "MeanDiagnosticRearPassageSeconds": 1.3881918530092172,
+        "MinDiagnosticRearPassageSeconds": 1.059978723526001,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      }
+    ],
+    "cold_starts": [
+      {
+        "join": "2026-08-23T13:45:00+00:00",
+        "common_frames": 2899,
+        "neighbour_mismatch": 0,
+        "missing_passage_vs_full": 4,
+        "passage_max_abs_difference": 0.0
+      },
+      {
+        "join": "2026-08-23T13:46:14+00:00",
+        "common_frames": 2614,
+        "neighbour_mismatch": 0,
+        "missing_passage_vs_full": 4,
+        "passage_max_abs_difference": 0.0
+      },
+      {
+        "join": "2026-08-23T13:48:00+00:00",
+        "common_frames": 2220,
+        "neighbour_mismatch": 0,
+        "missing_passage_vs_full": 0,
+        "passage_max_abs_difference": 0.0
+      }
+    ],
+    "direct_seconds": 1.244679915951565,
+    "direct_repaired": [
+      {
+        "Driver": "PIA",
+        "LapNumber": 9,
+        "MinTimeDeltaToDriverAhead": 0.014717584656111171,
+        "MeanTimeDeltaToDriverAhead": 3.562277225317908,
+        "MinDistanceToDriverAhead": 0.5069390270436998,
+        "MeanDistanceToDriverAhead": 197.068272938001,
+        "DirectSampleCount": 293,
+        "DirectMatchedSampleCount": 293,
+        "MinTimeDeltaToDriverBehind": 0.011437211476182263,
+        "MeanTimeDeltaToDriverBehind": 0.5593654606366231,
+        "MinDistanceToDriverBehind": 0.4479574494835106,
+        "MeanDistanceToDriverBehind": 33.162109880317296,
+        "DirectCoverageFraction": 1.0,
+        "DirectTrafficStatus": "ok",
+        "DirectTrafficStatusReason": "direct synchronized coverage passed",
+        "TrafficEvaluatorVersion": "unified-traffic-v3"
+      },
+      {
+        "Driver": "PIA",
+        "LapNumber": 10,
+        "MinTimeDeltaToDriverAhead": 0.035839455468197556,
+        "MeanTimeDeltaToDriverAhead": 4.09100857046787,
+        "MinDistanceToDriverAhead": 1.1251173416749225,
+        "MeanDistanceToDriverAhead": 221.92621030254168,
+        "DirectSampleCount": 306,
+        "DirectMatchedSampleCount": 306,
+        "MinTimeDeltaToDriverBehind": 0.031586609103567476,
+        "MeanTimeDeltaToDriverBehind": 0.792626503052942,
+        "MinDistanceToDriverBehind": 1.5442342228416237,
+        "MeanDistanceToDriverBehind": 47.250857805587096,
+        "DirectCoverageFraction": 1.0,
+        "DirectTrafficStatus": "ok",
+        "DirectTrafficStatusReason": "direct synchronized coverage passed",
+        "TrafficEvaluatorVersion": "unified-traffic-v3"
+      },
+      {
+        "Driver": "PIA",
+        "LapNumber": 11,
+        "MinTimeDeltaToDriverAhead": 4.1308147584398895,
+        "MeanTimeDeltaToDriverAhead": 4.425737164674538,
+        "MinDistanceToDriverAhead": 129.57440296808636,
+        "MeanDistanceToDriverAhead": 239.8832811620351,
+        "DirectSampleCount": 309,
+        "DirectMatchedSampleCount": 309,
+        "MinTimeDeltaToDriverBehind": 0.3932488621499264,
+        "MeanTimeDeltaToDriverBehind": 0.9049269301649048,
+        "MinDistanceToDriverBehind": 11.060611473192694,
+        "MeanDistanceToDriverBehind": 51.62626503861673,
+        "DirectCoverageFraction": 1.0,
+        "DirectTrafficStatus": "ok",
+        "DirectTrafficStatusReason": "direct synchronized coverage passed",
+        "TrafficEvaluatorVersion": "unified-traffic-v3"
+      },
+      {
+        "Driver": "PIA",
+        "LapNumber": 12,
+        "MinTimeDeltaToDriverAhead": 0.00585817439234404,
+        "MeanTimeDeltaToDriverAhead": 4.134948561607747,
+        "MinDistanceToDriverAhead": 0.22781789303553523,
+        "MeanDistanceToDriverAhead": 229.16752043883395,
+        "DirectSampleCount": 303,
+        "DirectMatchedSampleCount": 303,
+        "MinTimeDeltaToDriverBehind": 0.029588317548709497,
+        "MeanTimeDeltaToDriverBehind": 0.8046596677039342,
+        "MinDistanceToDriverBehind": 1.2164086103366571,
+        "MeanDistanceToDriverBehind": 45.75915512755599,
+        "DirectCoverageFraction": 1.0,
+        "DirectTrafficStatus": "ok",
+        "DirectTrafficStatusReason": "direct synchronized coverage passed",
+        "TrafficEvaluatorVersion": "unified-traffic-v3"
+      }
+    ],
+    "legacy_source_sha256": "6abbb379fa1a564e21b68a74af39edcff0e7791c574b05ae5e61e8dfb86d09cb",
+    "legacy_selected": [
+      {
+        "Driver": "PIA",
+        "LapNumber": 9,
+        "DirectMinTimeDeltaToDriverAhead": 0.014717584656111171,
+        "DirectMeanTimeDeltaToDriverAhead": 3.562277225317908,
+        "DirectMinDistanceToDriverAhead": 0.5069390270436998,
+        "DirectMeanDistanceToDriverAhead": 197.068272938001,
+        "DirectSampleCount": 293,
+        "DirectMatchedSampleCount": 293,
+        "DirectMinTimeDeltaToDriverBehind": 0.011437211476182263,
+        "DirectMeanTimeDeltaToDriverBehind": 0.5467100706334997,
+        "DirectMinDistanceToDriverBehind": 0.4479574494835106,
+        "DirectMeanDistanceToDriverBehind": 31.912606667361757,
+        "DirectCoverageFraction": 1.0,
+        "DirectTrafficStatus": "ok",
+        "DirectTrafficStatusReason": "direct synchronized coverage passed",
+        "TrafficEvaluatorVersion_x": "unified-traffic-v3",
+        "PhysicalMinTimeDeltaToDriverAhead": 0.04257465297129446,
+        "PhysicalMeanTimeDeltaToDriverAhead": 2.969687788432936,
+        "PhysicalMinDistanceToDriverAhead": 1.6032666143395318,
+        "PhysicalMeanDistanceToDriverAhead": 156.38760133145695,
+        "PhysicalMinTimeDeltaToDriverBehind": 0.028829387030234372,
+        "PhysicalMeanTimeDeltaToDriverBehind": 0.7147997199641938,
+        "PhysicalMinDistanceToDriverBehind": 2.4508537990923855,
+        "PhysicalMeanDistanceToDriverBehind": 38.61374095277122,
+        "TargetSampleCount": 293,
+        "AheadMatchedSampleCount": 292,
+        "BehindMatchedSampleCount": 286,
+        "MaximumInterpolationAgeSeconds": 0.0,
+        "AheadCoverageFraction": 0.9965870307167235,
+        "BehindCoverageFraction": 0.9761092150170648,
+        "PhysicalCoverageFraction": 0.9761092150170648,
+        "PhysicalTrafficMethod": "PHYSICAL_CIRCULAR",
+        "PhysicalTrafficStatus": "ok",
+        "PhysicalTrafficStatusReason": "telemetry coverage passed",
+        "TrafficEvaluatorVersion_y": "unified-traffic-v3",
+        "MinTimeDeltaToDriverAhead": 0.014717584656111171,
+        "MinTimeDeltaToDriverAheadMethod": "DIRECT_FASTF1_STYLE",
+        "MeanTimeDeltaToDriverAhead": 2.969687788432936,
+        "MeanTimeDeltaToDriverAheadMethod": "PHYSICAL_CIRCULAR",
+        "MinDistanceToDriverAhead": 0.5069390270436998,
+        "MinDistanceToDriverAheadMethod": "DIRECT_FASTF1_STYLE",
+        "MeanDistanceToDriverAhead": 156.38760133145695,
+        "MeanDistanceToDriverAheadMethod": "PHYSICAL_CIRCULAR",
+        "MinTimeDeltaToDriverBehind": 0.011437211476182263,
+        "MinTimeDeltaToDriverBehindMethod": "DIRECT_FASTF1_STYLE",
+        "MeanTimeDeltaToDriverBehind": 0.5467100706334997,
+        "MeanTimeDeltaToDriverBehindMethod": "DIRECT_FASTF1_STYLE",
+        "MinDistanceToDriverBehind": 0.4479574494835106,
+        "MinDistanceToDriverBehindMethod": "DIRECT_FASTF1_STYLE",
+        "MeanDistanceToDriverBehind": 31.912606667361757,
+        "MeanDistanceToDriverBehindMethod": "DIRECT_FASTF1_STYLE",
+        "TrafficCombinationMode": "compatibility_min",
+        "TrafficMethod": "compatibility_min",
+        "CoverageFraction": 1.0,
+        "TrafficStatus": "ok",
+        "TrafficStatusReason": "direct and physical telemetry coverage passed",
+        "TrafficEvaluatorVersion": "unified-traffic-v3"
+      },
+      {
+        "Driver": "PIA",
+        "LapNumber": 10,
+        "DirectMinTimeDeltaToDriverAhead": 0.035839455468197556,
+        "DirectMeanTimeDeltaToDriverAhead": 4.09100857046787,
+        "DirectMinDistanceToDriverAhead": 1.1251173416749225,
+        "DirectMeanDistanceToDriverAhead": 221.92621030254168,
+        "DirectSampleCount": 306,
+        "DirectMatchedSampleCount": 306,
+        "DirectMinTimeDeltaToDriverBehind": 0.031586609103567476,
+        "DirectMeanTimeDeltaToDriverBehind": 0.8001014456304524,
+        "DirectMinDistanceToDriverBehind": 1.5442342228416237,
+        "DirectMeanDistanceToDriverBehind": 48.359209852046355,
+        "DirectCoverageFraction": 1.0,
+        "DirectTrafficStatus": "ok",
+        "DirectTrafficStatusReason": "direct synchronized coverage passed",
+        "TrafficEvaluatorVersion_x": "unified-traffic-v3",
+        "PhysicalMinTimeDeltaToDriverAhead": 0.06307995531090553,
+        "PhysicalMeanTimeDeltaToDriverAhead": 3.9556519350964274,
+        "PhysicalMinDistanceToDriverAhead": 1.874876449518581,
+        "PhysicalMeanDistanceToDriverAhead": 204.45081211947468,
+        "PhysicalMinTimeDeltaToDriverBehind": 0.02996943267536016,
+        "PhysicalMeanTimeDeltaToDriverBehind": 0.8488547181881475,
+        "PhysicalMinDistanceToDriverBehind": 1.3236499431617403,
+        "PhysicalMeanDistanceToDriverBehind": 47.43974458953403,
+        "TargetSampleCount": 306,
+        "AheadMatchedSampleCount": 305,
+        "BehindMatchedSampleCount": 302,
+        "MaximumInterpolationAgeSeconds": 0.0,
+        "AheadCoverageFraction": 0.9967320261437909,
+        "BehindCoverageFraction": 0.9869281045751634,
+        "PhysicalCoverageFraction": 0.9869281045751634,
+        "PhysicalTrafficMethod": "PHYSICAL_CIRCULAR",
+        "PhysicalTrafficStatus": "ok",
+        "PhysicalTrafficStatusReason": "telemetry coverage passed",
+        "TrafficEvaluatorVersion_y": "unified-traffic-v3",
+        "MinTimeDeltaToDriverAhead": 0.035839455468197556,
+        "MinTimeDeltaToDriverAheadMethod": "DIRECT_FASTF1_STYLE",
+        "MeanTimeDeltaToDriverAhead": 3.9556519350964274,
+        "MeanTimeDeltaToDriverAheadMethod": "PHYSICAL_CIRCULAR",
+        "MinDistanceToDriverAhead": 1.1251173416749225,
+        "MinDistanceToDriverAheadMethod": "DIRECT_FASTF1_STYLE",
+        "MeanDistanceToDriverAhead": 204.45081211947468,
+        "MeanDistanceToDriverAheadMethod": "PHYSICAL_CIRCULAR",
+        "MinTimeDeltaToDriverBehind": 0.02996943267536016,
+        "MinTimeDeltaToDriverBehindMethod": "PHYSICAL_CIRCULAR",
+        "MeanTimeDeltaToDriverBehind": 0.8001014456304524,
+        "MeanTimeDeltaToDriverBehindMethod": "DIRECT_FASTF1_STYLE",
+        "MinDistanceToDriverBehind": 1.3236499431617403,
+        "MinDistanceToDriverBehindMethod": "PHYSICAL_CIRCULAR",
+        "MeanDistanceToDriverBehind": 47.43974458953403,
+        "MeanDistanceToDriverBehindMethod": "PHYSICAL_CIRCULAR",
+        "TrafficCombinationMode": "compatibility_min",
+        "TrafficMethod": "compatibility_min",
+        "CoverageFraction": 1.0,
+        "TrafficStatus": "ok",
+        "TrafficStatusReason": "direct and physical telemetry coverage passed",
+        "TrafficEvaluatorVersion": "unified-traffic-v3"
+      },
+      {
+        "Driver": "PIA",
+        "LapNumber": 11,
+        "DirectMinTimeDeltaToDriverAhead": 4.1308147584398895,
+        "DirectMeanTimeDeltaToDriverAhead": 4.425737164674538,
+        "DirectMinDistanceToDriverAhead": 129.57440296808636,
+        "DirectMeanDistanceToDriverAhead": 239.8832811620351,
+        "DirectSampleCount": 309,
+        "DirectMatchedSampleCount": 309,
+        "DirectMinTimeDeltaToDriverBehind": 0.3932488621499264,
+        "DirectMeanTimeDeltaToDriverBehind": 0.9041155510835059,
+        "DirectMinDistanceToDriverBehind": 11.060611473192694,
+        "DirectMeanDistanceToDriverBehind": 51.10413518110107,
+        "DirectCoverageFraction": 1.0,
+        "DirectTrafficStatus": "ok",
+        "DirectTrafficStatusReason": "direct synchronized coverage passed",
+        "TrafficEvaluatorVersion_x": "unified-traffic-v3",
+        "PhysicalMinTimeDeltaToDriverAhead": 0.04427581832597239,
+        "PhysicalMeanTimeDeltaToDriverAhead": 4.048104206156319,
+        "PhysicalMinDistanceToDriverAhead": 1.131493134997072,
+        "PhysicalMeanDistanceToDriverAhead": 207.0751445189381,
+        "PhysicalMinTimeDeltaToDriverBehind": 0.06293199620468097,
+        "PhysicalMeanTimeDeltaToDriverBehind": 0.6979564349140224,
+        "PhysicalMinDistanceToDriverBehind": 1.9054409961972851,
+        "PhysicalMeanDistanceToDriverBehind": 39.16607088379225,
+        "TargetSampleCount": 309,
+        "AheadMatchedSampleCount": 309,
+        "BehindMatchedSampleCount": 304,
+        "MaximumInterpolationAgeSeconds": 0.0,
+        "AheadCoverageFraction": 1.0,
+        "BehindCoverageFraction": 0.9838187702265372,
+        "PhysicalCoverageFraction": 0.9838187702265372,
+        "PhysicalTrafficMethod": "PHYSICAL_CIRCULAR",
+        "PhysicalTrafficStatus": "ok",
+        "PhysicalTrafficStatusReason": "telemetry coverage passed",
+        "TrafficEvaluatorVersion_y": "unified-traffic-v3",
+        "MinTimeDeltaToDriverAhead": 0.04427581832597239,
+        "MinTimeDeltaToDriverAheadMethod": "PHYSICAL_CIRCULAR",
+        "MeanTimeDeltaToDriverAhead": 4.048104206156319,
+        "MeanTimeDeltaToDriverAheadMethod": "PHYSICAL_CIRCULAR",
+        "MinDistanceToDriverAhead": 1.131493134997072,
+        "MinDistanceToDriverAheadMethod": "PHYSICAL_CIRCULAR",
+        "MeanDistanceToDriverAhead": 207.0751445189381,
+        "MeanDistanceToDriverAheadMethod": "PHYSICAL_CIRCULAR",
+        "MinTimeDeltaToDriverBehind": 0.06293199620468097,
+        "MinTimeDeltaToDriverBehindMethod": "PHYSICAL_CIRCULAR",
+        "MeanTimeDeltaToDriverBehind": 0.6979564349140224,
+        "MeanTimeDeltaToDriverBehindMethod": "PHYSICAL_CIRCULAR",
+        "MinDistanceToDriverBehind": 1.9054409961972851,
+        "MinDistanceToDriverBehindMethod": "PHYSICAL_CIRCULAR",
+        "MeanDistanceToDriverBehind": 39.16607088379225,
+        "MeanDistanceToDriverBehindMethod": "PHYSICAL_CIRCULAR",
+        "TrafficCombinationMode": "compatibility_min",
+        "TrafficMethod": "compatibility_min",
+        "CoverageFraction": 1.0,
+        "TrafficStatus": "ok",
+        "TrafficStatusReason": "direct and physical telemetry coverage passed",
+        "TrafficEvaluatorVersion": "unified-traffic-v3"
+      },
+      {
+        "Driver": "PIA",
+        "LapNumber": 12,
+        "DirectMinTimeDeltaToDriverAhead": 0.00585817439234404,
+        "DirectMeanTimeDeltaToDriverAhead": 4.134948561607747,
+        "DirectMinDistanceToDriverAhead": 0.22781789303553523,
+        "DirectMeanDistanceToDriverAhead": 229.16752043883395,
+        "DirectSampleCount": 303,
+        "DirectMatchedSampleCount": 303,
+        "DirectMinTimeDeltaToDriverBehind": 0.029588317548709497,
+        "DirectMeanTimeDeltaToDriverBehind": 0.8051060613314742,
+        "DirectMinDistanceToDriverBehind": 1.2164086103366571,
+        "DirectMeanDistanceToDriverBehind": 45.88726769609275,
+        "DirectCoverageFraction": 1.0,
+        "DirectTrafficStatus": "ok",
+        "DirectTrafficStatusReason": "direct synchronized coverage passed",
+        "TrafficEvaluatorVersion_x": "unified-traffic-v3",
+        "PhysicalMinTimeDeltaToDriverAhead": 0.02440158780206552,
+        "PhysicalMeanTimeDeltaToDriverAhead": 4.602419406818459,
+        "PhysicalMinDistanceToDriverAhead": 1.145518982930298,
+        "PhysicalMeanDistanceToDriverAhead": 240.35736809260644,
+        "PhysicalMinTimeDeltaToDriverBehind": 0.034839869887291174,
+        "PhysicalMeanTimeDeltaToDriverBehind": 0.9991021038483616,
+        "PhysicalMinDistanceToDriverBehind": 1.2512581686588646,
+        "PhysicalMeanDistanceToDriverBehind": 53.86288486855,
+        "TargetSampleCount": 303,
+        "AheadMatchedSampleCount": 302,
+        "BehindMatchedSampleCount": 292,
+        "MaximumInterpolationAgeSeconds": 0.0,
+        "AheadCoverageFraction": 0.9966996699669967,
+        "BehindCoverageFraction": 0.9636963696369637,
+        "PhysicalCoverageFraction": 0.9636963696369637,
+        "PhysicalTrafficMethod": "PHYSICAL_CIRCULAR",
+        "PhysicalTrafficStatus": "ok",
+        "PhysicalTrafficStatusReason": "telemetry coverage passed",
+        "TrafficEvaluatorVersion_y": "unified-traffic-v3",
+        "MinTimeDeltaToDriverAhead": 0.00585817439234404,
+        "MinTimeDeltaToDriverAheadMethod": "DIRECT_FASTF1_STYLE",
+        "MeanTimeDeltaToDriverAhead": 4.134948561607747,
+        "MeanTimeDeltaToDriverAheadMethod": "DIRECT_FASTF1_STYLE",
+        "MinDistanceToDriverAhead": 0.22781789303553523,
+        "MinDistanceToDriverAheadMethod": "DIRECT_FASTF1_STYLE",
+        "MeanDistanceToDriverAhead": 229.16752043883395,
+        "MeanDistanceToDriverAheadMethod": "DIRECT_FASTF1_STYLE",
+        "MinTimeDeltaToDriverBehind": 0.029588317548709497,
+        "MinTimeDeltaToDriverBehindMethod": "DIRECT_FASTF1_STYLE",
+        "MeanTimeDeltaToDriverBehind": 0.8051060613314742,
+        "MeanTimeDeltaToDriverBehindMethod": "DIRECT_FASTF1_STYLE",
+        "MinDistanceToDriverBehind": 1.2164086103366571,
+        "MinDistanceToDriverBehindMethod": "DIRECT_FASTF1_STYLE",
+        "MeanDistanceToDriverBehind": 45.88726769609275,
+        "MeanDistanceToDriverBehindMethod": "DIRECT_FASTF1_STYLE",
+        "TrafficCombinationMode": "compatibility_min",
+        "TrafficMethod": "compatibility_min",
+        "CoverageFraction": 1.0,
+        "TrafficStatus": "ok",
+        "TrafficStatusReason": "direct and physical telemetry coverage passed",
+        "TrafficEvaluatorVersion": "unified-traffic-v3"
+      }
+    ],
+    "legacy_contributors": {
+      "9": {
+        "RUS": 272,
+        "HAM": 19
+      },
+      "10": {
+        "LEC": 276,
+        "RUS": 21,
+        "HAM": 15
+      },
+      "11": {
+        "RUS": 309
+      },
+      "12": {
+        "RUS": 294,
+        "LEC": 10
+      }
+    }
+  },
+  "r13": {
+    "source": "/Users/zhxutong/dr-wo/woData/wodata/live_timing/schema_v1/year=2026/round=13/session=R/live_timing_raw.jsonl",
+    "source_sha256": "2d4b604294e66ba288e6f8b94a68c0b5e1f1fe730421552ac39d927dc4a4ab5e",
+    "cut": {
+      "leader_lap_number": 8,
+      "leader_lap_end_session_time": 1788702603.277,
+      "ingress_sequence": 15965,
+      "session_generation": 0,
+      "leader_lap_end_source_timestamp": "2026-09-06 13:50:03.277000+00:00"
+    },
+    "reference": {
+      "coordinate_frame": "r13",
+      "source": "/Users/zhxutong/dr-wo/woData/wodata/live_archive/schema_v1/year=2026/round=13/session=Q/raw/Position.z.json",
+      "source_sha256": "0fc24999c2c83112f3ef580f719ac968fed3d79b739546ce98f5ba8436951957",
+      "observed_until": 1788617180.498025,
+      "available_from": 1788617180.498025,
+      "availability_basis": "historical_preload_assumption; archive materialization does not prove live availability",
+      "raw_unit_to_m": 0.1
+    },
+    "reference_vertices": 316,
+    "reference_length_m": 5759.565727306555,
+    "replay_seconds": 3.738552500028163,
+    "shadow_seconds": 6.608530957950279,
+    "positions": 99697,
+    "position_span_s": {
+      "n": 99697,
+      "median": 1788702001.847837,
+      "p95": 1788702543.528913,
+      "max": 1788702602.089056,
+      "min": 1788700009.306081
+    },
+    "neighbour_status": {
+      "common_time": 8922,
+      "unavailable": 5199
+    },
+    "rear_counts": {
+      "LIN": 2790,
+      "GAS": 2026,
+      "NOR": 1560,
+      "VER": 892,
+      "ANT": 729,
+      "HAM": 708,
+      "LEC": 67,
+      "PIA": 65,
+      "COL": 53,
+      "BEA": 15,
+      "TSU": 9,
+      "HUL": 4,
+      "LAW": 2,
+      "OCO": 1,
+      "SAI": 1
+    },
+    "passage_status": {
+      "diagnostic_only": 5903,
+      "unavailable": 5199,
+      "insufficient_passage_history": 2736,
+      "invalid_passage_bracket": 263,
+      "passage_outside_history": 20
+    },
+    "timing_comparison": {
+      "eligible_position_observations": 3046,
+      "difference_s": {
+        "n": 2879,
+        "median": 0.004947923660278519,
+        "p95": 0.29376520385742194,
+        "max": 0.8555588092803954,
+        "min": -1.5905629196166993
+      },
+      "absolute_difference_s": {
+        "n": 2879,
+        "median": 0.08467685508728029,
+        "p95": 0.45604601364135733,
+        "max": 1.5905629196166993,
+        "min": 1.9334793091019264e-05
+      },
+      "thresholds": {
+        "1.0": {
+          "n": 2879,
+          "disagree": 203,
+          "passage_only": 136,
+          "timing_only": 67
+        },
+        "2.5": {
+          "n": 2879,
+          "disagree": 74,
+          "passage_only": 48,
+          "timing_only": 26
+        }
+      }
+    },
+    "ahead_timing_comparison": {
+      "eligible_position_observations": 2002,
+      "difference_s": {
+        "n": 1911,
+        "median": -0.025317005157470707,
+        "p95": 0.32865049934387214,
+        "max": 1.4426772613525392,
+        "min": -2.289558738708496
+      },
+      "absolute_difference_s": {
+        "n": 1911,
+        "median": 0.10214632225036624,
+        "p95": 0.4907336120605468,
+        "max": 2.289558738708496,
+        "min": 3.429985046386752e-05
+      },
+      "thresholds": {
+        "1.0": {
+          "n": 1911,
+          "disagree": 114,
+          "passage_only": 99,
+          "timing_only": 15
+        },
+        "2.5": {
+          "n": 1911,
+          "disagree": 97,
+          "passage_only": 80,
+          "timing_only": 17
+        }
+      }
+    },
+    "production_status": {
+      "unknown": 127
+    },
+    "laps": [
+      {
+        "Driver": "NOR",
+        "LapNumber": 3.0,
+        "PositionSamples": 203,
+        "RearPassageSamples": 0,
+        "MeanDiagnosticRearPassageSeconds": NaN,
+        "MinDiagnosticRearPassageSeconds": NaN,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "NOR",
+        "LapNumber": 4.0,
+        "PositionSamples": 2535,
+        "RearPassageSamples": 473,
+        "MeanDiagnosticRearPassageSeconds": 1.8335167222496822,
+        "MinDiagnosticRearPassageSeconds": 0.19395828247070312,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "NOR",
+        "LapNumber": 5.0,
+        "PositionSamples": 735,
+        "RearPassageSamples": 516,
+        "MeanDiagnosticRearPassageSeconds": 2.3440252533254697,
+        "MinDiagnosticRearPassageSeconds": 0.23352575302124023,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "NOR",
+        "LapNumber": 6.0,
+        "PositionSamples": 599,
+        "RearPassageSamples": 409,
+        "MeanDiagnosticRearPassageSeconds": 0.9804739071862331,
+        "MinDiagnosticRearPassageSeconds": 0.0005331039428710938,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "NOR",
+        "LapNumber": 7.0,
+        "PositionSamples": 332,
+        "RearPassageSamples": 307,
+        "MeanDiagnosticRearPassageSeconds": 0.7374489315169642,
+        "MinDiagnosticRearPassageSeconds": 0.0035109519958496094,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "PIA",
+        "LapNumber": 3.0,
+        "PositionSamples": 203,
+        "RearPassageSamples": 0,
+        "MeanDiagnosticRearPassageSeconds": NaN,
+        "MinDiagnosticRearPassageSeconds": NaN,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "PIA",
+        "LapNumber": 4.0,
+        "PositionSamples": 2528,
+        "RearPassageSamples": 469,
+        "MeanDiagnosticRearPassageSeconds": 2.528273571274682,
+        "MinDiagnosticRearPassageSeconds": 0.0540921688079834,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "PIA",
+        "LapNumber": 5.0,
+        "PositionSamples": 730,
+        "RearPassageSamples": 505,
+        "MeanDiagnosticRearPassageSeconds": 2.4766009477105473,
+        "MinDiagnosticRearPassageSeconds": 0.013424396514892578,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "PIA",
+        "LapNumber": 6.0,
+        "PositionSamples": 606,
+        "RearPassageSamples": 417,
+        "MeanDiagnosticRearPassageSeconds": 1.201124817347355,
+        "MinDiagnosticRearPassageSeconds": 0.007816076278686523,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "PIA",
+        "LapNumber": 7.0,
+        "PositionSamples": 334,
+        "RearPassageSamples": 303,
+        "MeanDiagnosticRearPassageSeconds": 0.6850680958713242,
+        "MinDiagnosticRearPassageSeconds": 0.006348848342895508,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "RUS",
+        "LapNumber": 3.0,
+        "PositionSamples": 203,
+        "RearPassageSamples": 0,
+        "MeanDiagnosticRearPassageSeconds": NaN,
+        "MinDiagnosticRearPassageSeconds": NaN,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "RUS",
+        "LapNumber": 4.0,
+        "PositionSamples": 2481,
+        "RearPassageSamples": 456,
+        "MeanDiagnosticRearPassageSeconds": 1.9502830008665721,
+        "MinDiagnosticRearPassageSeconds": 0.21774530410766602,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "RUS",
+        "LapNumber": 5.0,
+        "PositionSamples": 744,
+        "RearPassageSamples": 490,
+        "MeanDiagnosticRearPassageSeconds": 1.8986057412867643,
+        "MinDiagnosticRearPassageSeconds": 0.05109453201293945,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "RUS",
+        "LapNumber": 6.0,
+        "PositionSamples": 626,
+        "RearPassageSamples": 389,
+        "MeanDiagnosticRearPassageSeconds": 1.4399539229189522,
+        "MinDiagnosticRearPassageSeconds": 0.0018041133880615234,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "RUS",
+        "LapNumber": 7.0,
+        "PositionSamples": 330,
+        "RearPassageSamples": 296,
+        "MeanDiagnosticRearPassageSeconds": 1.1051519166778874,
+        "MinDiagnosticRearPassageSeconds": 0.24911928176879883,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      },
+      {
+        "Driver": "RUS",
+        "LapNumber": 8.0,
+        "PositionSamples": 323,
+        "RearPassageSamples": 313,
+        "MeanDiagnosticRearPassageSeconds": 1.725834905149076,
+        "MinDiagnosticRearPassageSeconds": 0.0751652717590332,
+        "TrafficStatus": "unknown",
+        "EvidenceLevel": "position_shadow"
+      }
+    ]
+  }
+}

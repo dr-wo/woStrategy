@@ -1,0 +1,99 @@
+{
+  "r12_wrap": {
+    "target_wraps": 3,
+    "pair_straddles_coordinate_zero": 17,
+    "rear_candidates": {
+      "RUS": 1167
+    },
+    "unavailable_field_members": {
+      "BEA,VER": 1167
+    }
+  },
+  "ownership": [
+    {
+      "target_lap": 9,
+      "moved_out": 3,
+      "moved_in": 5,
+      "contributors": {
+        "RUS": 274,
+        "HAM": 19
+      },
+      "mean": 0.5593654606366231
+    },
+    {
+      "target_lap": 10,
+      "moved_out": 8,
+      "moved_in": 3,
+      "contributors": {
+        "LEC": 268,
+        "RUS": 24,
+        "HAM": 15
+      },
+      "mean": 0.792626503052942
+    },
+    {
+      "target_lap": 11,
+      "moved_out": 4,
+      "moved_in": 8,
+      "contributors": {
+        "RUS": 305,
+        "LEC": 8
+      },
+      "mean": 0.9049269301649046
+    },
+    {
+      "target_lap": 12,
+      "moved_out": 5,
+      "moved_in": 4,
+      "contributors": {
+        "RUS": 293,
+        "LEC": 10
+      },
+      "mean": 0.804659667703934
+    }
+  ],
+  "r13_order_change": [
+    {
+      "PIA": {
+        "sample_utc": "2026-09-06T13:45:43.128221989+00:00",
+        "phase_m": 222.03234358557225,
+        "rank": 5,
+        "completed_counter": 5,
+        "in_pit": false,
+        "nearest_ahead": "COL",
+        "nearest_rear": "NOR"
+      },
+      "NOR": {
+        "sample_utc": "2026-09-06T13:45:43.128221989+00:00",
+        "phase_m": 213.39556509306385,
+        "rank": 6,
+        "completed_counter": 5,
+        "in_pit": false,
+        "nearest_ahead": "PIA",
+        "nearest_rear": "LIN"
+      },
+      "NOR_minus_PIA_m": -8.636778492508398
+    },
+    {
+      "PIA": {
+        "sample_utc": "2026-09-06T13:45:49.008332968+00:00",
+        "phase_m": 388.24911062396313,
+        "rank": 6,
+        "completed_counter": 5,
+        "in_pit": false,
+        "nearest_ahead": "BEA",
+        "nearest_rear": "OCO"
+      },
+      "NOR": {
+        "sample_utc": "2026-09-06T13:45:49.008332968+00:00",
+        "phase_m": 425.9850767085602,
+        "rank": 5,
+        "completed_counter": 5,
+        "in_pit": false,
+        "nearest_ahead": "VER",
+        "nearest_rear": "HAM"
+      },
+      "NOR_minus_PIA_m": 37.73596608459707
+    }
+  ]
+}
