@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from pathlib import Path
 
 import numpy as np
@@ -219,7 +220,8 @@ def test_load_or_cache_session_telemetry_refreshes_stale_cache_without_time_delt
     assert "TimeDeltaToDriverAhead" in refreshed.columns
 
 
-def test_load_or_cache_session_telemetry_refreshes_v2_traffic_cache(tmp_path):
+@pytest.mark.parametrize("old_version", ["unified-traffic-v2", "unified-traffic-v3"])
+def test_load_or_cache_session_telemetry_refreshes_old_traffic_cache(tmp_path, old_version):
     cache_path = get_session_telemetry_cache_path(
         year=2026,
         round_number=1,
@@ -234,7 +236,7 @@ def test_load_or_cache_session_telemetry_refreshes_v2_traffic_cache(tmp_path):
             "TimeDeltaToDriverAhead": [99.9, 99.9],
         }
     )
-    stale.attrs["traffic_evaluator_version"] = "unified-traffic-v2"
+    stale.attrs["traffic_evaluator_version"] = old_version
     stale.attrs["traffic_combination_mode"] = "compatibility_min"
     stale.to_pickle(cache_path)
     session = FakeSession(
@@ -262,6 +264,11 @@ def test_load_or_cache_session_telemetry_refreshes_v2_traffic_cache(tmp_path):
 
     assert result["DistanceToDriverAhead"].tolist() == [50.0, 50.0]
     assert result.attrs["traffic_evaluator_version"] == TRAFFIC_EVALUATOR_VERSION
+
+    cached = load_or_cache_session_telemetry(
+        FakeSession([]), year=2026, round_number=1, session_name="R", cache_dir=tmp_path,
+    )
+    pd.testing.assert_frame_equal(result, cached)
 
 
 def test_load_or_cache_session_telemetry_refreshes_empty_cache_with_time_delta(tmp_path):
@@ -333,6 +340,7 @@ def test_summarize_lap_gap_metrics_derives_driver_behind_gap():
             "DriverNumber": ["1", "1", "16", "16"],
             "DriverAhead": ["", "", "1", "1"],
             "LapNumber": [1, 1, 1, 1],
+            "SessionTime": [0., .5, 0., .5],
             "TimeDeltaToDriverAhead": [8.0, 9.0, 2.0, 4.0],
             "DistanceToDriverAhead": [80.0, 90.0, 20.0, 40.0],
         }
@@ -376,7 +384,8 @@ def test_summarize_lap_gap_metrics_uses_smaller_direct_driver_ahead_gap():
     assert round(rus["LegacyFastF1MeanTimeDeltaToDriverAhead"], 6) == 0.85
     assert pd.notna(rus["PhysicalMeanTimeDeltaToDriverAhead"])
     assert rus["TrafficCombinationMode"] == "compatibility_min"
-    assert rus["DirectTrafficStatus"] == "ok"
+    assert rus["DirectTrafficStatus"] == "unknown"
+    assert rus["DirectRearOwnershipStatus"] == "unavailable"
     assert rus["PhysicalTrafficStatus"] == "ok"
     assert rus["MeanTimeDeltaToDriverAheadMethod"] == "DIRECT_FASTF1_STYLE"
 

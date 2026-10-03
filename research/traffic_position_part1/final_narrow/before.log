@@ -1,0 +1,81 @@
+FFFFFFFFFFFFFFF                                                          [100%]
+=================================== FAILURES ===================================
+_ test_direct_fp_entry_rejects_incompatible_cache_before_analysis[unified-traffic-v2-compatibility_min-diagnostic] _
+tests/test_fp_traffic_cache_contract.py:89: in test_direct_fp_entry_rejects_incompatible_cache_before_analysis
+    with pytest.raises(ValueError, match="Incompatible FP traffic cache"):
+E   Failed: DID NOT RAISE ValueError
+_ test_direct_fp_entry_rejects_incompatible_cache_before_analysis[unified-traffic-v2-compatibility_min-calibration] _
+tests/test_fp_traffic_cache_contract.py:89: in test_direct_fp_entry_rejects_incompatible_cache_before_analysis
+    with pytest.raises(ValueError, match="Incompatible FP traffic cache"):
+E   Failed: DID NOT RAISE ValueError
+_ test_direct_fp_entry_rejects_incompatible_cache_before_analysis[unified-traffic-v3-compatibility_min-diagnostic] _
+tests/test_fp_traffic_cache_contract.py:89: in test_direct_fp_entry_rejects_incompatible_cache_before_analysis
+    with pytest.raises(ValueError, match="Incompatible FP traffic cache"):
+E   Failed: DID NOT RAISE ValueError
+_ test_direct_fp_entry_rejects_incompatible_cache_before_analysis[unified-traffic-v3-compatibility_min-calibration] _
+tests/test_fp_traffic_cache_contract.py:89: in test_direct_fp_entry_rejects_incompatible_cache_before_analysis
+    with pytest.raises(ValueError, match="Incompatible FP traffic cache"):
+E   Failed: DID NOT RAISE ValueError
+_ test_direct_fp_entry_rejects_incompatible_cache_before_analysis[unified-traffic-v4-incompatible_mode-diagnostic] _
+tests/test_fp_traffic_cache_contract.py:89: in test_direct_fp_entry_rejects_incompatible_cache_before_analysis
+    with pytest.raises(ValueError, match="Incompatible FP traffic cache"):
+E   Failed: DID NOT RAISE ValueError
+_ test_direct_fp_entry_rejects_incompatible_cache_before_analysis[unified-traffic-v4-incompatible_mode-calibration] _
+tests/test_fp_traffic_cache_contract.py:89: in test_direct_fp_entry_rejects_incompatible_cache_before_analysis
+    with pytest.raises(ValueError, match="Incompatible FP traffic cache"):
+E   Failed: DID NOT RAISE ValueError
+_ test_direct_fp_entry_rejects_incompatible_cache_before_analysis[None-compatibility_min-diagnostic] _
+tests/test_fp_traffic_cache_contract.py:89: in test_direct_fp_entry_rejects_incompatible_cache_before_analysis
+    with pytest.raises(ValueError, match="Incompatible FP traffic cache"):
+E   Failed: DID NOT RAISE ValueError
+_ test_direct_fp_entry_rejects_incompatible_cache_before_analysis[None-compatibility_min-calibration] _
+tests/test_fp_traffic_cache_contract.py:89: in test_direct_fp_entry_rejects_incompatible_cache_before_analysis
+    with pytest.raises(ValueError, match="Incompatible FP traffic cache"):
+E   Failed: DID NOT RAISE ValueError
+_ test_direct_fp_entry_rejects_incompatible_cache_before_analysis[unified-traffic-v4-None-diagnostic] _
+tests/test_fp_traffic_cache_contract.py:89: in test_direct_fp_entry_rejects_incompatible_cache_before_analysis
+    with pytest.raises(ValueError, match="Incompatible FP traffic cache"):
+E   Failed: DID NOT RAISE ValueError
+_ test_direct_fp_entry_rejects_incompatible_cache_before_analysis[unified-traffic-v4-None-calibration] _
+tests/test_fp_traffic_cache_contract.py:89: in test_direct_fp_entry_rejects_incompatible_cache_before_analysis
+    with pytest.raises(ValueError, match="Incompatible FP traffic cache"):
+E   Failed: DID NOT RAISE ValueError
+_ test_current_fp_cache_fresh_and_repeated_analysis_match_without_model_writes[diagnostic] _
+tests/test_fp_traffic_cache_contract.py:108: in test_current_fp_cache_fresh_and_repeated_analysis_match_without_model_writes
+    assert summary["enriched_lap_traffic_contract"]["traffic_evaluator_version"] == TRAFFIC_EVALUATOR_VERSION
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'enriched_lap_traffic_contract'
+_ test_current_fp_cache_fresh_and_repeated_analysis_match_without_model_writes[calibration] _
+tests/test_fp_traffic_cache_contract.py:108: in test_current_fp_cache_fresh_and_repeated_analysis_match_without_model_writes
+    assert summary["enriched_lap_traffic_contract"]["traffic_evaluator_version"] == TRAFFIC_EVALUATOR_VERSION
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'enriched_lap_traffic_contract'
+______ test_old_calibration_history_cannot_bypass_fp_input_contract[None] ______
+tests/test_fp_traffic_cache_contract.py:162: in test_old_calibration_history_cannot_bypass_fp_input_contract
+    with pytest.raises(ValueError, match="Incompatible FP traffic calibration history"):
+E   Failed: DID NOT RAISE ValueError
+_ test_old_calibration_history_cannot_bypass_fp_input_contract[unified-traffic-v2] _
+tests/test_fp_traffic_cache_contract.py:162: in test_old_calibration_history_cannot_bypass_fp_input_contract
+    with pytest.raises(ValueError, match="Incompatible FP traffic calibration history"):
+E   Failed: DID NOT RAISE ValueError
+_ test_old_calibration_history_cannot_bypass_fp_input_contract[unified-traffic-v3] _
+tests/test_fp_traffic_cache_contract.py:162: in test_old_calibration_history_cannot_bypass_fp_input_contract
+    with pytest.raises(ValueError, match="Incompatible FP traffic calibration history"):
+E   Failed: DID NOT RAISE ValueError
+=========================== short test summary info ============================
+FAILED tests/test_fp_traffic_cache_contract.py::test_direct_fp_entry_rejects_incompatible_cache_before_analysis[unified-traffic-v2-compatibility_min-diagnostic]
+FAILED tests/test_fp_traffic_cache_contract.py::test_direct_fp_entry_rejects_incompatible_cache_before_analysis[unified-traffic-v2-compatibility_min-calibration]
+FAILED tests/test_fp_traffic_cache_contract.py::test_direct_fp_entry_rejects_incompatible_cache_before_analysis[unified-traffic-v3-compatibility_min-diagnostic]
+FAILED tests/test_fp_traffic_cache_contract.py::test_direct_fp_entry_rejects_incompatible_cache_before_analysis[unified-traffic-v3-compatibility_min-calibration]
+FAILED tests/test_fp_traffic_cache_contract.py::test_direct_fp_entry_rejects_incompatible_cache_before_analysis[unified-traffic-v4-incompatible_mode-diagnostic]
+FAILED tests/test_fp_traffic_cache_contract.py::test_direct_fp_entry_rejects_incompatible_cache_before_analysis[unified-traffic-v4-incompatible_mode-calibration]
+FAILED tests/test_fp_traffic_cache_contract.py::test_direct_fp_entry_rejects_incompatible_cache_before_analysis[None-compatibility_min-diagnostic]
+FAILED tests/test_fp_traffic_cache_contract.py::test_direct_fp_entry_rejects_incompatible_cache_before_analysis[None-compatibility_min-calibration]
+FAILED tests/test_fp_traffic_cache_contract.py::test_direct_fp_entry_rejects_incompatible_cache_before_analysis[unified-traffic-v4-None-diagnostic]
+FAILED tests/test_fp_traffic_cache_contract.py::test_direct_fp_entry_rejects_incompatible_cache_before_analysis[unified-traffic-v4-None-calibration]
+FAILED tests/test_fp_traffic_cache_contract.py::test_current_fp_cache_fresh_and_repeated_analysis_match_without_model_writes[diagnostic]
+FAILED tests/test_fp_traffic_cache_contract.py::test_current_fp_cache_fresh_and_repeated_analysis_match_without_model_writes[calibration]
+FAILED tests/test_fp_traffic_cache_contract.py::test_old_calibration_history_cannot_bypass_fp_input_contract[None]
+FAILED tests/test_fp_traffic_cache_contract.py::test_old_calibration_history_cannot_bypass_fp_input_contract[unified-traffic-v2]
+FAILED tests/test_fp_traffic_cache_contract.py::test_old_calibration_history_cannot_bypass_fp_input_contract[unified-traffic-v3]
+15 failed in 2.01s

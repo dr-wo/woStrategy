@@ -1,0 +1,36 @@
+woStrategy — git diff --stat HEAD
+ research/traffic_position_part1/README.md          |   5 +
+ research/traffic_position_part1/REPORT.md          |   6 +
+ .../traffic_position_part1/remediation/README.md   |  85 +++++++++++
+ .../traffic_position_part1/remediation/REPORT.md   | 147 +++++++++++++++++++
+ .../traffic_position_part1/remediation/after.log   |   2 +
+ .../remediation/baseline_commits.json              |   5 +
+ .../traffic_position_part1/remediation/before.log  | 158 +++++++++++++++++++++
+ .../traffic_position_part1/remediation/data.log    |   3 +
+ .../remediation/diff-stat.txt                      |  36 +++++
+ .../remediation/grouping.json                      |  33 +++++
+ .../remediation/grouping_probe.py                  |  26 ++++
+ .../traffic_position_part1/remediation/planner.log |   3 +
+ .../remediation/prerequisite_float_failure.log     |  89 ++++++++++++
+ .../traffic_position_part1/remediation/probes.py   |  48 +++++++
+ .../remediation/strategy.log                       |  90 ++++++++++++
+ src/wostrategy/analysis/traffic.py                 | 149 ++++++++++---------
+ tests/test_position_traffic.py                     |  17 +++
+ tests/test_pre_race_session_data.py                |  12 +-
+ tests/test_race_performance_review.py              |   6 +-
+ tests/test_telemetry_loader.py                     |  15 +-
+ tests/test_traffic_evaluator.py                    |   3 +-
+ tests/test_traffic_review_remediation.py           |  89 ++++++++++++
+ 22 files changed, 949 insertions(+), 78 deletions(-)
+
+woData — git diff --stat HEAD
+ src/wodata/live/reducer.py           |  9 ++++++++-
+ tests/test_live_telemetry_buffers.py | 19 +++++++++++++++++++
+ 2 files changed, 27 insertions(+), 1 deletion(-)
+
+woPlanner — git diff --stat HEAD
+ src/woplanner/analysis/gui.py     | 35 ++++++++++------
+ src/woplanner/analysis/service.py | 29 +++++++++++--
+ tests/test_analysis_service.py    | 87 ++++++++++++++++++++++++++++++++++++++-
+ tests/test_telemetry_worker.py    |  8 ++--
+ 4 files changed, 140 insertions(+), 19 deletions(-)

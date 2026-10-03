@@ -6,7 +6,7 @@ from typing import Protocol
 import numpy as np
 import pandas as pd
 
-TRAFFIC_EVALUATOR_VERSION = "unified-traffic-v3"
+TRAFFIC_EVALUATOR_VERSION = "unified-traffic-v4"
 COMBINATION_MODE_COMPATIBILITY_MIN = "compatibility_min"
 
 DIRECT_FASTF1_STYLE = "DIRECT_FASTF1_STYLE"
@@ -306,7 +306,8 @@ def evaluate_direct_fastf1_style(
             _empty_direct_samples(groups), _unknown_direct_laps(prepared, groups, config)
         )
     samples = pd.concat(sample_frames, ignore_index=True)
-    samples = _attach_direct_rear_ownership(samples, prepared, config=config)
+    samples = _attach_direct_rear_ownership(samples, telemetry, config=config)
+    samples = samples.drop(columns=[c for c in session_columns if c not in groups])
     laps = _summarize_direct_samples(samples, groups=groups, config=config)
     return TrafficEvaluationResult(samples=samples, laps=laps)
 
@@ -324,6 +325,11 @@ def _prepare_direct_progress(telemetry: pd.DataFrame) -> pd.DataFrame:
     lap_groups = [*session_columns, "Driver", "LapNumber"]
     driver_groups = [*session_columns, "Driver"]
     output = output.sort_values([*driver_groups, "_SessionSeconds"], kind="stable")
+    # Conflicting target lap labels cannot be resolved by packet/input order.
+    conflict = output.groupby([*driver_groups, "_SessionSeconds"], dropna=False)[
+        "LapNumber"
+    ].transform("nunique").gt(1)
+    output = output.loc[~conflict]
     output = output.drop_duplicates([*driver_groups, "_SessionSeconds"], keep="last")
     driver_delta = (
         output.groupby(driver_groups, dropna=False)["_SessionSeconds"].diff().fillna(0.0)
@@ -399,7 +405,11 @@ def _evaluate_direct_session(
                 )
                 candidates.append(interpolated - own_distance)
                 other_drivers.append(other_driver)
-            frame = target.loc[:, [c for c in groups if c in target]].copy()
+            internal_groups = list(dict.fromkeys([
+                *groups,
+                *[c for c in ("Year", "Round", "SessionName") if c in target],
+            ]))
+            frame = target.loc[:, internal_groups].copy()
             frame["SessionTime"] = target["SessionTime"].to_numpy()
             frame["DirectDriverAhead"] = pd.NA
             frame["DirectDistanceToDriverAhead"] = np.nan
@@ -558,11 +568,23 @@ def _attach_direct_rear_ownership(
     output["DirectRearTargetDriver"] = output["DirectDriverAhead"]
     output["DirectRearSampleTime"] = output["SessionTime"]
     output["DirectRearTargetLapNumber"] = np.nan
-    session_columns = [c for c in ("Year", "Round", "SessionName") if c in telemetry]
+    session_columns = [
+        c for c in ("Year", "Round", "SessionName") if c in telemetry and c in output
+    ]
     keys = [*session_columns, "Driver"]
+    raw = telemetry.copy()
+    raw["_SessionSeconds"] = (
+        _seconds(raw["SessionTime"]) if "SessionTime" in raw else raw["_SessionSeconds"]
+    )
+    raw["LapNumber"] = pd.to_numeric(raw["LapNumber"], errors="coerce")
+    # Preserve conflict barriers before deduplication/integration. Neither an
+    # exact query nor a bracket touching this timestamp may select a lap label.
+    labels = raw.groupby([*keys, "_SessionSeconds"], dropna=False)["LapNumber"].agg(
+        lambda values: values.iloc[0] if values.nunique(dropna=False) == 1 else np.nan
+    ).reset_index()
     traces = {
         key if isinstance(key, tuple) else (key,): group.sort_values("_SessionSeconds")
-        for key, group in telemetry.groupby(keys, dropna=False, sort=False)
+        for key, group in labels.groupby(keys, dropna=False, sort=False)
     }
     for key, observations in output.dropna(subset=["DirectRearTargetDriver"]).groupby(
         [*session_columns, "DirectRearTargetDriver"], dropna=False, sort=False
@@ -582,8 +604,11 @@ def _attach_direct_rear_ownership(
             times[clipped] - times[left] <= config.maximum_bracketing_interval_seconds
         ) & (np.minimum(query - times[left], times[clipped] - query)
              <= config.interpolation_tolerance_seconds)
-        valid = exact | supported
+        valid = (exact | supported) & np.isfinite(labels[clipped])
         output.loc[observations.index[valid], "DirectRearTargetLapNumber"] = labels[clipped[valid]]
+    output["DirectRearOwnershipStatus"] = np.where(
+        output["DirectRearTargetLapNumber"].notna(), "supported", "unavailable"
+    )
     return output
 
 
@@ -633,6 +658,15 @@ def _summarize_direct_samples(
         "direct synchronized coverage passed",
         "direct synchronized coverage below configured minimum",
     )
+    summary["DirectRearOwnershipStatus"] = np.where(
+        summary["MeanTimeDeltaToDriverBehind"].notna(), "supported", "unavailable"
+    )
+    missing_rear = summary["DirectRearOwnershipStatus"].eq("unavailable")
+    summary.loc[
+        missing_rear & summary["DirectTrafficStatus"].eq(TRAFFIC_STATUS_OK),
+        "DirectTrafficStatus",
+    ] = TRAFFIC_STATUS_UNKNOWN
+    summary.loc[missing_rear, "DirectTrafficStatusReason"] = "target-owned rear observations unavailable"
     summary["TrafficEvaluatorVersion"] = config.evaluator_version
     return summary
 
@@ -1075,6 +1109,12 @@ def combine_lap_traffic_components(
         ],
         default="no synchronized other-driver telemetry",
     )
+    if "DirectRearOwnershipStatus" in merged:
+        unsupported_rear = merged["DirectRearOwnershipStatus"].eq("unavailable") & merged[
+            "PhysicalMeanTimeDeltaToDriverBehind"
+        ].isna()
+        merged.loc[unsupported_rear, "TrafficStatus"] = TRAFFIC_STATUS_UNKNOWN
+        merged.loc[unsupported_rear, "TrafficStatusReason"] = "target-owned rear observations unavailable"
     if "TrafficEvaluatorVersion" not in merged.columns:
         merged["TrafficEvaluatorVersion"] = TRAFFIC_EVALUATOR_VERSION
     else:
@@ -1372,7 +1412,7 @@ def _attach_legacy_direct_comparison(
     comparison = legacy.loc[:, columns].rename(
         columns={metric: f"LegacyFastF1{metric}" for metric in _METRICS}
     )
-    comparison["LegacyFastF1TrafficStatus"] = TRAFFIC_STATUS_OK
+    comparison["LegacyFastF1TrafficStatus"] = legacy["DirectTrafficStatus"].to_numpy()
     return output.merge(comparison, on=list(group_columns), how="left")
 
 
@@ -1399,18 +1439,16 @@ def _summarize_lap_gaps_from_driver_ahead(
         time_delta_column=time_delta_column,
         distance_delta_column=distance_delta_column,
     )
-    if behind_summary.empty:
-        ahead_summary["MinTimeDeltaToDriverBehind"] = pd.NA
-        ahead_summary["MeanTimeDeltaToDriverBehind"] = pd.NA
-        ahead_summary["MinDistanceToDriverBehind"] = pd.NA
-        ahead_summary["MeanDistanceToDriverBehind"] = pd.NA
-        return ahead_summary
-
-    return ahead_summary.merge(
-        behind_summary,
-        on=list(group_columns),
-        how="left",
+    output = ahead_summary.merge(behind_summary, on=list(group_columns), how="left")
+    supported = pd.to_numeric(output["MeanTimeDeltaToDriverBehind"], errors="coerce").notna()
+    output["DirectRearOwnershipStatus"] = np.where(supported, "supported", "unavailable")
+    output["DirectTrafficStatus"] = np.where(supported, TRAFFIC_STATUS_OK, TRAFFIC_STATUS_UNKNOWN)
+    output["TrafficStatus"] = output["DirectTrafficStatus"]
+    output["DirectTrafficStatusReason"] = np.where(
+        supported, "target-owned legacy rear observations", "target-owned rear observations unavailable"
     )
+    output["TrafficEvaluatorVersion"] = TRAFFIC_EVALUATOR_VERSION
+    return output
 
 
 def _combine_gap_summaries(
@@ -1468,57 +1506,30 @@ def _summarize_lap_gap_behind_from_driver_ahead(
     time_delta_column: str,
     distance_delta_column: str,
 ) -> pd.DataFrame:
-    driver_lookup_columns = [
-        column
-        for column in ("Year", "Round", "SessionName", "LapNumber", "Driver", "DriverNumber")
-        if column in telemetry.columns
-    ]
-    driver_lookup = (
-        telemetry.loc[:, driver_lookup_columns]
-        .dropna(subset=["Driver", "DriverNumber"])
-        .drop_duplicates()
-        .copy()
-    )
-    driver_lookup["DriverNumber"] = driver_lookup["DriverNumber"].astype("string")
-
-    behind_samples = telemetry.dropna(subset=["DriverAhead", time_delta_column]).copy()
-    behind_samples["DriverAhead"] = behind_samples["DriverAhead"].astype("string")
-    merge_columns = [
-        column
-        for column in ("Year", "Round", "SessionName", "LapNumber")
-        if column in group_columns and column in telemetry.columns
-    ]
-    target_lookup = driver_lookup.rename(
-        columns={
-            "Driver": "TargetDriver",
-            "DriverNumber": "DriverAhead",
-        }
-    )
-    behind_samples = behind_samples.merge(
-        target_lookup[[*merge_columns, "TargetDriver", "DriverAhead"]],
-        on=[*merge_columns, "DriverAhead"],
-        how="inner",
-    )
-    if behind_samples.empty:
-        return pd.DataFrame(
-            columns=[
-                *group_columns,
-                "MinTimeDeltaToDriverBehind",
-                "MeanTimeDeltaToDriverBehind",
-                "MinDistanceToDriverBehind",
-                "MeanDistanceToDriverBehind",
-            ]
-        )
-
-    behind_samples["Driver"] = behind_samples["TargetDriver"]
-    return (
-        behind_samples.groupby(list(group_columns), dropna=False, as_index=False)
-        .agg(
-            MinTimeDeltaToDriverBehind=(time_delta_column, "min"),
-            MeanTimeDeltaToDriverBehind=(time_delta_column, "mean"),
-            MinDistanceToDriverBehind=(distance_delta_column, "min"),
-            MeanDistanceToDriverBehind=(distance_delta_column, "mean"),
-        )
+    if "SessionTime" not in telemetry:
+        return _empty_behind_gap_summary(group_columns)
+    sessions = [c for c in ("Year", "Round", "SessionName") if c in telemetry]
+    lookup = telemetry[[*sessions, "Driver", "DriverNumber"]].dropna().drop_duplicates()
+    lookup["DriverNumber"] = lookup["DriverNumber"].astype(str)
+    # Conflicting number-to-driver identities are also unavailable, never fan out.
+    lookup = lookup.loc[~lookup.duplicated([*sessions, "DriverNumber"], keep=False)]
+    observed = telemetry.dropna(subset=["DriverAhead", time_delta_column]).copy()
+    observed["DriverAhead"] = observed["DriverAhead"].astype(str)
+    observed = observed.merge(lookup.rename(columns={
+        "DriverNumber": "DriverAhead", "Driver": "DirectDriverAhead"
+    }), on=[*sessions, "DriverAhead"], how="left")
+    owned = _attach_direct_rear_ownership(
+        observed, telemetry, config=DirectTrafficEvaluationConfig()
+    ).dropna(subset=["DirectRearTargetDriver", "DirectRearTargetLapNumber"])
+    if owned.empty:
+        return _empty_behind_gap_summary(group_columns)
+    owned["Driver"] = owned["DirectRearTargetDriver"]
+    owned["LapNumber"] = owned["DirectRearTargetLapNumber"]
+    return owned.groupby(list(group_columns), dropna=False, as_index=False).agg(
+        MinTimeDeltaToDriverBehind=(time_delta_column, "min"),
+        MeanTimeDeltaToDriverBehind=(time_delta_column, "mean"),
+        MinDistanceToDriverBehind=(distance_delta_column, "min"),
+        MeanDistanceToDriverBehind=(distance_delta_column, "mean"),
     )
 
 

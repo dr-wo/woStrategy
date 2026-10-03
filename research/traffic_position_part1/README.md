@@ -1,5 +1,10 @@
 # Part 1 reproduction
 
+For the independent-review fixes and current checks, start with
+[remediation/REPORT.md](remediation/REPORT.md) and
+[remediation/README.md](remediation/README.md). The instructions below preserve
+the original historical experiment; its source identities predate remediation.
+
 Read [REPORT.md](REPORT.md) first. This is a stopped-at-shadow correctness repair,
 not validated production time gaps. Production thresholds and tyre fitting are
 unchanged. Historical scripts only read the local data root and write their

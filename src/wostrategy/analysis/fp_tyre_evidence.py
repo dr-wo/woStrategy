@@ -18,6 +18,7 @@ from wostrategy.analysis.long_run_performance import (
     _prepare_laps,
 )
 from wostrategy.core.pre_race_session_data import load_cached_weekend_sessions
+from wostrategy.analysis.traffic_contract import require_current_traffic_contract
 
 
 FP_TYRE_EVIDENCE_SCHEMA_VERSION = 1
@@ -154,7 +155,16 @@ def analyse_fp_tyre_evidence_sessions(
     session_sources: Mapping[str, str] | None = None,
     calculated_at: datetime | None = None,
 ) -> dict[str, object]:
-    """Pure in-memory FP evidence calculation for applications and tests."""
+    """Calculate from current-contract enriched frames, without changing inputs.
+
+    Nonempty frames must carry compatible traffic provenance. Raw, stale or
+    unversioned laps require actual traffic derivation before calling this API.
+    """
+    # Check the whole input before normalization, selection or fitting. A mixed
+    # mapping must not silently discard an incompatible quantitative session.
+    for session, frame in sessions.items():
+        if frame is not None:
+            require_current_traffic_contract(frame, context=f"session {session}")
     resolved = config or FPTyreEvidenceCalculationConfig()
     normalized = _normalise_sessions(sessions)
     if not normalized:
@@ -200,10 +210,17 @@ def analyse_fp_tyre_evidence_sessions(
     ].to_dict("records")
     details = evidence.to_dict("records")
     fingerprints = dict(source_fingerprints or {})
+    traffic_contracts = {
+        session: {key: frame.attrs[key] for key in (
+            "traffic_evaluator_version", "traffic_combination_mode",
+        )}
+        for session, frame in normalized.items()
+    }
     input_fingerprint = canonical_hash(
         {
             "sessions": sessions_used,
             "sources": fingerprints,
+            "session_traffic_contracts": traffic_contracts,
             "config": asdict(resolved),
         }
     )
@@ -220,6 +237,7 @@ def analyse_fp_tyre_evidence_sessions(
         "sessions_used": sessions_used,
         "session_sources": dict(session_sources or {}),
         "source_fingerprints": fingerprints,
+        "session_traffic_contracts": traffic_contracts,
         "input_fingerprint": input_fingerprint,
         "calculation_config": asdict(resolved),
         "programme_inventory": inventory,

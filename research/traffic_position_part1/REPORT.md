@@ -1,5 +1,11 @@
 # R&D-2 Part 1 — position traffic correctness repair
 
+**Historical author report, superseded for merge readiness:** the independent
+review returned FAIL / NOT READY. Read [the remediation report](remediation/REPORT.md)
+for corrected ownership, cache identity, unknown-status handling and explicit
+live quarantine. Evidence and hashes below describe the original Part 1 run;
+they are not a claim that the original patch passed independent review.
+
 **Decision: retain and expose the position shadow, repair target ownership, and
 quarantine the defective default live gap reconstruction. Do not activate
 position-derived gap decisions.** This is the minimum repair supported by the

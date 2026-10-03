@@ -120,3 +120,20 @@ def test_rear_summary_counts_observations_on_target_laps_only():
     assert summary.loc[('A',9),'MeanTimeDeltaToDriverBehind']==.5
     assert summary.loc[('A',10),'MeanTimeDeltaToDriverBehind']==.8
     assert ('A',8) not in summary.index
+
+
+def test_reducer_malformed_status_cannot_certify_complete_field():
+    from datetime import datetime, timezone
+    from wodata.live import LiveSessionStore, LiveTimingMessage
+    now=datetime(2026,1,1,tzinfo=timezone.utc)
+    message=LiveTimingMessage('Position.z', {'Position':[{'Timestamp':now.isoformat(),
+        'Entries':{d:dict(X=x,Y=10,Z=1,Status=status) for d,x,status in
+                   [('A',50,'OnTrack'),('B',40,'garbage'),('C',70,'OnTrack')]}}]},now,now,
+        session_time_seconds=0)
+    snapshot=LiveSessionStore().apply(message)
+    frame=pd.DataFrame([dict(Driver=s.driver_number,SessionTime=s.session_time_seconds,
+        X=s.x,Y=s.y,Z=s.z,OnTrack=s.on_track) for s in snapshot.position_samples])
+    result=run(frame).samples.iloc[0]
+    assert not result.FieldComplete
+    assert result.UnavailableDrivers=='B'
+    assert result.TrafficStatus=='unknown'

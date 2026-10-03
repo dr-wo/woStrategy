@@ -1,0 +1,158 @@
+FFFFFFFFFFFF.F.FFFFF                                                     [100%]
+=================================== FAILURES ===================================
+_______________ test_review_legacy_target_lap_10_follower_lap_9 ________________
+tests/test_traffic_review_remediation.py:22: in test_review_legacy_target_lap_10_follower_lap_9
+    assert row.MeanTimeDeltaToDriverBehind.item()==.5
+E   assert nan == 0.5
+E    +  where nan = item()
+E    +    where item = 0   NaN\nName: MeanTimeDeltaToDriverBehind, dtype: float64.item
+E    +      where 0   NaN\nName: MeanTimeDeltaToDriverBehind, dtype: float64 =   Driver  ...  LegacyFastF1TrafficStatus\n0      A  ...                         ok\n\n[1 rows x 55 columns].MeanTimeDeltaToDriverBehind
+____ test_review_legacy_unsupported_ownership_cannot_be_clean[SessionTime] _____
+tests/test_traffic_review_remediation.py:30: in test_review_legacy_unsupported_ownership_cannot_be_clean
+    assert row.TrafficStatus.item()=='unknown'
+E   AssertionError: assert 'ok' == 'unknown'
+E
+E     - unknown
+E     + ok
+____ test_review_legacy_unsupported_ownership_cannot_be_clean[DriverAhead] _____
+tests/test_traffic_review_remediation.py:30: in test_review_legacy_unsupported_ownership_cannot_be_clean
+    assert row.TrafficStatus.item()=='unknown'
+E   AssertionError: assert 'ok' == 'unknown'
+E
+E     - unknown
+E     + ok
+____ test_review_legacy_unsupported_ownership_cannot_be_clean[DriverNumber] ____
+tests/test_traffic_review_remediation.py:30: in test_review_legacy_unsupported_ownership_cannot_be_clean
+    assert row.TrafficStatus.item()=='unknown'
+E   AssertionError: assert 'ok' == 'unknown'
+E
+E     - unknown
+E     + ok
+____________ test_review_conflicting_exact_labels_order_independent ____________
+tests/test_traffic_review_remediation.py:40: in test_review_conflicting_exact_labels_order_independent
+    assert pd.isna(row.DirectRearTargetLapNumber)
+E   assert False
+E    +  where False = <function isna at 0x10a257240>(np.float64(10.0))
+E    +    where <function isna at 0x10a257240> = pd.isna
+E    +    and   np.float64(10.0) = Driver                          B\nLapNumber                       9\nSessionTime                  0.25\nDirectDriverAhea...tRearTargetDriver          A\nDirectRearSampleTime         0.25\nDirectRearTargetLapNumber    10.0\nName: 0, dtype: object.DirectRearTargetLapNumber
+______________ test_review_extra_year_with_explicit_group_columns ______________
+tests/test_traffic_review_remediation.py:49: in test_review_extra_year_with_explicit_group_columns
+    result=evaluate_direct_fastf1_style(frame,group_columns=('Driver','LapNumber'))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/zhxutong/dr-wo/woStrategy/.worktrees/traffic-position-part1/src/wostrategy/analysis/traffic.py (author baseline):309: in evaluate_direct_fastf1_style
+    ???
+/Users/zhxutong/dr-wo/woStrategy/.worktrees/traffic-position-part1/src/wostrategy/analysis/traffic.py (author baseline):567: in _attach_direct_rear_ownership
+    ???
+../../../.venv/lib/python3.11/site-packages/pandas/core/frame.py:9210: in groupby
+    return DataFrameGroupBy(
+../../../.venv/lib/python3.11/site-packages/pandas/core/groupby/groupby.py:1331: in __init__
+    grouper, exclusions, obj = get_grouper(
+../../../.venv/lib/python3.11/site-packages/pandas/core/groupby/grouper.py:1043: in get_grouper
+    raise KeyError(gpr)
+E   KeyError: 'Year'
+_______________ test_review_old_ownership_version_is_not_current _______________
+tests/test_traffic_review_remediation.py:55: in test_review_old_ownership_version_is_not_current
+    assert TRAFFIC_EVALUATOR_VERSION != 'unified-traffic-v3'
+E   AssertionError: assert 'unified-traffic-v3' != 'unified-traffic-v3'
+_____ test_legacy_fallback_retains_target_ownership_when_shared_cannot_run _____
+tests/test_traffic_review_remediation.py:63: in test_legacy_fallback_retains_target_ownership_when_shared_cannot_run
+    assert target.MeanTimeDeltaToDriverBehind==.5
+E   assert np.float64(nan) == 0.5
+E    +  where np.float64(nan) = Driver                                                                                 A\nLapNumber                    ...   <NA>\nLegacyFastF1TrafficStatus                                                             ok\nName: 0, dtype: object.MeanTimeDeltaToDriverBehind
+________ test_conflicts_survive_progress_preparation_and_input_reversal ________
+tests/test_traffic_review_remediation.py:76: in test_conflicts_survive_progress_preparation_and_input_reversal
+    assert pd.isna(row.DirectRearTargetLapNumber)
+E   assert False
+E    +  where False = <function isna at 0x10a257240>(np.float64(11.0))
+E    +    where <function isna at 0x10a257240> = pd.isna
+E    +    and   np.float64(11.0) = Driver                             B\nLapNumber                          9\nSessionTime                      1.0\nDirectD...tDriver             A\nDirectRearSampleTime             1.0\nDirectRearTargetLapNumber       11.0\nName: 21, dtype: object.DirectRearTargetLapNumber
+_______ test_internal_sessions_are_separate_when_output_groups_omit_year _______
+tests/test_traffic_review_remediation.py:86: in test_internal_sessions_are_separate_when_output_groups_omit_year
+    result=evaluate_direct_fastf1_style(frame,group_columns=('Driver','LapNumber'))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/zhxutong/dr-wo/woStrategy/.worktrees/traffic-position-part1/src/wostrategy/analysis/traffic.py (author baseline):309: in evaluate_direct_fastf1_style
+    ???
+/Users/zhxutong/dr-wo/woStrategy/.worktrees/traffic-position-part1/src/wostrategy/analysis/traffic.py (author baseline):567: in _attach_direct_rear_ownership
+    ???
+../../../.venv/lib/python3.11/site-packages/pandas/core/frame.py:9210: in groupby
+    return DataFrameGroupBy(
+../../../.venv/lib/python3.11/site-packages/pandas/core/groupby/groupby.py:1331: in __init__
+    grouper, exclusions, obj = get_grouper(
+../../../.venv/lib/python3.11/site-packages/pandas/core/groupby/grouper.py:1043: in get_grouper
+    raise KeyError(gpr)
+E   KeyError: 'Year'
+_________ test_reducer_malformed_status_cannot_certify_complete_field __________
+tests/test_position_traffic.py:137: in test_reducer_malformed_status_cannot_certify_complete_field
+    assert not result.FieldComplete
+E   assert not np.True_
+E    +  where np.True_ = Driver                                            A\nSessionTime                                     0.0\nNeighbourStatu...er                                       NaN\nLapBoundaryBasis                        unavailable\nName: 0, dtype: object.FieldComplete
+______________ test_unrecognised_position_status_remains_unknown _______________
+../../../woData/.worktrees/traffic-position-part1/tests/test_live_telemetry_buffers.py:137: in test_unrecognised_position_status_remains_unknown
+    assert result.position_samples[0].on_track is None, status
+E   AssertionError: garbage
+E   assert False is None
+E    +  where False = LivePositionSample(driver_number='1', session_time_seconds=1767225600.0, x=10.0, y=20.0, z=1.0, on_track=False).on_track
+_ test_load_or_cache_session_telemetry_refreshes_old_traffic_cache[unified-traffic-v3] _
+tests/test_telemetry_loader.py:265: in test_load_or_cache_session_telemetry_refreshes_old_traffic_cache
+    assert result["DistanceToDriverAhead"].tolist() == [50.0, 50.0]
+E   assert [999.0, 999.0] == [50.0, 50.0]
+E
+E     At index 0 diff: 999.0 != 50.0
+E     Use -v to get more diff
+_____ test_loader_refreshes_old_enriched_traffic_cache[unified-traffic-v3] _____
+tests/test_pre_race_session_data.py:66: in test_loader_refreshes_old_enriched_traffic_cache
+    assert calls == ["FP1", "FP1"]
+E   AssertionError: assert ['FP1'] == ['FP1', 'FP1']
+E
+E     Right contains one more item: 'FP1'
+E     Use -v to get more diff
+_______ test_quarantine_repeats_explicitly_and_retains_model_and_history _______
+../../../woPlanner/.worktrees/traffic-position-part1/tests/test_analysis_service.py:1767: in test_quarantine_repeats_explicitly_and_retains_model_and_history
+    assert result.status=='traffic-unavailable'
+E   AssertionError: assert 'waiting-for-clean-laps' == 'traffic-unavailable'
+E
+E     - traffic-unavailable
+E     + waiting-for-clean-laps
+___________ test_quarantine_first_update_without_a_model_is_explicit ___________
+../../../woPlanner/.worktrees/traffic-position-part1/tests/test_analysis_service.py:1786: in test_quarantine_first_update_without_a_model_is_explicit
+    assert result.status=='traffic-unavailable'
+E   AssertionError: assert 'waiting-for-clean-laps' == 'traffic-unavailable'
+E
+E     - traffic-unavailable
+E     + waiting-for-clean-laps
+_______ test_quarantine_ui_explains_retention_without_publishing_history _______
+../../../woPlanner/.worktrees/traffic-position-part1/tests/test_analysis_service.py:1806: in test_quarantine_ui_explains_retention_without_publishing_history
+    assert 'unavailable' in window.traffic_source.itemText(0)
+E   AssertionError: assert 'unavailable' in 'Automatic telemetry with sector fallback'
+E    +  where 'Automatic telemetry with sector fallback' = <built-in method itemText of PySide6.QtWidgets.QComboBox object at 0x11de46440>(0)
+E    +    where <built-in method itemText of PySide6.QtWidgets.QComboBox object at 0x11de46440> = <PySide6.QtWidgets.QComboBox(0x9fef6f800) at 0x11de46440>.itemText
+E    +      where <PySide6.QtWidgets.QComboBox(0x9fef6f800) at 0x11de46440> = <woplanner.analysis.gui.StrategyPredictionWindow(0xa04690000) at 0x11e82d180>.traffic_source
+----------------------------- Captured stderr call -----------------------------
+qt.qpa.fonts: Populating font family aliases took 36 ms. Replace uses of missing font family "Sans Serif" with one that exists to avoid this cost.
+___________ test_quarantine_rejects_prepared_automatic_traffic_rows ____________
+../../../woPlanner/.worktrees/traffic-position-part1/tests/test_analysis_service.py:1830: in test_quarantine_rejects_prepared_automatic_traffic_rows
+    assert row.TrafficStatus == "unknown"
+E   AssertionError: assert 'ok' == 'unknown'
+E
+E     - unknown
+E     + ok
+=========================== short test summary info ============================
+FAILED tests/test_traffic_review_remediation.py::test_review_legacy_target_lap_10_follower_lap_9
+FAILED tests/test_traffic_review_remediation.py::test_review_legacy_unsupported_ownership_cannot_be_clean[SessionTime]
+FAILED tests/test_traffic_review_remediation.py::test_review_legacy_unsupported_ownership_cannot_be_clean[DriverAhead]
+FAILED tests/test_traffic_review_remediation.py::test_review_legacy_unsupported_ownership_cannot_be_clean[DriverNumber]
+FAILED tests/test_traffic_review_remediation.py::test_review_conflicting_exact_labels_order_independent
+FAILED tests/test_traffic_review_remediation.py::test_review_extra_year_with_explicit_group_columns
+FAILED tests/test_traffic_review_remediation.py::test_review_old_ownership_version_is_not_current
+FAILED tests/test_traffic_review_remediation.py::test_legacy_fallback_retains_target_ownership_when_shared_cannot_run
+FAILED tests/test_traffic_review_remediation.py::test_conflicts_survive_progress_preparation_and_input_reversal
+FAILED tests/test_traffic_review_remediation.py::test_internal_sessions_are_separate_when_output_groups_omit_year
+FAILED tests/test_position_traffic.py::test_reducer_malformed_status_cannot_certify_complete_field
+FAILED ::test_unrecognised_position_status_remains_unknown - AssertionError: ...
+FAILED tests/test_telemetry_loader.py::test_load_or_cache_session_telemetry_refreshes_old_traffic_cache[unified-traffic-v3]
+FAILED tests/test_pre_race_session_data.py::test_loader_refreshes_old_enriched_traffic_cache[unified-traffic-v3]
+FAILED ::test_quarantine_repeats_explicitly_and_retains_model_and_history - A...
+FAILED ::test_quarantine_first_update_without_a_model_is_explicit - Assertion...
+FAILED ::test_quarantine_ui_explains_retention_without_publishing_history - A...
+FAILED ::test_quarantine_rejects_prepared_automatic_traffic_rows - AssertionE...
+18 failed, 2 passed in 0.95s

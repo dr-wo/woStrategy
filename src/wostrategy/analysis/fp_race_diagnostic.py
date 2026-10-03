@@ -14,6 +14,10 @@ from wodata.contracts import canonical_hash
 
 from wostrategy.analysis.fp_tyre_evidence import analyse_fp_tyre_evidence_sessions
 from wostrategy.analysis.long_run_performance import fit_long_run_components
+from wostrategy.analysis.traffic_contract import (
+    current_traffic_contract,
+    require_current_traffic_contract,
+)
 from wostrategy.core.pre_race_session_data import prepare_weekend_sessions
 from wostrategy.model.pre_race_performance import _prepare_analysis_laps
 from wostrategy.analysis.retro_tyre_results import (
@@ -1021,6 +1025,13 @@ def _race_team_baselines(
     return frame.set_index("Team")["Median"].astype(float).to_dict(), path
 
 
+def _read_compatible_fp_laps(path: Path) -> pd.DataFrame:
+    """Read only current enriched inputs; never relabel or refresh old evidence."""
+    laps = pd.read_pickle(path)
+    require_current_traffic_contract(laps, context=f"cache {path}")
+    return laps
+
+
 def run_historical_fp_race_diagnostic(
     *,
     season: int = 2026,
@@ -1063,7 +1074,7 @@ def run_historical_fp_race_diagnostic(
             )
             lap_root = root / "fastf1/session_laps" / SCHEMA_VERSION / f"year={season}" / f"round={round_number}"
             session_frames = {
-                session: pd.read_pickle(lap_root / f"session={session}/laps.pkl")
+                session: _read_compatible_fp_laps(lap_root / f"session={session}/laps.pkl")
                 for session in SESSION_ORDER
                 if (lap_root / f"session={session}/laps.pkl").is_file()
                 and (current_event_root / "sessions" / session / "latest_parameters.csv").is_file()
@@ -1072,6 +1083,9 @@ def run_historical_fp_race_diagnostic(
             skipped.append(f"round {round_number}: {exc}")
             continue
         provenance.append(str(prior_path))
+        provenance.extend(
+            str(lap_root / f"session={session}/laps.pkl") for session in session_frames
+        )
         if baseline_path.is_file():
             provenance.append(str(baseline_path))
         if race_baseline_path.is_file():
@@ -1338,6 +1352,9 @@ def run_historical_fp_race_diagnostic(
         corrected_performance_frame,
         programme_observations,
     )
+    # Bind reusable derived history to the input contract, not saved FP models.
+    for key, value in current_traffic_contract().items():
+        calibration_frame[key] = value
     frames = {
         "fp_race_degradation_validation.csv": degradation_frame,
         "fp_degradation_partial_update_event_metrics.csv": degradation_event_frame,
@@ -1487,6 +1504,15 @@ def refresh_fp_degradation_calibration(
             history = pd.read_csv(history_path)
         except pd.errors.EmptyDataError:
             history = pd.DataFrame()
+        if not history.empty and any(
+            key not in history or not history[key].eq(value).all()
+            for key, value in current_traffic_contract().items()
+        ):
+            raise ValueError(
+                f"Incompatible FP traffic calibration history {history_path}; "
+                "recompute the diagnostic from compatible enriched laps first. "
+                "Saved historical models have not been changed."
+            )
     destination = calibration_snapshot_root(season, root)
     observations_path = observations_csv_path(season, root)
     completed_rounds = [int(completed_retro_through_round)]
@@ -1626,6 +1652,11 @@ def _build_summary(frames, *, season, candidates, skipped, provenance):
         return rows
     payload = {
         "schema_version": SCHEMA_VERSION, "algorithm_version": ALGORITHM_VERSION,
+        "enriched_lap_traffic_contract": current_traffic_contract(),
+        "saved_fp_parameter_semantics": (
+            "Historical saved estimates, not refitted or certified under the current "
+            "traffic contract by this diagnostic. The contract applies to enriched lap inputs."
+        ),
         "season": int(season), "candidate_rounds": candidates,
         "skipped": skipped, "degradation_metrics": grouped(degradation_endpoints, ["session", "prior_family", "strategy"]),
         "degradation_partial_update_metrics": grouped(
@@ -1750,5 +1781,9 @@ def _build_summary(frames, *, season, candidates, skipped, provenance):
             ),
         },
     }
-    payload["input_fingerprint"] = canonical_hash({"algorithm": ALGORITHM_VERSION, "provenance": provenance_hashes})
+    payload["input_fingerprint"] = canonical_hash({
+        "algorithm": ALGORITHM_VERSION,
+        "enriched_lap_traffic_contract": current_traffic_contract(),
+        "provenance": provenance_hashes,
+    })
     return payload
