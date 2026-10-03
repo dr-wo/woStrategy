@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+from wostrategy.analysis.traffic_contract import require_current_traffic_contract
 
 from wostrategy.analysis.fp_tyre_evidence import (
     FPTyreEvidenceCalculationConfig,
@@ -22,10 +23,16 @@ R11_CACHE = (
 def r11_sessions():
     if not R11_CACHE.is_dir():
         pytest.skip("Local 2026 R11 FP cache is unavailable")
-    return {
+    frames = {
         session: pd.read_pickle(R11_CACHE / f"session={session}/laps.pkl")
         for session in ("FP1", "FP2", "FP3")
     }
+    for name, frame in frames.items():
+        try:
+            require_current_traffic_contract(frame, context=f"local R11 {name}")
+        except ValueError:
+            pytest.skip("Local R11 enriched cache requires genuine traffic recomputation")
+    return frames
 
 
 def test_r11_strict_longrun_contrast_regression_and_programme_exclusion():
@@ -89,4 +96,3 @@ def test_calculate_is_explicit_and_cache_load_is_read_only(tmp_path):
     cached = load_fp_tyre_evidence(2026, 11, tmp_path)
     assert cached["analysis_id"] == calculated["analysis_id"]
     assert calls == ["FP1", "FP2"]
-

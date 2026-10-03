@@ -1,0 +1,33 @@
+{
+  "prerequisite": {
+    "error": null,
+    "lap_rows": 2,
+    "keys": [
+      {
+        "Driver": "A",
+        "LapNumber": 10
+      },
+      {
+        "Driver": "B",
+        "LapNumber": 9
+      }
+    ]
+  },
+  "author": {
+    "error": "KeyError: 'Year'"
+  },
+  "remediated": {
+    "error": null,
+    "lap_rows": 2,
+    "keys": [
+      {
+        "Driver": "A",
+        "LapNumber": 10
+      },
+      {
+        "Driver": "B",
+        "LapNumber": 9
+      }
+    ]
+  }
+}

@@ -1175,7 +1175,7 @@ def test_load_cached_monte_carlo_outputs_requires_matching_metadata_when_expecte
         dry_compounds=("MEDIUM", "HARD"),
         team_baseline_mode="average-drivers",
     )
-    assert metadata["traffic_evaluator_version"] == "unified-traffic-v3"
+    assert metadata["traffic_evaluator_version"] == "unified-traffic-v4"
     assert metadata["traffic_combination_mode"] == "compatibility_min"
     with cached_metadata_path(
         output_dir=tmp_path,
@@ -1274,7 +1274,7 @@ def test_run_rejects_v2_cache_without_compound_overrides(tmp_path, monkeypatch):
         json.dump(
             {
                 "cache_schema": 2,
-                "traffic_evaluator_version": "unified-traffic-v2",
+                "traffic_evaluator_version": "unified-traffic-v3",
                 "traffic_combination_mode": "compatibility_min",
                 "lap_compound_overrides": [],
             },
@@ -1286,7 +1286,7 @@ def test_run_rejects_v2_cache_without_compound_overrides(tmp_path, monkeypatch):
         "monte_carlo_cache_metadata",
         lambda **_kwargs: {
             "cache_schema": 2,
-            "traffic_evaluator_version": "unified-traffic-v3",
+            "traffic_evaluator_version": "unified-traffic-v4",
             "traffic_combination_mode": "compatibility_min",
         },
     )

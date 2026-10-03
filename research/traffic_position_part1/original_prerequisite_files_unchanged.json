@@ -1,0 +1,18 @@
+{
+  "woStrategy": {},
+  "woData": {
+    "src/wodata/live/__init__.py": true,
+    "src/wodata/live/models.py": true,
+    "src/wodata/live/reducer.py": true,
+    "tests/test_live_reducer.py": true,
+    "tests/test_pending_lap_contract.py": true,
+    "tests/test_r15_live_timing.py": true,
+    "tests/fixtures/r15_first_laps.jsonl": true,
+    "tests/fixtures/r15_first_laps.md": true
+  },
+  "woPlanner": {
+    "src/woplanner/analysis/service.py": true,
+    "src/woplanner/live/telemetry.py": true,
+    "tests/test_live_analysis_boundary.py": true
+  }
+}

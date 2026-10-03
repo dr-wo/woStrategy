@@ -19,10 +19,7 @@ from wostrategy.analysis.long_run_performance import (
     select_consecutive_clean_air_runs,
 )
 from wostrategy.tools.load_sessions import load_all_session_laps_with_telemetry_gap_summary
-from wostrategy.analysis.traffic import (
-    COMBINATION_MODE_COMPATIBILITY_MIN,
-    TRAFFIC_EVALUATOR_VERSION,
-)
+from wostrategy.analysis.traffic_contract import require_current_traffic_contract
 
 
 @dataclass(frozen=True)
@@ -41,7 +38,12 @@ def load_cached_weekend_sessions(
     force_refresh: bool = False,
     session_loader: Callable[..., pd.DataFrame] | None = None,
 ) -> WeekendSessionLoadResult:
-    """Read enriched FP laps from woData first, downloading only cache misses."""
+    """Read compatible enriched FP laps, refreshing incompatible caches.
+
+    A supplied session_loader must return already-derived, current-contract
+    frames. This cache wrapper validates and preserves provenance; it cannot
+    certify raw or stale materialized output from an injected loader.
+    """
     normalized_sessions = tuple(dict.fromkeys(str(value).upper() for value in sessions))
     loader = session_loader or _load_fastf1_session
     output: dict[str, pd.DataFrame] = {}
@@ -58,11 +60,11 @@ def load_cached_weekend_sessions(
     for session, path in paths.items():
         if path.exists() and not force_refresh:
             cached = pd.read_pickle(path)
-            if (
-                cached.attrs.get("traffic_evaluator_version") == TRAFFIC_EVALUATOR_VERSION
-                and cached.attrs.get("traffic_combination_mode")
-                == COMBINATION_MODE_COMPATIBILITY_MIN
-            ):
+            try:
+                require_current_traffic_contract(cached, context=f"cache {path}")
+            except ValueError:
+                pass  # Refresh via derivation; never relabel this cache.
+            else:
                 output[session] = cached
                 sources[session] = "wodata-cache"
                 continue
@@ -83,8 +85,7 @@ def load_cached_weekend_sessions(
                 f"{path}. Check year/round/session and network access."
             )
             continue
-        laps.attrs["traffic_evaluator_version"] = TRAFFIC_EVALUATOR_VERSION
-        laps.attrs["traffic_combination_mode"] = COMBINATION_MODE_COMPATIBILITY_MIN
+        require_current_traffic_contract(laps, context=f"loader output for {session}")
         path.parent.mkdir(parents=True, exist_ok=True)
         laps.to_pickle(path)
         output[session] = laps

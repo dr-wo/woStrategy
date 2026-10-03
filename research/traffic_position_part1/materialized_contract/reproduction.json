@@ -1,0 +1,165 @@
+{
+  "baseline_commit": "bf5e12cabf61135c3ce438659b3c7af879d793a1",
+  "input_attrs": {
+    "FP1": {
+      "traffic_combination_mode": "compatibility_min",
+      "traffic_evaluator_version": "unified-traffic-v2"
+    },
+    "FP2": {
+      "traffic_combination_mode": "compatibility_min",
+      "traffic_evaluator_version": "unified-traffic-v2"
+    },
+    "FP3": {
+      "traffic_combination_mode": "compatibility_min",
+      "traffic_evaluator_version": "unified-traffic-v2"
+    }
+  },
+  "input_sha256": {
+    "/Users/zhxutong/dr-wo/woData/fastf1/session_laps/schema_v1/year=2026/round=11/session=FP1/laps.pkl": "c7faf5407d43c13d2d93ce80fa70e2f9a7883ef4dfe7c335b3c9c85cbb114185",
+    "/Users/zhxutong/dr-wo/woData/fastf1/session_laps/schema_v1/year=2026/round=11/session=FP2/laps.pkl": "acab4c2427fac04a9bd3786979672abef4698da581ce67f6addb3d155f4455dd",
+    "/Users/zhxutong/dr-wo/woData/fastf1/session_laps/schema_v1/year=2026/round=11/session=FP3/laps.pkl": "204ab062e398ba41e6546dd1bf2abafd08e98e19c9c47d78339e563f8efc27a7"
+  },
+  "loader": {
+    "unified-traffic-v2": {
+      "after": {
+        "accepted": false,
+        "cache_count": 0,
+        "cached_attrs": [],
+        "cached_quantitative_contents_unchanged": false,
+        "error": "Incompatible FP traffic loader output for FP1: expected {'traffic_evaluator_version': 'unified-traffic-v4', 'traffic_combination_mode': 'compatibility_min'}, got {'traffic_evaluator_version': 'unified-traffic-v2', 'traffic_combination_mode': 'compatibility_min'}. Recompute enriched traffic through the current derivation path first; loading materialized data does not certify its provenance.",
+        "evidence_written": false
+      },
+      "before": {
+        "accepted": true,
+        "cache_count": 3,
+        "cached_attrs": [
+          {
+            "traffic_combination_mode": "compatibility_min",
+            "traffic_evaluator_version": "unified-traffic-v4"
+          },
+          {
+            "traffic_combination_mode": "compatibility_min",
+            "traffic_evaluator_version": "unified-traffic-v4"
+          },
+          {
+            "traffic_combination_mode": "compatibility_min",
+            "traffic_evaluator_version": "unified-traffic-v4"
+          }
+        ],
+        "cached_quantitative_contents_unchanged": true,
+        "current_rejects_previously_mislabelled_cache": {
+          "accepted": false,
+          "error": "Incompatible FP traffic session FP1: TrafficEvaluatorVersion rows contradict the declared unified-traffic-v4 provenance."
+        },
+        "evidence_written": true,
+        "support": {
+          "strict_clean_laps": 55,
+          "strict_drivers": 8,
+          "strict_longrun_runs": 8,
+          "strict_teams": 7
+        }
+      }
+    },
+    "unified-traffic-v3": {
+      "after": {
+        "accepted": false,
+        "cache_count": 0,
+        "cached_attrs": [],
+        "cached_quantitative_contents_unchanged": false,
+        "error": "Incompatible FP traffic loader output for FP1: expected {'traffic_evaluator_version': 'unified-traffic-v4', 'traffic_combination_mode': 'compatibility_min'}, got {'traffic_evaluator_version': 'unified-traffic-v3', 'traffic_combination_mode': 'compatibility_min'}. Recompute enriched traffic through the current derivation path first; loading materialized data does not certify its provenance.",
+        "evidence_written": false
+      },
+      "before": {
+        "accepted": true,
+        "cache_count": 3,
+        "cached_attrs": [
+          {
+            "traffic_combination_mode": "compatibility_min",
+            "traffic_evaluator_version": "unified-traffic-v4"
+          },
+          {
+            "traffic_combination_mode": "compatibility_min",
+            "traffic_evaluator_version": "unified-traffic-v4"
+          },
+          {
+            "traffic_combination_mode": "compatibility_min",
+            "traffic_evaluator_version": "unified-traffic-v4"
+          }
+        ],
+        "cached_quantitative_contents_unchanged": true,
+        "current_rejects_previously_mislabelled_cache": {
+          "accepted": false,
+          "error": "Incompatible FP traffic session FP1: TrafficEvaluatorVersion rows contradict the declared unified-traffic-v4 provenance."
+        },
+        "evidence_written": true,
+        "support": {
+          "strict_clean_laps": 55,
+          "strict_drivers": 8,
+          "strict_longrun_runs": 8,
+          "strict_teams": 7
+        }
+      }
+    }
+  },
+  "materialized": {
+    "None": {
+      "after": {
+        "accepted": false,
+        "error": "Incompatible FP traffic session FP1: expected {'traffic_evaluator_version': 'unified-traffic-v4', 'traffic_combination_mode': 'compatibility_min'}, got {'traffic_evaluator_version': None, 'traffic_combination_mode': None}. Recompute enriched traffic through the current derivation path first; loading materialized data does not certify its provenance."
+      },
+      "before": {
+        "accepted": true,
+        "contrasts": 3,
+        "support": {
+          "strict_clean_laps": 55,
+          "strict_drivers": 8,
+          "strict_longrun_runs": 8,
+          "strict_teams": 7
+        }
+      }
+    },
+    "unified-traffic-v2": {
+      "after": {
+        "accepted": false,
+        "error": "Incompatible FP traffic session FP1: expected {'traffic_evaluator_version': 'unified-traffic-v4', 'traffic_combination_mode': 'compatibility_min'}, got {'traffic_evaluator_version': 'unified-traffic-v2', 'traffic_combination_mode': 'compatibility_min'}. Recompute enriched traffic through the current derivation path first; loading materialized data does not certify its provenance."
+      },
+      "before": {
+        "accepted": true,
+        "contrasts": 3,
+        "support": {
+          "strict_clean_laps": 55,
+          "strict_drivers": 8,
+          "strict_longrun_runs": 8,
+          "strict_teams": 7
+        }
+      }
+    },
+    "unified-traffic-v3": {
+      "after": {
+        "accepted": false,
+        "error": "Incompatible FP traffic session FP1: expected {'traffic_evaluator_version': 'unified-traffic-v4', 'traffic_combination_mode': 'compatibility_min'}, got {'traffic_evaluator_version': 'unified-traffic-v3', 'traffic_combination_mode': 'compatibility_min'}. Recompute enriched traffic through the current derivation path first; loading materialized data does not certify its provenance."
+      },
+      "before": {
+        "accepted": true,
+        "contrasts": 3,
+        "support": {
+          "strict_clean_laps": 55,
+          "strict_drivers": 8,
+          "strict_longrun_runs": 8,
+          "strict_teams": 7
+        }
+      }
+    }
+  },
+  "source_files_unchanged": true,
+  "valid_v4": {
+    "all_non_identity_payload_fields_equal": true,
+    "contrasts": 3,
+    "support": {
+      "strict_clean_laps": 60,
+      "strict_drivers": 2,
+      "strict_longrun_runs": 6,
+      "strict_teams": 2
+    }
+  }
+}

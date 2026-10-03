@@ -5,6 +5,7 @@ from typing import Callable, Union
 
 import pandas as pd
 from wostrategy.analysis.traffic import summarize_lap_gap_metrics
+from wostrategy.analysis.traffic_contract import current_traffic_contract
 
 from .telemetry_loader import (
     TelemetryDataLoader,
@@ -101,6 +102,10 @@ def load_session_laps_with_telemetry_gap_summary(
                 continue
 
             session_laps = session.laps.copy()
+            # Source laps are not proof of derived traffic. Only the successful
+            # current aggregation below may assign enriched traffic identity.
+            for key in current_traffic_contract():
+                session_laps.attrs.pop(key, None)
             session_laps["Year"] = year
             session_laps["Round"] = round_number
             session_laps["SessionName"] = session_name
@@ -127,16 +132,31 @@ def load_session_laps_with_telemetry_gap_summary(
                 gap_summary = pd.DataFrame()
 
             if not gap_summary.empty:
+                keys = ["Year", "Round", "SessionName", "Driver", "LapNumber"]
+                replaced = gap_summary.columns.difference(keys)
+                session_laps = session_laps.drop(
+                    columns=session_laps.columns.intersection(replaced)
+                )
                 session_laps = session_laps.merge(
                     gap_summary,
                     on=["Year", "Round", "SessionName", "Driver", "LapNumber"],
                     how="left",
                 )
+                session_laps.attrs.update(current_traffic_contract())
 
             all_laps.append(session_laps)
 
     if all_laps:
-        return pd.concat(all_laps, ignore_index=True)
+        output = pd.concat(all_laps, ignore_index=True)
+        contract = current_traffic_contract()
+        # pandas may drop attrs when unrelated source metadata differs. Preserve
+        # this identity only if every included session was actually derived.
+        if all(all(frame.attrs.get(k) == v for k, v in contract.items()) for frame in all_laps):
+            output.attrs.update(contract)
+        else:
+            for key in contract:
+                output.attrs.pop(key, None)
+        return output
 
     return pd.DataFrame(columns=empty_columns or ["Year", "Round", "SessionName"])
 

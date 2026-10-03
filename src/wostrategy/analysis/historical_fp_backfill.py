@@ -9,10 +9,7 @@ import pandas as pd
 
 from wodata import get_data_root, get_fastf1_session_laps_path
 from wodata.artifacts import weekend_model_root
-from wostrategy.analysis.traffic import (
-    COMBINATION_MODE_COMPATIBILITY_MIN,
-    TRAFFIC_EVALUATOR_VERSION,
-)
+from wostrategy.analysis.traffic_contract import require_current_traffic_contract
 
 
 SESSIONS = ("FP1", "FP2", "FP3")
@@ -70,15 +67,8 @@ def inspect_fp_session_artifact(
             if laps.empty:
                 raw_status = "invalid/stale"
                 raw_reason = "canonical enriched lap cache is empty"
-            elif (
-                laps.attrs.get("traffic_evaluator_version")
-                != TRAFFIC_EVALUATOR_VERSION
-                or laps.attrs.get("traffic_combination_mode")
-                != COMBINATION_MODE_COMPATIBILITY_MIN
-            ):
-                raw_status = "invalid/stale"
-                raw_reason = "traffic cache metadata does not match current evaluator"
             else:
+                require_current_traffic_contract(laps, context=f"cache {raw_path}")
                 raw_status = "cached"
                 raw_hash = sha256(raw_path.read_bytes()).hexdigest()
         except (OSError, ValueError, TypeError) as exc:

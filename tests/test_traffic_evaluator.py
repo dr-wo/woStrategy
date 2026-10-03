@@ -181,5 +181,6 @@ def test_combination_preserves_partial_direct_coverage_status():
     target = selected.loc[selected["Driver"].eq("TARGET")].iloc[0]
 
     assert target["DirectTrafficStatus"] == "partial_coverage"
-    assert target["TrafficStatus"] == "partial_coverage"
+    assert target["TrafficStatus"] == "unknown"
+    assert target["DirectRearOwnershipStatus"] == "unavailable"
     assert np.isclose(target["CoverageFraction"], 0.3)

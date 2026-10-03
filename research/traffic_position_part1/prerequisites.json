@@ -1,0 +1,30 @@
+{
+  "woStrategy": {
+    "original_head": "57495559a860814a96ade41f30dc74df699c9ed6",
+    "prerequisites": {},
+    "review_base": "57495559a860814a96ade41f30dc74df699c9ed6"
+  },
+  "woData": {
+    "original_head": "bd40bbb85dc5381c66232abfc41324d216dc701f",
+    "prerequisites": {
+      "src/wodata/live/__init__.py": "fcf1c9061955d199bfeff41b853af9db27c0136eda48621973ee80816f846d93",
+      "src/wodata/live/models.py": "27764028e00c6435ef345e05523a4d66cfdf9dc7f7c4a086a826b9dfe9c8cbc6",
+      "src/wodata/live/reducer.py": "7851c0f621d34989aba1404830424c6356169d08f83ab0412e2c549e75db0713",
+      "tests/test_live_reducer.py": "38c584657339cf8a0592c0dc4998db15650536cc8735f06c461c5361a830c025",
+      "tests/test_pending_lap_contract.py": "83759efa7180c9e6569e87da2d2d05d23f8cfef0c477d005ca6075d9445d5977",
+      "tests/test_r15_live_timing.py": "0d928da22b2dc45dc794c6b0f03891ecb62f451f3383226908b7e63b0232bbdf",
+      "tests/fixtures/r15_first_laps.jsonl": "0c2dfcfc4ffe84b793186791f09da7fb27593382823ff3aa5a50f803125e2049",
+      "tests/fixtures/r15_first_laps.md": "e19031c5fcd651502d18b09e8fee2b33b6c96115f02efe45dc652db8660c2f9e"
+    },
+    "review_base": "ce07e9fa7408e4fd0e792b596e65100702c45497"
+  },
+  "woPlanner": {
+    "original_head": "73f42aa9e82a3cd23c87b2f657b929ebcecc8040",
+    "prerequisites": {
+      "src/woplanner/analysis/service.py": "7eabf297c2543f138fb11a3810eb0bb567f83b2c1b300569713033d570790e16",
+      "src/woplanner/live/telemetry.py": "0e5d06d058bc60b2b1ad77719ba785a3338112911a073861e9d9b3724cb2baf4",
+      "tests/test_live_analysis_boundary.py": "912112c61e74ca64df6c9b59b472fa7b2e05db0f86ebb8eeec631efd15360e29"
+    },
+    "review_base": "b08ba5e9d0de15c2daa7146538690ba7ffba0e3e"
+  }
+}

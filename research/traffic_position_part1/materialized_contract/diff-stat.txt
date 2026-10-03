@@ -1,0 +1,11 @@
+ src/wostrategy/analysis/fp_race_diagnostic.py     |   30 +---
+ src/wostrategy/analysis/fp_tyre_evidence.py       |   20 ++
+ src/wostrategy/analysis/historical_fp_backfill.py |   14 --
+ src/wostrategy/core/pre_race_session_data.py      |   25 ++-
+ src/wostrategy/core/session_loader.py             |   22 +++
+ tests/test_fp_traffic_cache_contract.py           |   16 ++
+ tests/test_fp_tyre_evidence.py                    |   10 +
+ tests/test_pre_race_session_data.py               |    9 +
+ src/wostrategy/analysis/traffic_contract.py       |   36 ++++
+ tests/test_fp_materialized_contract.py            |  172 +++++++++++++++++++++
+ 10 files changed, 300 insertions(+), 54 deletions(-)
