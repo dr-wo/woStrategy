@@ -82,10 +82,20 @@ authoritatively finds no valid candidate, legacy data remains diagnostic-only.
 Physical circular traffic is an independent valid source and can still identify
 nearby or lapped cars.
 
-The traffic evaluator version is `unified-traffic-v3`. Traffic-dependent session
+The traffic evaluator version is `unified-traffic-v4`. Traffic-dependent session
 and Monte Carlo caches must match that evaluator metadata before reuse, including
 normal cached runs as well as paths with explicit overrides. A version mismatch
-or missing metadata requires regeneration rather than silent reuse.
+or missing metadata requires regeneration rather than silent reuse. Fresh FP
+materialized-frame, diagnostic and calibration-history consumers also require
+`compatibility_min` provenance; contradictory row metadata is rejected. Saved
+models/calibrations remain historical artefacts without retroactive certification.
+Rear gaps are owned by target driver/sample time/target lap, including legacy paths.
+
+Default live Race traffic is `traffic-unavailable`: the old zero-origin telemetry
+reconstruction is disabled, existing model/history is retained, and there is no
+automatic sector fallback. Sector traffic requires explicit selection. Position.z
+history and position traffic remain diagnostic-only; position gaps do not enter
+production clean-lap selection. See [traffic evaluation](traffic_evaluation.md).
 
 ## Identifiability
 

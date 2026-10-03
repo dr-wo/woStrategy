@@ -1,0 +1,4 @@
+sss                                                                      [100%]
+=========================== short test summary info ============================
+SKIPPED [3] tests/test_fp_tyre_evidence.py:34: Local R11 enriched cache requires genuine traffic recomputation
+3 skipped in 1.00s

@@ -1,0 +1,20 @@
+{
+  "woData": {
+    "preserved_original_files": 3689,
+    "unrelated_patch_hunks_identical": true,
+    "head": "8c2ba265ca429562dc1737fb11449d3e8112bef7",
+    "feature_head": "671eb26f47d6f3110e859e4d43cd7e00cecef4ca"
+  },
+  "woStrategy": {
+    "preserved_original_files": 1157,
+    "unrelated_patch_hunks_identical": true,
+    "head": "6d15d69f947a9589f63b4b178088bbb1284b1fa6",
+    "feature_head": "dac01810fcdfb4ce91a5993e90b67848933b2d5b"
+  },
+  "woPlanner": {
+    "preserved_original_files": 0,
+    "unrelated_patch_hunks_identical": true,
+    "head": "b303a11eb9b14bd26db72549e3bea70d7723668f",
+    "feature_head": "909a7cc28cfc1a1b5d1da3ce25067be5d8181cb2"
+  }
+}

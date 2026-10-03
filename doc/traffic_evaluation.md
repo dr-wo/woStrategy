@@ -2,8 +2,38 @@
 
 Traffic and clean-lap calculations live in
 `wostrategy.analysis.traffic`. Retrospective FastF1 loading remains in the core
-loading layer, and live/archive parsing remains in `woData`; those adapters
-normalize their samples before calling the same evaluator and clean-lap mask.
+loading layer, and live/archive parsing remains in `woData`. The numerical core
+accepts normalized telemetry, but default live Race clean-lap decisions no longer
+use the old zero-origin reconstruction.
+
+## Current live and FP contract (R&D-2 Part 1)
+
+Default automatic live traffic returns `traffic-unavailable`, including repeated
+requests. Existing Race model state, evidence counts and run/parameter history
+are retained. There is **no automatic sector fallback**. Sector traffic requires
+explicit selection and keeps its `SECTOR_BOUNDARY_FALLBACK` provenance; prepared
+rows cannot bypass the quarantine or impersonate sector traffic.
+
+`Position.z` history supports the track map and a diagnostic position-traffic
+shadow. Position-derived gaps are **not production-active**. woPlanner's track-map
+store and causal replay builder use the same woData retention implementation:
+latest 1,200 sample-time seconds, capped at 6,000 samples per driver. Delayed
+batches are sorted by embedded timestamps, with unknown status for conflicting
+samples. Diagnostic cuts reconstruct only packets through the ingress boundary
+and then filter sample time. A warmed later snapshot cannot establish historical
+arrival causality; raw positions do not enter MC inputs.
+
+Fresh traffic-derived FP evidence requires `unified-traffic-v4` and
+`compatibility_min` provenance. Cache loaders invalidate stale identities;
+materialized frames and direct diagnostic/calibration consumers reject v2, v3,
+unversioned or contradictory evidence before fresh quantitative analysis. Loading
+a frame cannot certify it: genuine derivation is required. Input hashes and
+contract metadata protect provenance. Saved models and calibrations remain
+historical artefacts and are not rewritten or retroactively certified as v4.
+
+Part 1 is complete with independent final gate **PASS**. Position-gap activation
+remains a separate unresolved task. Rear-filter relaxation belongs to Part 2 and
+was not implemented. See [closure evidence](../research/traffic_position_part1/CLOSURE.md).
 
 ## Normalized input and finalization
 
@@ -20,16 +50,14 @@ drivers:
 `Year`, `Round`, and `SessionName` are optional grouping keys. `Distance` may be
 supplied by retrospective FastF1 telemetry and is used as a phase anchor; it is
 not required by the normalized live contract. `CarData.z` supplies speed and
-`Position.z` may still be retained by archive tooling, but the shared estimator
-does not require X/Y position coordinates or FastF1's precomputed
+`Position.z` is retained separately for the track map and diagnostic shadow.
+The retrospective telemetry estimator does not require X/Y coordinates or FastF1's precomputed
 `DriverAhead` columns.
 
-Live and replay results are provisional while a lap can still receive samples.
-They become comparable with retrospective output after the lap is complete and
-the telemetry watermark has advanced beyond it. The direct component may remain
-unknown for an incomplete current lap. Batch and replay delivery order do not
-affect a finalized result because input is sorted and duplicate timestamps keep
-the latest sample.
+The direct component may remain unknown for an incomplete current lap. Input is
+sorted by sample time. Conflicting target lap labels at one timestamp are barriers
+to rear ownership; packet order cannot decide the target lap. These numerical
+finalization rules do not lift the default live quarantine.
 
 "Shared" means that equivalent normalized input produces the same evaluation and
 clean-lap decision. It does not mean the upstream feeds are currently identical.
@@ -40,7 +68,8 @@ compatibility compromise: other retrospective consumers still use its distance,
 position, and legacy `DriverAhead` columns, and changing that general loader in
 the traffic migration would have altered unrelated plots and caches. Consequently,
 batch/replay parity is guaranteed for the same normalized rows, while raw
-FastF1-versus-live results are expected to be close rather than bit-for-bit equal.
+FastF1-versus-live comparisons require separate validation. Equivalent input
+parity is not evidence that live zero-origin gaps are valid.
 
 ## Estimator components
 
@@ -58,6 +87,12 @@ This preserves FastF1's classification-lap anchoring for compatibility. It is
 therefore not the authority for nearby lapped traffic. Retrospective output also
 retains legacy FastF1-supplied columns, when present, under `LegacyFastF1...`
 names so migration differences remain inspectable.
+
+Rear observations belong to the target driver, sample time and target lap, never
+the follower's lap. Exact target labels or agreeing bounded brackets establish
+ownership; conflicting or unsupported labels remain unavailable. Session grouping
+and legacy/fallback paths obey the same rule. This ownership change and the v4
+contract land together so stale traffic semantics cannot survive in fresh FP evidence.
 
 ### `PHYSICAL_CIRCULAR`
 
@@ -85,10 +120,9 @@ separately, and the selected value is the smaller available value on each side.
 This conservative historical behavior is intentionally a compatibility option,
 not an irreversible definition of traffic.
 
-Sector-boundary traffic is not numerically merged into telemetry mean gaps. It
-is automatically selected only when telemetry is unavailable or does not pass
-basic quality/coverage checks. A manual force-sector mode exists for diagnostics.
-Every selected result exposes:
+Sector-boundary traffic is not numerically merged into telemetry mean gaps.
+It is available only through explicit sector selection; missing telemetry never
+selects it automatically. Every selected result exposes:
 
 - `TrafficMethod`
 - `TrafficStatus`
@@ -100,7 +134,8 @@ Every selected result exposes:
 Component values use `Direct...` and `Physical...` prefixes. Missing telemetry
 is represented as `unknown` or `partial_coverage`, never as an infinite clean
 gap. The shared clean-lap mask requires usable traffic evidence and applies the
-same ahead/behind thresholds to retrospective and finalized live/replay laps.
+unchanged ahead/behind thresholds where valid selected evidence is available.
+Default live/replay automatic traffic supplies no such evidence.
 
 ## Performance assumptions
 
@@ -117,12 +152,16 @@ not a portable performance guarantee. Runtime scales with telemetry rows and
 drivers; the Monte Carlo sample count (for example 80,000 race-model samples) is
 a separate later calculation and does not multiply traffic-estimator work.
 
-The live store retains a rolling 12-lap telemetry window per driver, and model
-recalculation is scheduled at leader-lap boundaries rather than for every
-incoming telemetry message. The retained window is re-evaluated so clean-lap
-selection stays deterministic; it does not grow to a full 72-lap race. Archive
-batch evaluation may contain the full session and follows the same numerical
-path.
+woData's general store defaults to a 12-lap car-telemetry window. woPlanner's
+worker retains generation message history for causal replay and disables that
+car-telemetry lap limit. Position retention is separately bounded as above:
+at most 132,000 position samples per store for 22 driver identities. At 5 Hz the
+6,000-sample cap covers about 20 minutes; at 10 Hz it covers about 10 minutes.
+The cap therefore remains meaningful even for dense timestamp streams, while
+recent complete laps remain available to the track map. This is a bound on the
+position buffers, not the separate raw recording or replay-message history.
+Recalculation requests occur at leader-lap boundaries; automatic requests return
+the quarantine status without fitting a new Race update.
 
 ## Known assumptions and limits
 
@@ -131,7 +170,7 @@ path.
   interval is too wide; coverage records the resulting missing samples.
 - Lap normalization assumes enough plausible speed samples to represent a lap.
 - Pit-lane, stopped-car, timing dropout, and lap-attribution anomalies can lower
-  coverage and trigger sector fallback.
+  coverage; they never trigger automatic sector fallback.
 - Run-continuity rules and numerical threshold tuning are outside this traffic
   implementation and remain unchanged.
 
@@ -162,25 +201,15 @@ rather than changed as incidental refactoring:
   measurable and cache-safe.
 - **Do not blend sector gaps into telemetry means.** Four boundary observations
   have different sampling semantics from continuous telemetry. Sector data is an
-  all-or-nothing fallback with explicit provenance so a selected mean never mixes
+  explicitly selected source with provenance so a selected mean never mixes
   incomparable estimators.
-- **Archive Position.z but do not require it.** XYZ coordinates would need circuit
-  projection, orientation, and track-map calibration before they yield along-track
-  gaps. Speed integration already matches the retrospective estimator contract;
-  parsing Position.z into the traffic hot path would add memory and replay cost
-  without solving those calibration problems.
-- **Bound live memory to 12 laps per driver.** Clean-run fitting needs recent laps,
-  not the full race telemetry history. The window keeps recalculation cost bounded
-  while leaving enough completed laps for current clean-run selection. It is a
-  scheduling/storage choice, not a change to the evaluator.
-- **Infer live lap attribution from timing state.** `CarData.z` does not carry the
-  strategy lap number, so `woData` assigns samples to the driver's next incomplete
-  lap. This assumes timing and car messages are processed chronologically. Samples
-  around a delayed finish-line update can be attributed to the adjacent lap;
-  coverage/fallback handles gross failures, but this remains a known source-adapter
-  limitation.
-- **Infer live circuit length from plausible completed speed integrations.** Live
-  data has no required static circuit-length input. The median plausible lap span
-  avoids coupling the reducer to event metadata; until enough data exists, the
-  sector estimator is used. A known circuit length can replace this inference later
-  without changing the normalized contract.
+- **Keep position gaps diagnostic.** Track-map visualization and the position
+  shadow use retained XYZ samples, but neither validates production time-gap
+  thresholds. Production activation requires a separate decision and evidence.
+- **Preserve causal position retention.** The shared capped/time-window policy
+  supports both track-map references and diagnostic analysis cuts. Replay
+  reconstruction respects arrival order before filtering embedded sample times.
+- **Do not infer valid live gaps from speed origins.** `CarData.z` lap attribution
+  follows timing state and can lag a physical crossing. Independent lap-labelled
+  speed origins are not a shared track coordinate. The default live path is
+  quarantined instead of inferring circuit length and automatically using sectors.

@@ -1,0 +1,11 @@
+...................................................................sss.. [ 37%]
+........................................................................ [ 74%]
+......................................F..........                        [100%]
+=================================== FAILURES ===================================
+_ test_relative_team_pace_rows_use_sample_paired_relative_baseline_when_available _
+tests/test_race_performance_review.py:967: in test_relative_team_pace_rows_use_sample_paired_relative_baseline_when_available
+    assert beta["PercentageToReferenceTeam"] == 200.0 / 3.0
+E   assert 66.66666666666666 == (200.0 / 3.0)
+=========================== short test summary info ============================
+FAILED tests/test_race_performance_review.py::test_relative_team_pace_rows_use_sample_paired_relative_baseline_when_available
+1 failed, 189 passed, 3 skipped in 19.41s

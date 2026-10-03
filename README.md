@@ -410,9 +410,12 @@ analysis scripts.
 - Clean-air summaries include min/mean time and distance gaps to cars ahead and
   behind when the data are available.
 
-Retrospective, archive-replay, and live paths now pass the same normalized
-`Driver`, `SessionTime`, `LapNumber`, and `Speed` contract to the traffic
-implementation in `wostrategy.analysis.traffic`. See
+The retrospective traffic evaluator accepts normalized `Driver`, `SessionTime`,
+`LapNumber`, and `Speed` inputs. Default live/replay Race traffic is quarantined
+as `traffic-unavailable`; existing model/history is retained, sector mode must be
+selected explicitly, and position-derived gaps remain diagnostic-only. Fresh
+traffic-derived FP evidence requires `unified-traffic-v4` / `compatibility_min`;
+saved models remain historical artefacts without retroactive v4 certification. See
 [Traffic evaluation](doc/traffic_evaluation.md) for its assumptions, component
 outputs, performance model, fallback rules, and finalization semantics.
 
@@ -492,9 +495,10 @@ circular physical result independently visible. The current versioned
 `compatibility_min` selector deliberately chooses the smaller available metric,
 preserving the historical conservative rule while allowing either component to
 be compared or replaced later. Physical circuit phase—not classification lap
-difference—is used to locate nearby lapped cars. If telemetry is unavailable or
-fails coverage checks, the sector-boundary estimator is selected as a fallback
-with explicit method and status provenance.
+difference—is used to locate nearby lapped cars in retrospective telemetry.
+The old zero-origin reconstruction is disabled for default live Race clean-lap
+decisions. There is no automatic sector fallback; explicitly selected sector
+traffic keeps its own method and status provenance.
 
 #### 2.0.3 Other data clean tools
 

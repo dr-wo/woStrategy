@@ -635,7 +635,7 @@ Scripts are importable modules under `src/wostrategy/script`.
 - Loads one race or a numeric race range with telemetry gap summaries.
 - Supports feature race/default race sessions through `--session`, defaulting to `R`.
 - Requires telemetry gap data for clean-air filtering; missing or empty gap columns skip the race and write an empty diagnostic CSV set.
-- Telemetry gap summaries prefer physical same-session-time track-position distances for both ahead and behind gaps, which keeps lapped-car scenarios symmetric; the older FastF1 driver-ahead stream remains a fallback.
+- Retrospective traffic keeps direct and circular-physical components under the v4 `compatibility_min` contract, with rear gaps owned by target driver/sample time/target lap. Fresh FP evidence rejects stale or unversioned traffic; saved models remain historical. Default live Race traffic is quarantined as `traffic-unavailable`, retains model/history and never automatically falls back to sectors. Position-derived gaps remain diagnostic-only. See [traffic evaluation](traffic_evaluation.md).
 - Consecutive clean-air selection treats `--min-clean-air-laps` as an inclusive minimum.
 - `--treat-stint-as-whole` switches clean-lap selection from consecutive chunks to one whole clean-lap group per driver/stint, using `--min-clean-air-laps` as a minimum total clean-lap count for that stint.
 - `--tyre-age-mode {stint,overall}` controls tyre-age correction input. `stint` is the default and uses `StintLapNumber - 1` or counted stint laps; `overall` uses `TyreLife - 1`.

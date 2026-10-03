@@ -1,0 +1,36 @@
+{
+  "woData": [
+    "test_live_reducer",
+    "test_live_telemetry_buffers",
+    "test_pending_lap_contract",
+    "test_r15_live_timing",
+    "test_live_replay"
+  ],
+  "woStrategy": [
+    "test_position_traffic",
+    "test_traffic_evaluator",
+    "test_traffic_review_remediation",
+    "test_r14_clean_lap_traffic",
+    "test_fp_materialized_contract",
+    "test_fp_traffic_cache_contract",
+    "test_fp_tyre_evidence",
+    "test_fp_race_diagnostic",
+    "test_fp_pre_race_report",
+    "test_historical_fp_backfill",
+    "test_pre_race_session_data",
+    "test_telemetry_loader",
+    "test_race_performance_review"
+  ],
+  "woPlanner": [
+    "test_position_retention_integration",
+    "test_telemetry_worker",
+    "test_live_analysis_boundary",
+    "test_analysis_service",
+    "test_analysis_worker",
+    "test_track_map",
+    "test_r13_track_map_replay",
+    "test_live_gui",
+    "test_live_presentation",
+    "test_compound_offset_contract"
+  ]
+}

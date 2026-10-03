@@ -1,10 +1,16 @@
 # R&D-2 Part 1 — position traffic correctness repair
 
-**Historical author report, superseded for merge readiness:** the independent
-review returned FAIL / NOT READY. Read [the remediation report](remediation/REPORT.md)
-for corrected ownership, cache identity, unknown-status handling and explicit
-live quarantine. Evidence and hashes below describe the original Part 1 run;
-they are not a claim that the original patch passed independent review.
+**Current closure: Part 1 complete; independent final gate PASS for A / B / C.**
+See [CLOSURE.md](CLOSURE.md) for local integration and merged-main validation.
+Position-gap activation remains a separate unresolved task; rear-filter relaxation
+belongs to Part 2 and was not implemented.
+
+**Historical author report:** an earlier independent review returned FAIL / NOT
+READY, followed by the recorded remediation and final PASS. Evidence and hashes
+below describe the original experiment, not the final merged source. The staged
+review history remains in [remediation/REPORT.md](remediation/REPORT.md),
+[materialized_contract/REPORT.md](materialized_contract/REPORT.md) and
+[final_narrow/REPORT.md](final_narrow/REPORT.md).
 
 **Decision: retain and expose the position shadow, repair target ownership, and
 quarantine the defective default live gap reconstruction. Do not activate

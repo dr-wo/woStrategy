@@ -1,6 +1,13 @@
-# Part 1 reproduction
+# R&D-2 Part 1 — complete
 
-For the independent-review fixes and current checks, start with
+**Independent final gate: PASS for A / B / C.** Part 1 is integrated locally.
+Start with [CLOSURE.md](CLOSURE.md) for merged commits, the track-map retention
+resolution and merged-main validation. Position-gap activation remains unresolved
+and separate; rear-filter relaxation belongs to Part 2 and was not implemented.
+
+## Historical reproduction
+
+For the historical independent-review fixes and their checks, see
 [remediation/REPORT.md](remediation/REPORT.md) and
 [remediation/README.md](remediation/README.md). The instructions below preserve
 the original historical experiment; its source identities predate remediation.
@@ -65,4 +72,5 @@ noninteractive test process.
 
 Review each repository against its `review_base` in `prerequisites.json`; use
 `git diff <review_base>` and `git diff --stat <review_base>`. Prerequisite changes
-can separately be reviewed against `original_head`. Nothing is merged or pushed.
+can separately be reviewed against `original_head`. These instructions describe
+the pre-integration experiment; current closure is recorded in CLOSURE.md.
