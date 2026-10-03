@@ -1,0 +1,11 @@
+{
+  "closure_zip_sha256": "82c9df45ec75e4fc6f37113194a1c4cc75c73c435caebab2849f8aa33227af29",
+  "oracle_csv_sha256": "b2a238a4f67d0b545d3248e08591983d6d8f8b51c4aab8bf83e79361f12c2fb2",
+  "input_origin": "Verified raw clean-lap rows and full_index forecast/base/count arrays named by immutable closure reproduce.py; no generated BSF scores used as inputs.",
+  "kernel_sources": {
+    "/private/tmp/rd4g_study/structure/support.py": "93f000475c95a144c4fdb45c9842e08697840f588626e22086042eed348383f3",
+    "/private/tmp/rd4h_study/transfer/empirical_transfer.py": "e7cf2158ea21fea65b51650280ab1a9d3bc9c3c388d483b46729ef00fad7564e",
+    "/private/tmp/rd4h_study/condition_graph.py": "c993461b61e1cfcef75f37aebe9f3ffae603036e71cd7076466367cb7a3efab3",
+    "/private/tmp/rd4g_study/baseline/canonical.py": "f0d56c00fe8baf96fad7da4078dc3a1b17aa43b6c04d591aa7583e0b54ddda47"
+  }
+}

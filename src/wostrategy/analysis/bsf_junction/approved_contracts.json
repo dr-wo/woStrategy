@@ -1,0 +1,588 @@
+{
+  "provenance": {
+    "approval": "R&D-4 closed 2026 R1-R15 projected_mean; source hashes only, no score reconstruction from oracle",
+    "closure_package_sha256": "82c9df45ec75e4fc6f37113194a1c4cc75c73c435caebab2849f8aa33227af29"
+  },
+  "versions": {
+    "rd4h_projected_mean_v1": {
+      "closed_history": {
+        "rounds": {
+          "1": {
+            "identity": "d1c3bd6dff6dbd533610a0caceb9880d0e4dda46290097c19a0a833a64f77e34",
+            "legacy_source_names": {
+              "clean": "race_performance_2026_1_R_clean_laps.csv",
+              "delta": "race_performance_2026_1_R_compound_delta.csv",
+              "metadata": "race_performance_2026_1_R_metadata.json",
+              "parameters": "race_performance_2026_1_R_sample_parameters.csv",
+              "team_deg": "race_performance_2026_1_R_team_compound_degradation.csv"
+            },
+            "sources": {
+              "clean": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=1/session=R/race_performance_2026_1_R_clean_laps.csv",
+                "sha256": "6eeb530f0941e781814bcd558158e13e942ab74531c79314221c70fd54b5c41f"
+              },
+              "delta": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=1/session=R/race_performance_2026_1_R_compound_delta.csv",
+                "sha256": "d0517dec6eba769a7903aa0f7affb972506aa428427b282d20e06e2bfbaadf23"
+              },
+              "metadata": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=1/session=R/race_performance_2026_1_R_metadata.json",
+                "sha256": "597506a6f31e2d4e5ce8b2b6c15c7067b19d1ae4c4ba77477b96af0905e93fef"
+              },
+              "parameters": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=1/session=R/race_performance_2026_1_R_sample_parameters.csv",
+                "sha256": "3bd67ed4aecb0233a6e86de26b428453c4f5bdca554dc27a391748a150416729"
+              },
+              "team_deg": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=1/session=R/race_performance_2026_1_R_team_compound_degradation.csv",
+                "sha256": "9d36e1a4c6d948f60b9d12ebceb57ceebf8a2a9e6193ed1958a70a7d4bef0bd9"
+              }
+            }
+          },
+          "10": {
+            "identity": "f708a44cee6b48dcce4d1bfd35629f969ad7782a39198e9d9f7d461ee9ac63b2",
+            "legacy_source_names": {
+              "clean": "race_performance_2026_10_R_clean_laps.csv",
+              "delta": "race_performance_2026_10_R_compound_delta.csv",
+              "metadata": "race_performance_2026_10_R_metadata.json",
+              "parameters": "race_performance_2026_10_R_sample_parameters.csv",
+              "team_deg": "race_performance_2026_10_R_team_compound_degradation.csv"
+            },
+            "sources": {
+              "clean": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=10/session=R/race_performance_2026_10_R_clean_laps.csv",
+                "sha256": "0992f1852a61419cbe759d2bca0b7a6dac9a962d57b5b86a8d33e48f3432b79d"
+              },
+              "delta": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=10/session=R/race_performance_2026_10_R_compound_delta.csv",
+                "sha256": "684977821278425846748195ab5a72a581d51f89343a975901287355003c391b"
+              },
+              "metadata": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=10/session=R/race_performance_2026_10_R_metadata.json",
+                "sha256": "597506a6f31e2d4e5ce8b2b6c15c7067b19d1ae4c4ba77477b96af0905e93fef"
+              },
+              "parameters": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=10/session=R/race_performance_2026_10_R_sample_parameters.csv",
+                "sha256": "b28bbd10354588e5d2701adae625ba8120bb2a5c035930fd9be2c66553c9f76e"
+              },
+              "team_deg": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=10/session=R/race_performance_2026_10_R_team_compound_degradation.csv",
+                "sha256": "ad17fe5d059c35b55f6da9ce0b28dda086d9b5ebcaa65ce2e7999af1d7f580d3"
+              }
+            }
+          },
+          "11": {
+            "identity": "8c2b7c420c1ae778f2ea706b28d96124ba02da7d8f6047402e02242509322a2a",
+            "legacy_source_names": {
+              "clean": "race_performance_2026_11_R_clean_laps.csv",
+              "delta": "race_performance_2026_11_R_compound_delta.csv",
+              "metadata": "race_performance_2026_11_R_metadata.json",
+              "parameters": "race_performance_2026_11_R_sample_parameters.csv",
+              "team_deg": "race_performance_2026_11_R_team_compound_degradation.csv"
+            },
+            "sources": {
+              "clean": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=11/session=R/race_performance_2026_11_R_clean_laps.csv",
+                "sha256": "d9cd402b05d8aa1eb3dbaf3edb1e4efb2bb44d7c8d6ab1d9e5839da5c5ece5b0"
+              },
+              "delta": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=11/session=R/race_performance_2026_11_R_compound_delta.csv",
+                "sha256": "1dfdae59429377fdf57da9e25d36abe077e86e59996e65e125af9cd4f97f47d4"
+              },
+              "metadata": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=11/session=R/race_performance_2026_11_R_metadata.json",
+                "sha256": "597506a6f31e2d4e5ce8b2b6c15c7067b19d1ae4c4ba77477b96af0905e93fef"
+              },
+              "parameters": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=11/session=R/race_performance_2026_11_R_sample_parameters.csv",
+                "sha256": "f26a3c8df46b261eae16a13e06e92128a72d39fcc69fc30af31fcadfec7e09eb"
+              },
+              "team_deg": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=11/session=R/race_performance_2026_11_R_team_compound_degradation.csv",
+                "sha256": "5a7e7b69011fa0412f1a6a364858f706d3ed1f0f30ff4413eff1aba0deca9fdb"
+              }
+            }
+          },
+          "12": {
+            "identity": "b267097c0b12a1ee692956803b88ab452c646c22796b18e7e79efe5040656d4b",
+            "legacy_source_names": {
+              "clean": "race_performance_2026_12_R_clean_laps.csv",
+              "delta": "race_performance_2026_12_R_compound_delta.csv",
+              "metadata": "race_performance_2026_12_R_metadata.json",
+              "parameters": "race_performance_2026_12_R_sample_parameters.csv",
+              "team_deg": "race_performance_2026_12_R_team_compound_degradation.csv"
+            },
+            "sources": {
+              "clean": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=12/session=R/race_performance_2026_12_R_clean_laps.csv",
+                "sha256": "8aa9952d35240ab0721842a9bf60eb197b5ccbb112a9f14c3b046531edfdf638"
+              },
+              "delta": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=12/session=R/race_performance_2026_12_R_compound_delta.csv",
+                "sha256": "e24564c415713619b2f8759de35ef142b4cbe1924db22af4f1be47318bf0c74a"
+              },
+              "metadata": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=12/session=R/race_performance_2026_12_R_metadata.json",
+                "sha256": "597506a6f31e2d4e5ce8b2b6c15c7067b19d1ae4c4ba77477b96af0905e93fef"
+              },
+              "parameters": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=12/session=R/race_performance_2026_12_R_sample_parameters.csv",
+                "sha256": "0839411072386ffde99c93b8577527188ef5464a878b8ddb0feed7de2b3fe2eb"
+              },
+              "team_deg": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=12/session=R/race_performance_2026_12_R_team_compound_degradation.csv",
+                "sha256": "d61fe77702ba312680040e449305dbd2a60407f866f7e6cea515a0303f0205a0"
+              }
+            }
+          },
+          "13": {
+            "identity": "0d6509ca7a644e78b5433623054ea3965601fbe2a4ec1bf7614286c52862fbdb",
+            "legacy_source_names": {
+              "clean": "race_performance_2026_13_R_clean_laps.csv",
+              "delta": "race_performance_2026_13_R_compound_delta.csv",
+              "metadata": "race_performance_2026_13_R_metadata.json",
+              "parameters": "race_performance_2026_13_R_sample_parameters.csv",
+              "team_deg": "race_performance_2026_13_R_team_compound_degradation.csv"
+            },
+            "sources": {
+              "clean": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=13/session=R/race_performance_2026_13_R_clean_laps.csv",
+                "sha256": "9f3f42ae1350089184af0d529d2cd0d0398f612d11aefe260cf72833dd1a958f"
+              },
+              "delta": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=13/session=R/race_performance_2026_13_R_compound_delta.csv",
+                "sha256": "27d778f418ff5dc18ebbf128b9fce5377e82699924429a3ed6b15a6ac4d82241"
+              },
+              "metadata": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=13/session=R/race_performance_2026_13_R_metadata.json",
+                "sha256": "597506a6f31e2d4e5ce8b2b6c15c7067b19d1ae4c4ba77477b96af0905e93fef"
+              },
+              "parameters": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=13/session=R/race_performance_2026_13_R_sample_parameters.csv",
+                "sha256": "c297e8175cc74f9a93b3efba38b8fa2bb923e0b610010313c901cc1008e80a07"
+              },
+              "team_deg": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=13/session=R/race_performance_2026_13_R_team_compound_degradation.csv",
+                "sha256": "ca3464d08beaf6e50e5912d8b1042746dd476ef693487af50aeed719de85ac04"
+              }
+            }
+          },
+          "14": {
+            "identity": "5693da5d6d736e1222993b798eb935c23587e8e7250c06593d4728bb9665e290",
+            "legacy_source_names": {
+              "clean": "race_performance_2026_14_R_clean_laps.csv",
+              "delta": "race_performance_2026_14_R_compound_delta.csv",
+              "metadata": "race_performance_2026_14_R_metadata.json",
+              "parameters": "race_performance_2026_14_R_sample_parameters.csv",
+              "team_deg": "race_performance_2026_14_R_team_compound_degradation.csv"
+            },
+            "sources": {
+              "clean": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=14/session=R/race_performance_2026_14_R_clean_laps.csv",
+                "sha256": "0c4f059815c67ab657ef669664a2305729155c08b975753741c407842ae4688a"
+              },
+              "delta": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=14/session=R/race_performance_2026_14_R_compound_delta.csv",
+                "sha256": "41c4b31abf0fd845c2f7ecbc0180047379723196b676cc8a7d02b927f519a36f"
+              },
+              "metadata": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=14/session=R/race_performance_2026_14_R_metadata.json",
+                "sha256": "597506a6f31e2d4e5ce8b2b6c15c7067b19d1ae4c4ba77477b96af0905e93fef"
+              },
+              "parameters": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=14/session=R/race_performance_2026_14_R_sample_parameters.csv",
+                "sha256": "95d9e4058a9bdda2bb207f938410ea25899bc3157bba0c07bfdb737ef82aa90a"
+              },
+              "team_deg": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=14/session=R/race_performance_2026_14_R_team_compound_degradation.csv",
+                "sha256": "1d552338a2c0a99898049bcd5e6589040c1da56bf983aac141ec108245e26cd7"
+              }
+            }
+          },
+          "15": {
+            "identity": "a89b30d4b3f5c726070a0a69e1d30c84ac645508bfb32993476ce76b8791aef4",
+            "legacy_source_names": {
+              "clean": "race_performance_2026_15_R_clean_laps.csv",
+              "delta": "original_R15_compound_delta.csv",
+              "metadata": "race_performance_2026_15_R_metadata.json",
+              "parameters": "original_R15_samples.csv",
+              "team_deg": "original_R15_team_compound_degradation.csv"
+            },
+            "sources": {
+              "clean": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=15/session=R/race_performance_2026_15_R_clean_laps.csv",
+                "sha256": "59646117f4ee9a9a715d02bd51b7f5008eb88ab73129511bec3d19ef246033a3"
+              },
+              "delta": {
+                "archive_sha256": "41c3756acecc8aa378fda60fd825b3f69a732d37600dd8603f70ca7c94551a48",
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/range=1-15/session=R/race_performance_compound_delta_2026_1-15_R.csv",
+                "selection": {
+                  "Round": 15
+                },
+                "sha256": "67aa029919359151ea4429f132c40ec4a31ecfc8a8a72d5d54e91fac1e2b0330"
+              },
+              "metadata": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=15/session=R/race_performance_2026_15_R_metadata.json",
+                "sha256": "597506a6f31e2d4e5ce8b2b6c15c7067b19d1ae4c4ba77477b96af0905e93fef"
+              },
+              "parameters": {
+                "archive_sha256": "128052ffe9b47426c7e20ddacb51788e019a28778e1f683d34214cb47b5c19b4",
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/range=1-15/session=R/race_performance_samples_2026_1-15_R.csv",
+                "selection": {
+                  "Round": 15
+                },
+                "sha256": "b2ce5bf8d281202e35c096e54f70252ffb186e9d97d29555b87e976a46a1bd42"
+              },
+              "team_deg": {
+                "archive_sha256": "8db1fc7e6f9f91d2bbbbb556224d5124706c39d3a9b29163a29f78aa4013924a",
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/range=1-15/session=R/race_performance_team_compound_degradation_2026_1-15_R.csv",
+                "selection": {
+                  "Round": 15
+                },
+                "sha256": "8b28f533053409d6790d4794564c50c9eb10e68de3e9fbb6bf71dd4be1eae2d9"
+              }
+            }
+          },
+          "2": {
+            "identity": "1aa413b00ac97206d9461a08ff4e24ce25cbf8f7cfe71f9d34d2a52dcf1333d6",
+            "legacy_source_names": {
+              "clean": "race_performance_2026_2_R_clean_laps.csv",
+              "delta": "race_performance_2026_2_R_compound_delta.csv",
+              "metadata": "race_performance_2026_2_R_metadata.json",
+              "parameters": "race_performance_2026_2_R_sample_parameters.csv",
+              "team_deg": "race_performance_2026_2_R_team_compound_degradation.csv"
+            },
+            "sources": {
+              "clean": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=2/session=R/race_performance_2026_2_R_clean_laps.csv",
+                "sha256": "eb19c6aefcea3bf5c0f8d6759f9393e11f06f7bbe705a8bc108f4666e0803a4f"
+              },
+              "delta": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=2/session=R/race_performance_2026_2_R_compound_delta.csv",
+                "sha256": "fac17de09a338b1aa08d8dd6bbbb48d80ababcf62316ebe06f7cda36928d8e3a"
+              },
+              "metadata": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=2/session=R/race_performance_2026_2_R_metadata.json",
+                "sha256": "597506a6f31e2d4e5ce8b2b6c15c7067b19d1ae4c4ba77477b96af0905e93fef"
+              },
+              "parameters": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=2/session=R/race_performance_2026_2_R_sample_parameters.csv",
+                "sha256": "30171f703cbe2bb1b23ced34c4341747b40c09b7e769cbb6a8a808310b92a479"
+              },
+              "team_deg": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=2/session=R/race_performance_2026_2_R_team_compound_degradation.csv",
+                "sha256": "b486b8ebec7651e7bf1f54b87dffefe00ba36bf85e8cb6f10e0ff53ac5d2f01b"
+              }
+            }
+          },
+          "3": {
+            "identity": "c8dfa63944ab3a5a3f348a2607ab69187f9872b2ebaebfa18b91aa04049ee7f3",
+            "legacy_source_names": {
+              "clean": "race_performance_2026_3_R_clean_laps.csv",
+              "delta": "race_performance_2026_3_R_compound_delta.csv",
+              "metadata": "race_performance_2026_3_R_metadata.json",
+              "parameters": "race_performance_2026_3_R_sample_parameters.csv",
+              "team_deg": "race_performance_2026_3_R_team_compound_degradation.csv"
+            },
+            "sources": {
+              "clean": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=3/session=R/race_performance_2026_3_R_clean_laps.csv",
+                "sha256": "8daa3d34cf234d00017ca198c7a0bffeb594ee214b22aeed8aeed15c6c29e682"
+              },
+              "delta": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=3/session=R/race_performance_2026_3_R_compound_delta.csv",
+                "sha256": "07f255adb6310b97472fa1d37a558a7935ff1d33c7acf3cbe322a56e251700d6"
+              },
+              "metadata": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=3/session=R/race_performance_2026_3_R_metadata.json",
+                "sha256": "597506a6f31e2d4e5ce8b2b6c15c7067b19d1ae4c4ba77477b96af0905e93fef"
+              },
+              "parameters": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=3/session=R/race_performance_2026_3_R_sample_parameters.csv",
+                "sha256": "c7d784a045ab1391093912898feeabb6798d35f61eb863dd014ba0d7af74145a"
+              },
+              "team_deg": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=3/session=R/race_performance_2026_3_R_team_compound_degradation.csv",
+                "sha256": "1fb423f8977534a2f4406e64d9827ea63e7ccb683d3b8854a48c7131049a14fb"
+              }
+            }
+          },
+          "4": {
+            "identity": "86afe355cb0db9f57ee3f27f22410d2a02f74cbffd62a1735f12ff15ba7b929a",
+            "legacy_source_names": {
+              "clean": "race_performance_2026_4_R_clean_laps.csv",
+              "delta": "race_performance_2026_4_R_compound_delta.csv",
+              "metadata": "race_performance_2026_4_R_metadata.json",
+              "parameters": "race_performance_2026_4_R_sample_parameters.csv",
+              "team_deg": "race_performance_2026_4_R_team_compound_degradation.csv"
+            },
+            "sources": {
+              "clean": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=4/session=R/race_performance_2026_4_R_clean_laps.csv",
+                "sha256": "85261e05e72b0eb89974b754e4aa409a4d1fbb7288f36263471ba0bd35298431"
+              },
+              "delta": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=4/session=R/race_performance_2026_4_R_compound_delta.csv",
+                "sha256": "2fb9a8e61f1d2ee922345187a794cd27f2cf8e3173951f0f16add45d3b3dfc9f"
+              },
+              "metadata": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=4/session=R/race_performance_2026_4_R_metadata.json",
+                "sha256": "597506a6f31e2d4e5ce8b2b6c15c7067b19d1ae4c4ba77477b96af0905e93fef"
+              },
+              "parameters": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=4/session=R/race_performance_2026_4_R_sample_parameters.csv",
+                "sha256": "7c7d820e0fad6ebeeb5f2e11251b0fa6073cac69121a9335940a61f3eaa2d08a"
+              },
+              "team_deg": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=4/session=R/race_performance_2026_4_R_team_compound_degradation.csv",
+                "sha256": "cf98c3e3630dfeab4797596697a729f955322725f5b67043075795916f5eb6d8"
+              }
+            }
+          },
+          "5": {
+            "identity": "ca84e56b62b4050f3df6839767261ca2cc2e771210c3e88829ed207e6a6676e9",
+            "legacy_source_names": {
+              "clean": "race_performance_2026_5_R_clean_laps.csv",
+              "delta": "race_performance_2026_5_R_compound_delta.csv",
+              "metadata": "race_performance_2026_5_R_metadata.json",
+              "parameters": "race_performance_2026_5_R_sample_parameters.csv",
+              "team_deg": "race_performance_2026_5_R_team_compound_degradation.csv"
+            },
+            "sources": {
+              "clean": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=5/session=R/race_performance_2026_5_R_clean_laps.csv",
+                "sha256": "648062555bcca8bf1449bc2390f53b16f9b15240b7f6d05ec9d1dab07be35db6"
+              },
+              "delta": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=5/session=R/race_performance_2026_5_R_compound_delta.csv",
+                "sha256": "1b44fae5c02be60d202fafb071ee017fa95e4a6c035519b98a5c3adba2c312dd"
+              },
+              "metadata": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=5/session=R/race_performance_2026_5_R_metadata.json",
+                "sha256": "597506a6f31e2d4e5ce8b2b6c15c7067b19d1ae4c4ba77477b96af0905e93fef"
+              },
+              "parameters": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=5/session=R/race_performance_2026_5_R_sample_parameters.csv",
+                "sha256": "fb651747e55a5116e13961fd8b7ffffb6cd73be9ef68393fb4cfc798dacf42e6"
+              },
+              "team_deg": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=5/session=R/race_performance_2026_5_R_team_compound_degradation.csv",
+                "sha256": "4a55afd1702dff116ebe699d7aa660c81d999e766f21c637f32d1d92f02fe386"
+              }
+            }
+          },
+          "6": {
+            "identity": "7d6cfc9a8592e99e1bdc97fd2085c14ffbb5547ff244b3149636fae654e4bfaa",
+            "legacy_source_names": {
+              "clean": "race_performance_2026_6_R_clean_laps.csv",
+              "delta": "race_performance_2026_6_R_compound_delta.csv",
+              "metadata": "race_performance_2026_6_R_metadata.json",
+              "parameters": "race_performance_2026_6_R_sample_parameters.csv",
+              "team_deg": "race_performance_2026_6_R_team_compound_degradation.csv"
+            },
+            "sources": {
+              "clean": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=6/session=R/race_performance_2026_6_R_clean_laps.csv",
+                "sha256": "d458af3231da83e0ff348aa0ed5a6e644dbb0d86590041bbbaeb4f6ba0b2a0c1"
+              },
+              "delta": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=6/session=R/race_performance_2026_6_R_compound_delta.csv",
+                "sha256": "4730347e747f9938d9bd95ebe8e0ea0898ae6c90b6816088fcdd48868c0bfd09"
+              },
+              "metadata": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=6/session=R/race_performance_2026_6_R_metadata.json",
+                "sha256": "597506a6f31e2d4e5ce8b2b6c15c7067b19d1ae4c4ba77477b96af0905e93fef"
+              },
+              "parameters": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=6/session=R/race_performance_2026_6_R_sample_parameters.csv",
+                "sha256": "5bc6bcd8328a5317bcafb411a6f5c7950d156c5feadfa962daae22087cdd545a"
+              },
+              "team_deg": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=6/session=R/race_performance_2026_6_R_team_compound_degradation.csv",
+                "sha256": "9ff77c1b38d2d48d5ee35644edd18f3825fdad983b3d0b59542aa4c5a7657db0"
+              }
+            }
+          },
+          "7": {
+            "identity": "ae1142179e88f63bb3584b4a425d4f52acd0689bf0da815212b9c971a7ed4efa",
+            "legacy_source_names": {
+              "clean": "race_performance_2026_7_R_clean_laps.csv",
+              "delta": "race_performance_2026_7_R_compound_delta.csv",
+              "metadata": "race_performance_2026_7_R_metadata.json",
+              "parameters": "race_performance_2026_7_R_sample_parameters.csv",
+              "team_deg": "race_performance_2026_7_R_team_compound_degradation.csv"
+            },
+            "sources": {
+              "clean": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=7/session=R/race_performance_2026_7_R_clean_laps.csv",
+                "sha256": "a140091ea55b149ebde66f6efbc47e9a1b2e29027dc0021b3d03d170be7700eb"
+              },
+              "delta": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=7/session=R/race_performance_2026_7_R_compound_delta.csv",
+                "sha256": "46cdb347231d4c3b3702a293ee81af5744ebc4de9296babc308692668efdf3fe"
+              },
+              "metadata": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=7/session=R/race_performance_2026_7_R_metadata.json",
+                "sha256": "597506a6f31e2d4e5ce8b2b6c15c7067b19d1ae4c4ba77477b96af0905e93fef"
+              },
+              "parameters": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=7/session=R/race_performance_2026_7_R_sample_parameters.csv",
+                "sha256": "6abcbbd534fead4c372791d106aa2a4e83743ccdf85773665a11e79a2729e826"
+              },
+              "team_deg": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=7/session=R/race_performance_2026_7_R_team_compound_degradation.csv",
+                "sha256": "d5528bd53d110bf3f890bc05790977fd82b11b34a137a82bd063069934e5db4b"
+              }
+            }
+          },
+          "8": {
+            "identity": "afce0eb15474b6ee4489b76655a2d0f7da9f68b02fbaf79bb8ca561bb1c1e3b4",
+            "legacy_source_names": {
+              "clean": "race_performance_2026_8_R_clean_laps.csv",
+              "delta": "race_performance_2026_8_R_compound_delta.csv",
+              "metadata": "race_performance_2026_8_R_metadata.json",
+              "parameters": "race_performance_2026_8_R_sample_parameters.csv",
+              "team_deg": "race_performance_2026_8_R_team_compound_degradation.csv"
+            },
+            "sources": {
+              "clean": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=8/session=R/race_performance_2026_8_R_clean_laps.csv",
+                "sha256": "d61da3df8f00d6ec8ee9540f53fb4a00e924111b3ae4d75691006ed91dc53888"
+              },
+              "delta": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=8/session=R/race_performance_2026_8_R_compound_delta.csv",
+                "sha256": "355dd98c5971fdf213fc71564f0f34575fc13726ae4c9f26f56a9ff926a64ea3"
+              },
+              "metadata": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=8/session=R/race_performance_2026_8_R_metadata.json",
+                "sha256": "597506a6f31e2d4e5ce8b2b6c15c7067b19d1ae4c4ba77477b96af0905e93fef"
+              },
+              "parameters": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=8/session=R/race_performance_2026_8_R_sample_parameters.csv",
+                "sha256": "6bfb8a37dcfbb7b7a860eae0224c02b122bb08e6ffc185b40e9620d72d470cb6"
+              },
+              "team_deg": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=8/session=R/race_performance_2026_8_R_team_compound_degradation.csv",
+                "sha256": "5ac0379966614c18d83d6af14582734733f6a520142f9e54e7758f2f1797170e"
+              }
+            }
+          },
+          "9": {
+            "identity": "bea3c90a6f767f884b23513658f5826bbb440da45b344676b08b0b9890f3cde7",
+            "legacy_source_names": {
+              "clean": "race_performance_2026_9_R_clean_laps.csv",
+              "delta": "race_performance_2026_9_R_compound_delta.csv",
+              "metadata": "race_performance_2026_9_R_metadata.json",
+              "parameters": "race_performance_2026_9_R_sample_parameters.csv",
+              "team_deg": "race_performance_2026_9_R_team_compound_degradation.csv"
+            },
+            "sources": {
+              "clean": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=9/session=R/race_performance_2026_9_R_clean_laps.csv",
+                "sha256": "683e5f0075af9c9b239d2a89765e0e0e9c6604a668cba15f1049365d7eb12e9b"
+              },
+              "delta": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=9/session=R/race_performance_2026_9_R_compound_delta.csv",
+                "sha256": "b5975f8bbc5000d8316b3be467fb38ba1d9eeb5717c8202d0d8da8a2db2090bc"
+              },
+              "metadata": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=9/session=R/race_performance_2026_9_R_metadata.json",
+                "sha256": "597506a6f31e2d4e5ce8b2b6c15c7067b19d1ae4c4ba77477b96af0905e93fef"
+              },
+              "parameters": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=9/session=R/race_performance_2026_9_R_sample_parameters.csv",
+                "sha256": "57fa4192c08fac1d0c7eeb2d01c46e250f189068a00f758b989efa65f25d92e8"
+              },
+              "team_deg": {
+                "path": "wostrategy/race_performance_review/schema_v1/year=2026/round=9/session=R/race_performance_2026_9_R_team_compound_degradation.csv",
+                "sha256": "7043ca2685d25bed9e2d6bf2655a86abf4fe4d5aa2de0437a4686dc462de30aa"
+              }
+            }
+          }
+        },
+        "season": 2026
+      },
+      "legacy_forensic_hashes": {
+        "_canonical.py": "3328f14c9f9e9eb3d4b69a56313381f8944ad6008da9e0385d95ac41feaea93a",
+        "_graph.py": "ed50d6dde9c30bbeeb5aed94280d854c400dd5564a48fbb68c801a8d297770f4",
+        "_support.py": "6ae93bf179ba5cc1507a5aab46303a40ca5a1a18d267b8387815f5f2d5eec464",
+        "_transfer.py": "edebd431d8565e9e20c0068b1a380b54323210c8cfb352d4951ddca479f8db1a",
+        "constants.py": "89fbb3b423d171c68c88bd492b7f56a61aa886f296b4794eea85920d3811234d",
+        "reference.py": "d884a66966ab34372dff1826d3bcdaf8355f343219b5644515ed8a3ffef6e938",
+        "workflow.py": "f21775e1bc2d6bb457f3a1c85bf028ac9d33a4b3a5b5d55d0769f53649810e62"
+      },
+      "method": "projected_mean",
+      "numerical_kernel": {
+        "components": {
+          "_canonical.py": "6b053174f9667a30279c2faadd6b85b9f9f99d1103bbb0760023893cdb377829",
+          "_graph.py": "caf2123c8d742dd78f8cd664e9dd53b2e3c048b59c90d6bb448c1739881c086b",
+          "_support.py": "f6ea5bea6912ce6f230ea1ddedd4a29ccb390a6b51b2456264f3088522998d50",
+          "_transfer.py": "0f1e2963103f00f58c865eaa45bb7caa489e5ae743493ad66d450e29e315b18f",
+          "reference.py": "a2f22f59e79a08d98715d2ad2a1d44501deaef5754220df84a9f1cab143ddfb1",
+          "workflow.py:canonical_reference_inputs": "28f92c379f49235546ad36499182bc559c2590b6c7adaa35e248cf35a4882de9"
+        },
+        "configuration": {
+          "COLS": [
+            "Team",
+            "Driver",
+            "Stint",
+            "Compound",
+            "FreshTyre",
+            "LapNumber",
+            "TyreLife",
+            "TyreAgeLaps",
+            "LapStartTime"
+          ],
+          "LABELS": [
+            "L0_exact",
+            "L1_age1",
+            "L2_age2",
+            "L3_age4",
+            "L4_age4_lap1",
+            "L5_age4_lap2"
+          ],
+          "LADDER": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              2,
+              0
+            ],
+            [
+              4,
+              0
+            ],
+            [
+              4,
+              1
+            ],
+            [
+              4,
+              2
+            ]
+          ],
+          "TEAMS": [
+            "Alpine",
+            "Aston Martin",
+            "Audi",
+            "Cadillac",
+            "Ferrari",
+            "Haas F1 Team",
+            "McLaren",
+            "Mercedes",
+            "Racing Bulls",
+            "Red Bull Racing",
+            "Williams"
+          ]
+        },
+        "fingerprint": "15fb933d255e8abb35f176563513c4b581c86791c07b6b6c4fe56dcfffef1930"
+      }
+    }
+  }
+}

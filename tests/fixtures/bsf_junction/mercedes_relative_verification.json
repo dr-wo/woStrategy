@@ -1,0 +1,50 @@
+{
+  "source_hashes_before_and_after": {
+    "/private/tmp/rd4_closure/BSF_TRACKER_2026_R1_R15.csv": "b2a238a4f67d0b545d3248e08591983d6d8f8b51c4aab8bf83e79361f12c2fb2",
+    "/private/tmp/rd4h_study/FULL_FIELD_PRIMARY_165.csv": "bc4d4eb46c3638fe312d4cec57dae670fd374bbc3af26db70d75ac2deb464449",
+    "/Users/zhxutong/dr-wo/woData/src/wodata/colours.py": "b59057122d5f689432e7742d1ea3129f57cec03a549ccd6e10d1ce79ecbc2666"
+  },
+  "source_files_unchanged": true,
+  "rows": 165,
+  "rounds": 15,
+  "teams": 11,
+  "Mercedes_exact_zero_both_charts_all_rounds": true,
+  "max_input_score_difference_from_saved_projected_mean_s": "6E-16",
+  "team_colours": {
+    "Alpine": "#00A1E8",
+    "Aston Martin": "#229971",
+    "Audi": "#F50537",
+    "Cadillac": "#909090",
+    "Ferrari": "#ED1131",
+    "Haas F1 Team": "#9C9FA2",
+    "McLaren": "#F47600",
+    "Mercedes": "#00D7B6",
+    "Racing Bulls": "#6C98FF",
+    "Red Bull Racing": "#4781D7",
+    "Williams": "#1868DB"
+  },
+  "figure_checks": [
+    {
+      "stem": "BSF_RELATIVE_TO_MERCEDES_2026_R1_R15",
+      "performance_markers": 148,
+      "N_only_in_provenance_strip": 17,
+      "P_to_P_dashed_segments": 32,
+      "performance_axis_range": [
+        -2.2965415973451533,
+        9.662440726794799
+      ]
+    },
+    {
+      "stem": "BSF_MINUS_CANONICAL_RELATIVE_TO_MERCEDES_2026_R1_R15",
+      "performance_markers": 148,
+      "N_only_in_provenance_strip": 17,
+      "P_to_P_dashed_segments": 32,
+      "performance_axis_range": [
+        -1.9504199542028524,
+        1.1996030079034004
+      ]
+    }
+  ],
+  "visual_review": "Both PNG figures inspected directly: titles, legends, units, sign conventions, P/F markers, all 165 provenance flags and required limitation text are legible; N has no performance-axis marker; all values fit within unclipped axes.",
+  "no_model_execution": true
+}

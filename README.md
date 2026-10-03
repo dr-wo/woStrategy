@@ -393,6 +393,73 @@ result = run_two_day_benchmark_race_sim(
 
 ## 2. Workflows
 
+### BSF Junction Engineering Reference companion
+
+Normal `woWeekend` post-race runs now add **BSF Junction Engineering Reference —
+Event Consensus with Explicit Fallback**, accepted as **B: restricted
+interpretation**. The canonical estimator and canonical tracker remain primary.
+The reusable entry point is
+`wostrategy.analysis.bsf_junction.workflow.generate_bsf_season`; it reads the
+canonical producer's persisted clean laps and candidate tables, without loading
+FastF1 again, generating candidates, or modifying canonical files.
+
+Method identity is `projected_mean`, version `rd4h_projected_mean_v1`. Frozen
+projected_mean combines matched local observations through explicit full
+donor-mean junction transfers, projects reachable supports through the canonical
+reference functional, uses canonical or neutral-prior fallback where required,
+and centers the completed eleven-team field to mean zero in seconds per lap.
+The covariate matcher admits the first qualifying life/lap ladder rung per named
+pair and ten-lap window, with four pairs and a 60-second paired clock limit.
+Junction donors retain the frozen complete endpoint schedules, physical-life
+radius four, transition class and at least two donor teams. None of these rules
+is configurable through post-race overrides.
+
+The projection functional is the frozen **posterior mean** over saved Gaussian,
+team-baseline candidates with clean-lap noise sigma 0.5. It is separate from the
+producer's unchanged weighted-median summary/percentage tracker. The diagnostic
+uses that same frozen canonical functional. Unsupported producer input settings
+cause an explicit unavailable companion; there is no alternate estimator.
+The roster is the frozen 2026 eleven-team roster.
+
+Event CSV, methodology/provenance metadata and auditable score paths are stored
+under `WODATA_ROOT/wostrategy/bsf_junction_reference/schema_v1/year=YYYY/round=R/session=R/`.
+CSV scores have 17-digit serialization. Source and implementation hashes identify
+each event; table and score-path checksums protect persisted artifacts. Season
+history reuses completed event outputs only after method/kernel and source
+identity validation. The closed 2026 R1–R15 set is pinned in
+`approved_contracts.json`; a missing cache rebuilds only from hash-verified
+approved originals, otherwise it is explicitly unavailable. R15 resolves its
+original published range=1–15 bank, never the newer per-event bank. Explicit
+input paths cannot replace those frozen identities. Report-only rendering
+never refreshes or refits history.
+
+`rd4h_projected_mean_v1` is bound to an approved numerical AST/configuration
+fingerprint covering matching, transfer, graph/projection, canonical reference,
+fallback and gauge. An incompatible runtime or saved kernel is rejected without
+silent v1 recomputation. Semantic changes require an approved version bump;
+plot/report wording does not invalidate this numerical contract. Raw source and
+implementation hashes remain recorded for forensic inspection.
+
+For an identified historical replay, `get_bsf_event(..., source_paths=...)` or
+`generate_bsf_season(..., source_paths_by_round={round: source_paths, ...})` accepts
+the five explicit producer input paths (`clean`, `parameters`, `delta`,
+`team_deg`, `metadata`). The frozen R1–R15 replay uses the source identities from
+closure provenance; R15 specifically uses its original published range=1–15
+candidate rows, not the subsequently regenerated per-event bank. Those bank
+files are input dependencies, not bundled into the small test fixture. No
+research directory is imported by production code.
+
+Unvalidated engineering reference. Every score depends on canonical projection,
+fallback or a prior; support and reference sensitivity vary by event. This is
+not equal-fuel pace, age-zero pace, pure car performance, driver-independent
+capability or a validated physical decomposition. No-clean-data values are
+numerical completion only; fallback-heavy values and changes across support
+classes must not be read as measured performance differences. There are no
+calibrated team-score confidence intervals. **P** is projected graph provenance,
+**F** full canonical fallback, and **N** prior-only completion; P is not confidence.
+Plots exclude N from the performance axis, retain every flag, and connect only
+consecutive P rounds with dashed links. Mercedes-relative outputs use s/lap.
+
 ### 2.0 Pre-process
 
 The loading layer wraps FastF1 sessions and normalizes the data needed by the

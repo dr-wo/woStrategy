@@ -1,0 +1,1657 @@
+{
+  "source": "/private/tmp/rd4_closure/BSF_TRACKER_2026_R1_R15.csv",
+  "method": "saved projected_mean; presentation-only subtraction",
+  "arithmetic": "Decimal from frozen CSV text; converted to float only for plotting",
+  "rows": [
+    {
+      "round": 1,
+      "team": "Alpine",
+      "bsf_relative_to_mercedes_s": "1.405075773638131",
+      "canonical_relative_to_mercedes_s": "2.434548886333133",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-1.029473112695002",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 1,
+      "team": "Aston Martin",
+      "bsf_relative_to_mercedes_s": "4.322399032781462",
+      "canonical_relative_to_mercedes_s": "5.197237479314907",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.874838446533445",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 1,
+      "team": "Audi",
+      "bsf_relative_to_mercedes_s": "1.981082239096764",
+      "canonical_relative_to_mercedes_s": "2.262230649102278",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.281148410005514",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 1,
+      "team": "Cadillac",
+      "bsf_relative_to_mercedes_s": "4.843816421298612",
+      "canonical_relative_to_mercedes_s": "5.124964831304126",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.281148410005514",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 1,
+      "team": "Ferrari",
+      "bsf_relative_to_mercedes_s": "0.691669052104231",
+      "canonical_relative_to_mercedes_s": "0.972817462109745",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.281148410005514",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 1,
+      "team": "Haas F1 Team",
+      "bsf_relative_to_mercedes_s": "1.421213475409317",
+      "canonical_relative_to_mercedes_s": "1.702361885414831",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.281148410005514",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 1,
+      "team": "McLaren",
+      "bsf_relative_to_mercedes_s": "0.149698592513218",
+      "canonical_relative_to_mercedes_s": "1.269796026755628",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-1.120097434242410",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 1,
+      "team": "Mercedes",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-14",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 1,
+      "team": "Racing Bulls",
+      "bsf_relative_to_mercedes_s": "1.943828167241165",
+      "canonical_relative_to_mercedes_s": "1.895581123071054",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.048247044170111",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 1,
+      "team": "Red Bull Racing",
+      "bsf_relative_to_mercedes_s": "0.213473587110883",
+      "canonical_relative_to_mercedes_s": "0.494621997116397",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.281148410005514",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 1,
+      "team": "Williams",
+      "bsf_relative_to_mercedes_s": "2.861095432805783",
+      "canonical_relative_to_mercedes_s": "2.665242862585217",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.195852570220566",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 2,
+      "team": "Alpine",
+      "bsf_relative_to_mercedes_s": "0.872269871045134",
+      "canonical_relative_to_mercedes_s": "1.412524792826162",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.540254921781028",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 2,
+      "team": "Aston Martin",
+      "bsf_relative_to_mercedes_s": "1.375352762696480",
+      "canonical_relative_to_mercedes_s": "1.539347031971616",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.163994269275136",
+      "team_support": "N",
+      "mercedes_support": "P",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 2,
+      "team": "Audi",
+      "bsf_relative_to_mercedes_s": "0.279479577528122",
+      "canonical_relative_to_mercedes_s": "0.443473846803258",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.163994269275136",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 2,
+      "team": "Cadillac",
+      "bsf_relative_to_mercedes_s": "3.753000922879409",
+      "canonical_relative_to_mercedes_s": "3.916995192154545",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.163994269275136",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 2,
+      "team": "Ferrari",
+      "bsf_relative_to_mercedes_s": "-0.046756215740927",
+      "canonical_relative_to_mercedes_s": "0.278622882104756",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.325379097845683",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 2,
+      "team": "Haas F1 Team",
+      "bsf_relative_to_mercedes_s": "1.287903722367617",
+      "canonical_relative_to_mercedes_s": "1.538673112320794",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.250769389953177",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 2,
+      "team": "McLaren",
+      "bsf_relative_to_mercedes_s": "1.375352762696480",
+      "canonical_relative_to_mercedes_s": "1.539347031971616",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.163994269275136",
+      "team_support": "N",
+      "mercedes_support": "P",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 2,
+      "team": "Mercedes",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 2,
+      "team": "Racing Bulls",
+      "bsf_relative_to_mercedes_s": "1.101116753583881",
+      "canonical_relative_to_mercedes_s": "1.664636971827264",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.563520218243383",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 2,
+      "team": "Red Bull Racing",
+      "bsf_relative_to_mercedes_s": "2.084877536467062",
+      "canonical_relative_to_mercedes_s": "2.248871805742198",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.163994269275136",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 2,
+      "team": "Williams",
+      "bsf_relative_to_mercedes_s": "2.691619184918366",
+      "canonical_relative_to_mercedes_s": "2.350324683965411",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.341294500952955",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 3,
+      "team": "Alpine",
+      "bsf_relative_to_mercedes_s": "1.792405455901971",
+      "canonical_relative_to_mercedes_s": "1.462435235104706",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.329970220797265",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 3,
+      "team": "Aston Martin",
+      "bsf_relative_to_mercedes_s": "4.173376680212172",
+      "canonical_relative_to_mercedes_s": "3.843406459414908",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.329970220797264",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 3,
+      "team": "Audi",
+      "bsf_relative_to_mercedes_s": "2.097631225780574",
+      "canonical_relative_to_mercedes_s": "1.76766100498331",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.329970220797264",
+      "team_support": "N",
+      "mercedes_support": "P",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 3,
+      "team": "Cadillac",
+      "bsf_relative_to_mercedes_s": "3.297111793959004",
+      "canonical_relative_to_mercedes_s": "3.750512369086394",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.453400575127390",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 3,
+      "team": "Ferrari",
+      "bsf_relative_to_mercedes_s": "2.097631225780574",
+      "canonical_relative_to_mercedes_s": "1.76766100498331",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.329970220797264",
+      "team_support": "N",
+      "mercedes_support": "P",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 3,
+      "team": "Haas F1 Team",
+      "bsf_relative_to_mercedes_s": "2.712348661869654",
+      "canonical_relative_to_mercedes_s": "2.38237844107239",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.329970220797264",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 3,
+      "team": "McLaren",
+      "bsf_relative_to_mercedes_s": "0.323879525495158",
+      "canonical_relative_to_mercedes_s": "0.136146019548079",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.187733505947079",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 3,
+      "team": "Mercedes",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-14",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 3,
+      "team": "Racing Bulls",
+      "bsf_relative_to_mercedes_s": "1.527390879248969",
+      "canonical_relative_to_mercedes_s": "1.197420658451705",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.329970220797264",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 3,
+      "team": "Red Bull Racing",
+      "bsf_relative_to_mercedes_s": "1.373814421242201",
+      "canonical_relative_to_mercedes_s": "1.368988857188313",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.004825564053888",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 3,
+      "team": "Williams",
+      "bsf_relative_to_mercedes_s": "2.097631225780574",
+      "canonical_relative_to_mercedes_s": "1.76766100498331",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.329970220797264",
+      "team_support": "N",
+      "mercedes_support": "P",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 4,
+      "team": "Alpine",
+      "bsf_relative_to_mercedes_s": "1.453256327860671",
+      "canonical_relative_to_mercedes_s": "1.182602425421749",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.270653902438922",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 4,
+      "team": "Aston Martin",
+      "bsf_relative_to_mercedes_s": "3.101724908308966",
+      "canonical_relative_to_mercedes_s": "2.440743728448297",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.660981179860669",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 4,
+      "team": "Audi",
+      "bsf_relative_to_mercedes_s": "1.733788636583156",
+      "canonical_relative_to_mercedes_s": "1.539463365544577",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.194325271038579",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 4,
+      "team": "Cadillac",
+      "bsf_relative_to_mercedes_s": "3.504524493777097",
+      "canonical_relative_to_mercedes_s": "4.643672229248267",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-1.139147735471170",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 4,
+      "team": "Ferrari",
+      "bsf_relative_to_mercedes_s": "1.611939034620491",
+      "canonical_relative_to_mercedes_s": "0.806925655010517",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.805013379609974",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 4,
+      "team": "Haas F1 Team",
+      "bsf_relative_to_mercedes_s": "2.975810612722909",
+      "canonical_relative_to_mercedes_s": "2.179510074730629",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.796300537992280",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 4,
+      "team": "McLaren",
+      "bsf_relative_to_mercedes_s": "0.218063413570647",
+      "canonical_relative_to_mercedes_s": "-0.026492036144802",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.244555449715449",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 4,
+      "team": "Mercedes",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 4,
+      "team": "Racing Bulls",
+      "bsf_relative_to_mercedes_s": "3.000027187896066",
+      "canonical_relative_to_mercedes_s": "2.458476404657404",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.541550783238662",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 4,
+      "team": "Red Bull Racing",
+      "bsf_relative_to_mercedes_s": "-0.465239586106421",
+      "canonical_relative_to_mercedes_s": "0.133715588706309",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.598955174812730",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 4,
+      "team": "Williams",
+      "bsf_relative_to_mercedes_s": "2.168194929863588",
+      "canonical_relative_to_mercedes_s": "1.648945285574015",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.519249644289573",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 5,
+      "team": "Alpine",
+      "bsf_relative_to_mercedes_s": "1.892012437285089",
+      "canonical_relative_to_mercedes_s": "1.892012437285090",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-1E-15",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 5,
+      "team": "Aston Martin",
+      "bsf_relative_to_mercedes_s": "5.406231728141378",
+      "canonical_relative_to_mercedes_s": "5.406231728141379",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-1E-15",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 5,
+      "team": "Audi",
+      "bsf_relative_to_mercedes_s": "1.703167008004328",
+      "canonical_relative_to_mercedes_s": "1.703167008004329",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-1E-15",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 5,
+      "team": "Cadillac",
+      "bsf_relative_to_mercedes_s": "4.824694551298862",
+      "canonical_relative_to_mercedes_s": "4.824694551298862",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 5,
+      "team": "Ferrari",
+      "bsf_relative_to_mercedes_s": "1.146528566588259",
+      "canonical_relative_to_mercedes_s": "0.859833238119336",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.286695328468923",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 5,
+      "team": "Haas F1 Team",
+      "bsf_relative_to_mercedes_s": "1.194159856559381",
+      "canonical_relative_to_mercedes_s": "1.194159856559381",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 5,
+      "team": "McLaren",
+      "bsf_relative_to_mercedes_s": "1.521860892996472",
+      "canonical_relative_to_mercedes_s": "1.521860892996472",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 5,
+      "team": "Mercedes",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 5,
+      "team": "Racing Bulls",
+      "bsf_relative_to_mercedes_s": "1.932786829107371",
+      "canonical_relative_to_mercedes_s": "1.932786829107372",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-1E-15",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 5,
+      "team": "Red Bull Racing",
+      "bsf_relative_to_mercedes_s": "-0.086697169933018",
+      "canonical_relative_to_mercedes_s": "-0.086697169933017",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-1E-15",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 5,
+      "team": "Williams",
+      "bsf_relative_to_mercedes_s": "1.753627679222276",
+      "canonical_relative_to_mercedes_s": "1.591971553365824",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.161656125856452",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 6,
+      "team": "Alpine",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "N",
+      "mercedes_support": "F",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 6,
+      "team": "Aston Martin",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "N",
+      "mercedes_support": "F",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 6,
+      "team": "Audi",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "N",
+      "mercedes_support": "F",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 6,
+      "team": "Cadillac",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "N",
+      "mercedes_support": "F",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 6,
+      "team": "Ferrari",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "N",
+      "mercedes_support": "F",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 6,
+      "team": "Haas F1 Team",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "N",
+      "mercedes_support": "F",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 6,
+      "team": "McLaren",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "N",
+      "mercedes_support": "F",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 6,
+      "team": "Mercedes",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 6,
+      "team": "Racing Bulls",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "N",
+      "mercedes_support": "F",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 6,
+      "team": "Red Bull Racing",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "N",
+      "mercedes_support": "F",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 6,
+      "team": "Williams",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "N",
+      "mercedes_support": "F",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 7,
+      "team": "Alpine",
+      "bsf_relative_to_mercedes_s": "1.528516881645956",
+      "canonical_relative_to_mercedes_s": "1.528516881645956",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 7,
+      "team": "Aston Martin",
+      "bsf_relative_to_mercedes_s": "4.171570628682318",
+      "canonical_relative_to_mercedes_s": "4.171570628682318",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 7,
+      "team": "Audi",
+      "bsf_relative_to_mercedes_s": "2.191891237447536",
+      "canonical_relative_to_mercedes_s": "2.191891237447536",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 7,
+      "team": "Cadillac",
+      "bsf_relative_to_mercedes_s": "2.193050692409799",
+      "canonical_relative_to_mercedes_s": "2.193050692409799",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 7,
+      "team": "Ferrari",
+      "bsf_relative_to_mercedes_s": "-0.084225036757729",
+      "canonical_relative_to_mercedes_s": "-0.084225036757729",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 7,
+      "team": "Haas F1 Team",
+      "bsf_relative_to_mercedes_s": "1.513257873825694",
+      "canonical_relative_to_mercedes_s": "1.513257873825694",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 7,
+      "team": "McLaren",
+      "bsf_relative_to_mercedes_s": "0.501325280022613",
+      "canonical_relative_to_mercedes_s": "0.354664642210353",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.146660637812260",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 7,
+      "team": "Mercedes",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 7,
+      "team": "Racing Bulls",
+      "bsf_relative_to_mercedes_s": "1.501871087474115",
+      "canonical_relative_to_mercedes_s": "1.501871087474115",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 7,
+      "team": "Red Bull Racing",
+      "bsf_relative_to_mercedes_s": "0.626283055013218",
+      "canonical_relative_to_mercedes_s": "0.098723874327491",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.527559180685727",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 7,
+      "team": "Williams",
+      "bsf_relative_to_mercedes_s": "2.389587927798246",
+      "canonical_relative_to_mercedes_s": "2.305535075378274",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.084052852419972",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 8,
+      "team": "Alpine",
+      "bsf_relative_to_mercedes_s": "1.054192191341415",
+      "canonical_relative_to_mercedes_s": "1.054192191341414",
+      "bsf_minus_canonical_relative_to_mercedes_s": "1E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 8,
+      "team": "Aston Martin",
+      "bsf_relative_to_mercedes_s": "2.471318429680182",
+      "canonical_relative_to_mercedes_s": "2.471318429680181",
+      "bsf_minus_canonical_relative_to_mercedes_s": "1E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 8,
+      "team": "Audi",
+      "bsf_relative_to_mercedes_s": "0.692384701935666",
+      "canonical_relative_to_mercedes_s": "0.835308484972145",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.142923783036479",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 8,
+      "team": "Cadillac",
+      "bsf_relative_to_mercedes_s": "0.957539255981829",
+      "canonical_relative_to_mercedes_s": "0.957539255981828",
+      "bsf_minus_canonical_relative_to_mercedes_s": "1E-15",
+      "team_support": "N",
+      "mercedes_support": "F",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 8,
+      "team": "Ferrari",
+      "bsf_relative_to_mercedes_s": "0.344196720169464",
+      "canonical_relative_to_mercedes_s": "0.344196720169464",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 8,
+      "team": "Haas F1 Team",
+      "bsf_relative_to_mercedes_s": "1.813210321439812",
+      "canonical_relative_to_mercedes_s": "1.813210321439811",
+      "bsf_minus_canonical_relative_to_mercedes_s": "1E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 8,
+      "team": "McLaren",
+      "bsf_relative_to_mercedes_s": "0.110689398740107",
+      "canonical_relative_to_mercedes_s": "0.110689398740106",
+      "bsf_minus_canonical_relative_to_mercedes_s": "1E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 8,
+      "team": "Mercedes",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 8,
+      "team": "Racing Bulls",
+      "bsf_relative_to_mercedes_s": "1.036173968259363",
+      "canonical_relative_to_mercedes_s": "1.036173968259362",
+      "bsf_minus_canonical_relative_to_mercedes_s": "1E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 8,
+      "team": "Red Bull Racing",
+      "bsf_relative_to_mercedes_s": "-0.270395791613268",
+      "canonical_relative_to_mercedes_s": "-0.270395791613268",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 8,
+      "team": "Williams",
+      "bsf_relative_to_mercedes_s": "2.180698836829066",
+      "canonical_relative_to_mercedes_s": "2.180698836829066",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 9,
+      "team": "Alpine",
+      "bsf_relative_to_mercedes_s": "1.811591817759052",
+      "canonical_relative_to_mercedes_s": "2.369598092414208",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.558006274655156",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 9,
+      "team": "Aston Martin",
+      "bsf_relative_to_mercedes_s": "5.811079166538349",
+      "canonical_relative_to_mercedes_s": "5.578678713259322",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.232400453279027",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 9,
+      "team": "Audi",
+      "bsf_relative_to_mercedes_s": "1.674419898862624",
+      "canonical_relative_to_mercedes_s": "2.290085412620371",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.615665513757747",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 9,
+      "team": "Cadillac",
+      "bsf_relative_to_mercedes_s": "3.464692872502098",
+      "canonical_relative_to_mercedes_s": "4.184704651162818",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.720011778660720",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 9,
+      "team": "Ferrari",
+      "bsf_relative_to_mercedes_s": "0.426299093849650",
+      "canonical_relative_to_mercedes_s": "0.913094494132651",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.486795400283001",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 9,
+      "team": "Haas F1 Team",
+      "bsf_relative_to_mercedes_s": "1.026752361424897",
+      "canonical_relative_to_mercedes_s": "2.693153851831284",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-1.666401490406387",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 9,
+      "team": "McLaren",
+      "bsf_relative_to_mercedes_s": "-0.072917317351226",
+      "canonical_relative_to_mercedes_s": "1.593484173055160",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-1.666401490406386",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 9,
+      "team": "Mercedes",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 9,
+      "team": "Racing Bulls",
+      "bsf_relative_to_mercedes_s": "1.538765307316453",
+      "canonical_relative_to_mercedes_s": "2.234734396808065",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.695969089491612",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 9,
+      "team": "Red Bull Racing",
+      "bsf_relative_to_mercedes_s": "-0.014206940101346",
+      "canonical_relative_to_mercedes_s": "1.652194550305041",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-1.666401490406387",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 9,
+      "team": "Williams",
+      "bsf_relative_to_mercedes_s": "2.123359169638221",
+      "canonical_relative_to_mercedes_s": "3.789760660044607",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-1.666401490406386",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 10,
+      "team": "Alpine",
+      "bsf_relative_to_mercedes_s": "4.630140331638714",
+      "canonical_relative_to_mercedes_s": "4.320263095433731",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.309877236204983",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 10,
+      "team": "Aston Martin",
+      "bsf_relative_to_mercedes_s": "8.584171828716606",
+      "canonical_relative_to_mercedes_s": "8.584171828716607",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-1E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 10,
+      "team": "Audi",
+      "bsf_relative_to_mercedes_s": "4.726941258944479",
+      "canonical_relative_to_mercedes_s": "4.131089950007820",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.595851308936659",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 10,
+      "team": "Cadillac",
+      "bsf_relative_to_mercedes_s": "6.524268759825702",
+      "canonical_relative_to_mercedes_s": "6.524268759825703",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-1E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 10,
+      "team": "Ferrari",
+      "bsf_relative_to_mercedes_s": "3.971413198724307",
+      "canonical_relative_to_mercedes_s": "3.288562555068907",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.682850643655400",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 10,
+      "team": "Haas F1 Team",
+      "bsf_relative_to_mercedes_s": "5.473306870423784",
+      "canonical_relative_to_mercedes_s": "5.220921399178494",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.252385471245290",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 10,
+      "team": "McLaren",
+      "bsf_relative_to_mercedes_s": "2.677729402850787",
+      "canonical_relative_to_mercedes_s": "2.677729402850787",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 10,
+      "team": "Mercedes",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 10,
+      "team": "Racing Bulls",
+      "bsf_relative_to_mercedes_s": "4.572427315541916",
+      "canonical_relative_to_mercedes_s": "3.988484027294675",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.583943288247241",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 10,
+      "team": "Red Bull Racing",
+      "bsf_relative_to_mercedes_s": "3.358707832798189",
+      "canonical_relative_to_mercedes_s": "3.031621019884299",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.327086812913890",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 10,
+      "team": "Williams",
+      "bsf_relative_to_mercedes_s": "5.628626447935233",
+      "canonical_relative_to_mercedes_s": "5.137043132545970",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.491583315389263",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 11,
+      "team": "Alpine",
+      "bsf_relative_to_mercedes_s": "2.145085268305309",
+      "canonical_relative_to_mercedes_s": "1.662294754139580",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.482790514165729",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 11,
+      "team": "Aston Martin",
+      "bsf_relative_to_mercedes_s": "0.653016852501353",
+      "canonical_relative_to_mercedes_s": "0.653016852501352",
+      "bsf_minus_canonical_relative_to_mercedes_s": "1E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 11,
+      "team": "Audi",
+      "bsf_relative_to_mercedes_s": "0.121011531290947",
+      "canonical_relative_to_mercedes_s": "0.121011531290946",
+      "bsf_minus_canonical_relative_to_mercedes_s": "1E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 11,
+      "team": "Cadillac",
+      "bsf_relative_to_mercedes_s": "3.068788727449089",
+      "canonical_relative_to_mercedes_s": "3.068788727449089",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 11,
+      "team": "Ferrari",
+      "bsf_relative_to_mercedes_s": "-0.127906314747918",
+      "canonical_relative_to_mercedes_s": "-0.127906314747918",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 11,
+      "team": "Haas F1 Team",
+      "bsf_relative_to_mercedes_s": "1.733256792419795",
+      "canonical_relative_to_mercedes_s": "1.733256792419794",
+      "bsf_minus_canonical_relative_to_mercedes_s": "1E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 11,
+      "team": "McLaren",
+      "bsf_relative_to_mercedes_s": "-0.809517936911248",
+      "canonical_relative_to_mercedes_s": "-0.460603816843616",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.348914120067632",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 11,
+      "team": "Mercedes",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 11,
+      "team": "Racing Bulls",
+      "bsf_relative_to_mercedes_s": "1.169950066320780",
+      "canonical_relative_to_mercedes_s": "1.169950066320780",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 11,
+      "team": "Red Bull Racing",
+      "bsf_relative_to_mercedes_s": "-0.248460123006310",
+      "canonical_relative_to_mercedes_s": "-0.248460123006311",
+      "bsf_minus_canonical_relative_to_mercedes_s": "1E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 11,
+      "team": "Williams",
+      "bsf_relative_to_mercedes_s": "2.077413944130186",
+      "canonical_relative_to_mercedes_s": "2.077413944130185",
+      "bsf_minus_canonical_relative_to_mercedes_s": "1E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 12,
+      "team": "Alpine",
+      "bsf_relative_to_mercedes_s": "1.716368738122597",
+      "canonical_relative_to_mercedes_s": "1.716368738122596",
+      "bsf_minus_canonical_relative_to_mercedes_s": "1E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 12,
+      "team": "Aston Martin",
+      "bsf_relative_to_mercedes_s": "1.464456003945997",
+      "canonical_relative_to_mercedes_s": "1.464456003945997",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 12,
+      "team": "Audi",
+      "bsf_relative_to_mercedes_s": "0.307779895260864",
+      "canonical_relative_to_mercedes_s": "0.307779895260864",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 12,
+      "team": "Cadillac",
+      "bsf_relative_to_mercedes_s": "3.377952762040919",
+      "canonical_relative_to_mercedes_s": "3.377952762040919",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 12,
+      "team": "Ferrari",
+      "bsf_relative_to_mercedes_s": "-0.094444681743355",
+      "canonical_relative_to_mercedes_s": "-0.094444681743355",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 12,
+      "team": "Haas F1 Team",
+      "bsf_relative_to_mercedes_s": "2.410756291902629",
+      "canonical_relative_to_mercedes_s": "2.410756291902629",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 12,
+      "team": "McLaren",
+      "bsf_relative_to_mercedes_s": "-0.029953885350622",
+      "canonical_relative_to_mercedes_s": "-0.019027372541317",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.010926512809305",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 12,
+      "team": "Mercedes",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 12,
+      "team": "Racing Bulls",
+      "bsf_relative_to_mercedes_s": "2.035654311623588",
+      "canonical_relative_to_mercedes_s": "2.035654311623588",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 12,
+      "team": "Red Bull Racing",
+      "bsf_relative_to_mercedes_s": "0.530813720608279",
+      "canonical_relative_to_mercedes_s": "0.530813720608279",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 12,
+      "team": "Williams",
+      "bsf_relative_to_mercedes_s": "2.147840258154247",
+      "canonical_relative_to_mercedes_s": "2.147840258154246",
+      "bsf_minus_canonical_relative_to_mercedes_s": "1E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 13,
+      "team": "Alpine",
+      "bsf_relative_to_mercedes_s": "0.874093306882500",
+      "canonical_relative_to_mercedes_s": "0.600631678422289",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.273461628460211",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 13,
+      "team": "Aston Martin",
+      "bsf_relative_to_mercedes_s": "4.027287850028529",
+      "canonical_relative_to_mercedes_s": "4.286396362127050",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.259108512098521",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 13,
+      "team": "Audi",
+      "bsf_relative_to_mercedes_s": "0.758373538948064",
+      "canonical_relative_to_mercedes_s": "1.017482051046585",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.259108512098521",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 13,
+      "team": "Cadillac",
+      "bsf_relative_to_mercedes_s": "2.587475902431152",
+      "canonical_relative_to_mercedes_s": "2.846584414529673",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.259108512098521",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 13,
+      "team": "Ferrari",
+      "bsf_relative_to_mercedes_s": "-1.218272699266961",
+      "canonical_relative_to_mercedes_s": "-0.959164187168440",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.259108512098521",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 13,
+      "team": "Haas F1 Team",
+      "bsf_relative_to_mercedes_s": "2.126736056352030",
+      "canonical_relative_to_mercedes_s": "2.057852030614484",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.068884025737546",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 13,
+      "team": "McLaren",
+      "bsf_relative_to_mercedes_s": "0.603996188750188",
+      "canonical_relative_to_mercedes_s": "0.863104700848709",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.259108512098521",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 13,
+      "team": "Mercedes",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 13,
+      "team": "Racing Bulls",
+      "bsf_relative_to_mercedes_s": "1.266749234638652",
+      "canonical_relative_to_mercedes_s": "1.006242669176231",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.260506565462421",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 13,
+      "team": "Red Bull Racing",
+      "bsf_relative_to_mercedes_s": "0.687455285399736",
+      "canonical_relative_to_mercedes_s": "0.946563797498257",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.259108512098521",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 13,
+      "team": "Williams",
+      "bsf_relative_to_mercedes_s": "1.727362931477401",
+      "canonical_relative_to_mercedes_s": "1.721755539484107",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.005607391993294",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 14,
+      "team": "Alpine",
+      "bsf_relative_to_mercedes_s": "1.102047302627639",
+      "canonical_relative_to_mercedes_s": "0.642609241280383",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.459438061347256",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 14,
+      "team": "Aston Martin",
+      "bsf_relative_to_mercedes_s": "2.472201940022230",
+      "canonical_relative_to_mercedes_s": "2.305338316292435",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.166863623729795",
+      "team_support": "F",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 14,
+      "team": "Audi",
+      "bsf_relative_to_mercedes_s": "1.138918937099845",
+      "canonical_relative_to_mercedes_s": "1.060882522245151",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.078036414854694",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 14,
+      "team": "Cadillac",
+      "bsf_relative_to_mercedes_s": "4.427115560483684",
+      "canonical_relative_to_mercedes_s": "4.726637136265339",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.299521575781655",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 14,
+      "team": "Ferrari",
+      "bsf_relative_to_mercedes_s": "0.131942018168644",
+      "canonical_relative_to_mercedes_s": "-0.213405655075121",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.345347673243765",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 14,
+      "team": "Haas F1 Team",
+      "bsf_relative_to_mercedes_s": "1.300574400463048",
+      "canonical_relative_to_mercedes_s": "1.425530840827563",
+      "bsf_minus_canonical_relative_to_mercedes_s": "-0.124956440364515",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 14,
+      "team": "McLaren",
+      "bsf_relative_to_mercedes_s": "0.867689606406344",
+      "canonical_relative_to_mercedes_s": "0.173540662480789",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.694148943925555",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 14,
+      "team": "Mercedes",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 14,
+      "team": "Racing Bulls",
+      "bsf_relative_to_mercedes_s": "2.478894462103682",
+      "canonical_relative_to_mercedes_s": "1.563309917996747",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.915584544106935",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 14,
+      "team": "Red Bull Racing",
+      "bsf_relative_to_mercedes_s": "1.167683417982132",
+      "canonical_relative_to_mercedes_s": "0.590239463796010",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.577443954186122",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 14,
+      "team": "Williams",
+      "bsf_relative_to_mercedes_s": "4.039892623566231",
+      "canonical_relative_to_mercedes_s": "3.563414507289721",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.476478116276510",
+      "team_support": "P",
+      "mercedes_support": "P",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 15,
+      "team": "Alpine",
+      "bsf_relative_to_mercedes_s": "0.930850559303423",
+      "canonical_relative_to_mercedes_s": "0.930850559303423",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 15,
+      "team": "Aston Martin",
+      "bsf_relative_to_mercedes_s": "0.857988510407111",
+      "canonical_relative_to_mercedes_s": "0.857988510407111",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "N",
+      "mercedes_support": "F",
+      "plotted_as_performance": false
+    },
+    {
+      "round": 15,
+      "team": "Audi",
+      "bsf_relative_to_mercedes_s": "1.956856646297553",
+      "canonical_relative_to_mercedes_s": "1.956856646297553",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 15,
+      "team": "Cadillac",
+      "bsf_relative_to_mercedes_s": "3.076410150666689",
+      "canonical_relative_to_mercedes_s": "3.076410150666689",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 15,
+      "team": "Ferrari",
+      "bsf_relative_to_mercedes_s": "0.408349924228858",
+      "canonical_relative_to_mercedes_s": "-0.475140093400668",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.883490017629526",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 15,
+      "team": "Haas F1 Team",
+      "bsf_relative_to_mercedes_s": "1.313554368371499",
+      "canonical_relative_to_mercedes_s": "0.431885996808575",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.881668371562924",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 15,
+      "team": "McLaren",
+      "bsf_relative_to_mercedes_s": "0.415318570035368",
+      "canonical_relative_to_mercedes_s": "-0.066736258897052",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.482054828932420",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 15,
+      "team": "Mercedes",
+      "bsf_relative_to_mercedes_s": "0E-15",
+      "canonical_relative_to_mercedes_s": "0E-15",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 15,
+      "team": "Racing Bulls",
+      "bsf_relative_to_mercedes_s": "1.566618694228197",
+      "canonical_relative_to_mercedes_s": "0.777439151991615",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0.789179542236582",
+      "team_support": "P",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 15,
+      "team": "Red Bull Racing",
+      "bsf_relative_to_mercedes_s": "-0.298839021562003",
+      "canonical_relative_to_mercedes_s": "-0.298839021562003",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    },
+    {
+      "round": 15,
+      "team": "Williams",
+      "bsf_relative_to_mercedes_s": "2.247157972862795",
+      "canonical_relative_to_mercedes_s": "2.247157972862795",
+      "bsf_minus_canonical_relative_to_mercedes_s": "0E-15",
+      "team_support": "F",
+      "mercedes_support": "F",
+      "plotted_as_performance": true
+    }
+  ]
+}
