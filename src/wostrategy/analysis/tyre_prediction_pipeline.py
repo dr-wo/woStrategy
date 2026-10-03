@@ -14,6 +14,7 @@ from wodata.pirelli_preview import (
     PreviewVisionExtractor,
     ingest_previews,
     preview_csv_path,
+    rebuild_preview_csv,
 )
 
 from wostrategy.analysis.retro_tyre_results import (
@@ -114,11 +115,27 @@ def run_tyre_prediction_pipeline(
     data_root: str | Path | None = None,
     legacy_retro_root: str | Path | None = None,
     config: PipelineConfig | None = None,
+    processed_previews_only: bool = False,
+    refresh_fp_calibration: bool = True,
 ) -> TyrePredictionPipelineReport:
     config = config or PipelineConfig()
-    preview_report = ingest_previews(
-        season=season, extractor=vision_extractor, data_root=data_root
-    )
+    if processed_previews_only:
+        if vision_extractor is not None:
+            raise ValueError("processed_previews_only cannot use a vision extractor")
+        records = rebuild_preview_csv(season=season, data_root=data_root)
+        preview_report = PreviewIngestionReport(
+            discovered=0,
+            accepted=sum(record.review_status == "accepted" for record in records),
+            extracted=0,
+            skipped_unchanged=0,
+            manual_review=sum(record.review_status != "accepted" for record in records),
+            rejected=(),
+            csv_path=preview_csv_path(season, data_root),
+        )
+    else:
+        preview_report = ingest_previews(
+            season=season, extractor=vision_extractor, data_root=data_root
+        )
     previews = pd.read_csv(preview_csv_path(season, data_root))
     accepted = previews.loc[previews["review_status"].eq("accepted")].copy()
     retro_extractor = RetroTyreResultExtractor(
@@ -165,7 +182,7 @@ def run_tyre_prediction_pipeline(
     # Retro through Race N refreshes only the calibration snapshot consumed by
     # later events. Frozen prediction.json/version artifacts are never rewritten.
     fp_calibration_path = None
-    if not observations.empty:
+    if refresh_fp_calibration and not observations.empty:
         fp_calibration_path = refresh_fp_degradation_calibration(
             season=season,
             completed_retro_through_round=int(observations["round"].max()),

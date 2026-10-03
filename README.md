@@ -814,6 +814,17 @@ the owning producer when a caller proves the cached artifact is stale.
 python -m wostrategy.script.tyre_prediction_pipeline --year 2026
 ```
 
+For orchestration after manual Pirelli processing, use
+`--processed-previews-only` (API: `processed_previews_only=True`). This reads
+validated per-event JSONs and rebuilds their descriptor CSV without scanning or
+extracting images. `woweekend-race` uses this mode, ensures required FP data and
+FP model evidence, then runs the existing race analysis in one invocation.
+The race command also sets `refresh_fp_calibration=False`, leaving year-wide
+historical FP calibration in its explicit post-Retro diagnostic workflow. The
+standalone pipeline still refreshes it by default; `--no-refresh-fp-calibration`
+selects only the existing production prediction stages. These switches do not
+change regression settings, model readiness, or prediction values.
+
 Unchanged preview images are served from their SHA256-keyed per-event JSON artifacts.
 For a new or changed image, install `wodata[vision]` and pass `--vision-model`, or set
 `WODATA_PIRELLI_VISION_MODEL`. API credentials remain provider environment settings.

@@ -17,7 +17,7 @@ from wostrategy.model.cross_event_tyre_prediction import ReadinessConfig
 def main() -> None:
     args = parse_args()
     extractor = None
-    if args.vision_model:
+    if args.vision_model and not args.processed_previews_only:
         extractor = OpenAIPreviewVisionExtractor(model=args.vision_model)
     report = run_tyre_prediction_pipeline(
         season=args.year,
@@ -32,6 +32,8 @@ def main() -> None:
                 minimum_degradation_observations=args.minimum_degradation_observations,
             ),
         ),
+        processed_previews_only=args.processed_previews_only,
+        refresh_fp_calibration=args.refresh_fp_calibration,
     )
     print(json.dumps(_report_dict(report), indent=2, sort_keys=True))
 
@@ -43,6 +45,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--year", type=int, required=True)
     parser.add_argument("--data-root", type=Path)
     parser.add_argument("--legacy-retro-root", type=Path)
+    parser.add_argument(
+        "--processed-previews-only", action="store_true",
+        help="Use manually processed preview JSONs; never scan/extract preview images.",
+    )
+    parser.add_argument(
+        "--refresh-fp-calibration", action=argparse.BooleanOptionalAction, default=True,
+        help="Refresh independent historical FP diagnostics after Retro (enabled by default).",
+    )
     parser.add_argument(
         "--vision-model", default=os.environ.get("WODATA_PIRELLI_VISION_MODEL")
     )

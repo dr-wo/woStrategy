@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import json
 import math
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
@@ -50,6 +51,7 @@ def ensure_pre_race_model_config(
     data_root: str | Path | None = None,
     session_names: Sequence[str] | None = None,
     runner: Callable[[dict], int] | None = None,
+    require_fp_evidence: bool = False,
 ) -> PreRaceModelConfigResult:
     """Reuse a fresh live-MC config or run the canonical pre-race producer.
 
@@ -72,6 +74,8 @@ def ensure_pre_race_model_config(
         path=path,
         data_root=root,
     )
+    if valid and require_fp_evidence:
+        valid, reason = _validate_fp_evidence(path.parent, sessions)
     if valid:
         return PreRaceModelConfigResult(
             "reused", path, year, race, sessions, reason
@@ -115,6 +119,8 @@ def ensure_pre_race_model_config(
         path=path,
         data_root=root,
     )
+    if generated_valid and require_fp_evidence:
+        generated_valid, generated_reason = _validate_fp_evidence(path.parent, sessions)
     if not generated_valid:
         raise RuntimeError(
             "Canonical pre-race model-config producer did not create a valid "
@@ -123,6 +129,28 @@ def ensure_pre_race_model_config(
     return PreRaceModelConfigResult(
         "generated", path, year, race, sessions, reason
     )
+
+
+def _validate_fp_evidence(root: Path, sessions: Sequence[str]) -> tuple[bool, str]:
+    for name in ("aggregate/manifest.json", "aggregate/latest_parameters.csv",
+                 "fp_tyre_evidence_report.json"):
+        if not (root / name).is_file():
+            return False, f"missing FP model artifact: {root / name}"
+    try:
+        manifest = json.loads((root / "aggregate/manifest.json").read_text(encoding="utf-8"))
+        contributing = set(manifest.get("contributing_sessions", ()))
+        if not contributing or not contributing.issubset(sessions):
+            return False, "aggregate model has no usable FP evidence or contains Race data"
+        for session in contributing:
+            for name in ("manifest.json", "latest_parameters.csv"):
+                if not (root / "sessions" / session / name).is_file():
+                    return False, f"missing {session} model artifact: {name}"
+        report = json.loads((root / "fp_tyre_evidence_report.json").read_text(encoding="utf-8"))
+        if not isinstance(report, dict):
+            return False, "FP tyre evidence report must be a JSON object"
+    except (OSError, ValueError, TypeError, AttributeError) as exc:
+        return False, f"unusable FP evidence: {exc}"
+    return True, "valid and fresh with FP evidence"
 
 
 def validate_pre_race_model_config(

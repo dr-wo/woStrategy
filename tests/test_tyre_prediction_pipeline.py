@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import pandas as pd
+import pytest
 
 from wostrategy.analysis.tyre_prediction_pipeline import (
     PipelineConfig,
@@ -36,7 +37,7 @@ class RoundExtractor:
         }
 
 
-def test_pipeline_second_run_is_idempotent(tmp_path):
+def test_pipeline_second_run_is_idempotent(tmp_path, monkeypatch):
     preview_dir = tmp_path / "pirelli_preview/year=2026"
     preview_dir.mkdir(parents=True)
     for round_number in range(1, 10):
@@ -79,11 +80,24 @@ def test_pipeline_second_run_is_idempotent(tmp_path):
     ]
     before = {path: path.read_bytes() for path in tracked}
 
+    def unexpected_ingestion(**kwargs):
+        pytest.fail("processed input mode must not scan or extract preview images")
+
+    monkeypatch.setattr(
+        "wostrategy.analysis.tyre_prediction_pipeline.ingest_previews", unexpected_ingestion,
+    )
+    monkeypatch.setattr(
+        "wostrategy.analysis.tyre_prediction_pipeline.refresh_fp_degradation_calibration",
+        unexpected_ingestion,
+    )
     second = run_tyre_prediction_pipeline(
-        season=2026, vision_extractor=extractor, data_root=tmp_path,
+        season=2026, data_root=tmp_path, processed_previews_only=True,
+        refresh_fp_calibration=False,
         legacy_retro_root=tmp_path / "legacy", config=config,
     )
     assert extractor.calls == 9
+    assert second.preview.extracted == 0
+    assert second.fp_calibration_path is None
     assert second.retro.unchanged_events == 8
     assert second.predictions[0].history_rows_added == 0
     assert {path: path.read_bytes() for path in tracked} == before
