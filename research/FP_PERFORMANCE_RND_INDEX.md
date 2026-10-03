@@ -19,14 +19,14 @@
 
 状态：**RETAINED**＝保留有边界的用途/基准；**PAUSED**＝当前不继续路线；**CLOSED_FOR_NOW**＝已测批次结束；**NEEDS_NEW_EVIDENCE**＝尚不足以成立。触发条件由已有报告的限制/后续条件整理，不构成新 protocol；同线多个 branches 合并。
 
-Entry point 的路径按对应 commit 的 repo root 解释；REPORT 链接指向本机保留的工作区。前八份研究 REPORT 已逐项核对与所列冻结 commit 字节一致。
+Entry point 的路径按对应 commit 的 repo root 解释；REPORT 链接指向 durable archive 的冻结副本，不依赖已清理的 worktree。恢复完整代码时使用下述 archive tag + 对应 checkpoint 的 repo-relative path。前八份研究 REPORT 已逐项核对与所列冻结 commit 字节一致。
 
 | Research line | Status | Current strongest conclusion | Important boundary | Revisit trigger | Entry point |
 |---|---|---|---|---|---|
 | Historical Team Tyre Prior（team-specific RD1/RD2/RD3 来源待恢复） | NEEDS_NEW_EVIDENCE | 本次未定位到该既往 team×compound 历史 prior 研究的可恢复 REPORT、commit 或 artifacts，不能确认它们已持久化，也不能裁定其科学结果。另有 global P0/D0 baseline 文档，但不能替代团队 prior 研究。 | Global baseline 明确排除 team variation；找不到材料不等于未做过研究或研究失败。 | 先恢复原 RD1/RD2/RD3 报告、season-window/support/walk-forward 产物及冻结身份；随后按原报告触发条件复入，不在此新设验证结论。 | Team-specific commit/REPORT：未定位；`5bda17f` · [doc/CROSS_EVENT_TYRE_PREDICTION_V1.md][tyre] 仅供 global baseline 语义参考 |
 | FP long-run programme / selector / repeatability | RETAINED | Physical containers + S1/S2 恢复遗漏长跑；共同支持的 run pace 相对稳定。 | 人工 programme judgement 不是 ground truth；共同 run 稳定不等于跨 session gap 或 fuel 稳定。 | 新 FP programme 审阅样本，或相容 compound/age/time 的跨 session 与双车重复证据。 | `0901138` · [research/fp_longrun_selector_exploration/REPORT.md][selector]；repeatability 延伸 `c23392a` · [REPORT][repeatability] |
 | FP long-run→Race universal correction / fuel-related work | PAUSED | Reference-specific pace 可追溯；局部进度对齐未转化成稳定历史预测增益，已测 discovery 候选未建立通用规则。 | Canonical BSL 不是无误差真值；残差/fuel proxy 不识别 starting load，oracle correction 不等于预测。 | Materially improved Race retro 或独立 FP tyre/thermal/track reference；物理 fuel 解释另需独立 mass sensitivity、burn calibration 和 programme/setup 证据。 | `c6d31a5` · [research/fp_programme_corrections_rnd/REPORT.md][correction]；`87f65c6` · [research/fp_race_correction_discovery/REPORT.md][discovery] |
-| Common-load scenario / performance reconstruction | CLOSED_FOR_NOW | 同 programme 共同起始载油项相消；已算 tyre/time/burn 情景未稳定胜 raw，仅保留条件性进度线索。 | 使用同站 Race joint 参数，属 retro/oracle-assisted；长短 programme 的绝对 pace 不可直接拼接。 | 新 event block，且 FP 当时可用的参数/独立 physical calibration 足以检验冻结线索。 | `4c1c974` · [research/fp_common_load_scenario/REPORT.md][common]；`inputs/bank_registry.json` |
+| Common-load scenario / performance reconstruction | CLOSED_FOR_NOW | 同 programme 共同起始载油项相消；已算 tyre/time/burn 情景未稳定胜 raw，仅保留条件性进度线索。 | 使用同站 Race joint 参数，属 retro/oracle-assisted；长短 programme 的绝对 pace 不可直接拼接。 | 新 event block，且 FP 当时可用的参数/独立 physical calibration 足以检验冻结线索。 | `4c1c974` · [research/fp_common_load_scenario/REPORT.md][common]；冻结 `inputs/bank_registry.json`（旧绝对路径不改）；迁移 registry 见 archive manifest |
 | Raw FP long-run→Race evidence | RETAINED | 早期局部 ordering evidence 与后续 FP2 粗幅值证据可保留；未建立精确 Race gap。 | 旧 geometry/BSL 表与新 whole-Race matched target/support 不同；near-rival precision 不成立。 | 新 prospective ordinary GP：先固定 raw/FP2 用法，随后在同 target、同 pairs 与覆盖账本上评分。 | `532cfc2` · [research/fp_race_2025_transfer/REPORT.md][transfer] §2–3、5；旧几何 `afd4213` · [REPORT][geometry]、expanded `33b9e72` · [REPORT][expanded] |
 | FP fast-lap / Q1 evidence | RETAINED | 当次 FP 快圈与历史 Q1 融合有经验增量方向；FP3 sector shape 仅为较弱线索。 | Q1 target 审计是事后敏感性，不升级为新确认；fresh/低胎龄不保证 push。 | 新普通周末的冻结 FP/Q1 预测，配可靠的 Q1 validity/deletion/driver support；sector 需独立新站。 | `33b9e72` · [research/fp_performance_expanded/REPORT.md][expanded] §5–6；关键 `q_sector/FINDINGS.md` |
 | FP3→Q1 environmental exploration | CLOSED_FOR_NOW | 已测 signed/absolute-weather 中心及天气区间规则没有重复收益；raw 与无天气 rolling blend 保留。 | Target-selected Q1 实测天气是 retrospective；三站不确认 blend 稳定优胜或区间校准。 | 真正未参与选择的新 FP3/Q1 周末；天气预测主张另需有发布时间的预测天气，而非后来的实测天气。 | `b251bbd` · [research/fp3_q1_environment/REPORT.md][environment]；`operational.py` |
@@ -49,31 +49,31 @@ Historical Team Tyre Prior 搜索记录：检查 woStrategy/woData/woPlanner/woW
 
 ## Technical archive
 
-本次重新核查三条研究 branch 的 HEAD 与 `git status --short`：均为空，tracked/staged diff 均为空。主 checkout 的 README/BSF 等并发改动未处理。只建议归档聊天，不删除 worktree/cache，不 push/merge。
+保全 ref：`archive/fp-rnd/transfer-20261003` → `532cfc204ac8c0b2e194b3b6d418e8cf53286662`，覆盖本表全部已定位研究 checkpoints；独立早期 FP/Quali → `archive/fp-rnd/race-quali-20261003` → `d9da699e32a79a371225f5e0deb691b6608cd4f5`。两者均为本地 annotated tags，未 push。
 
-以下 `W`＝`/Users/zhxutong/dr-wo/woStrategy/research/.worktrees`，`D`＝`/Users/zhxutong/dr-wo/woData`；路径均为本机实际持久位置。
+完整代码恢复：从保存 tag 所指历史读取表中 checkpoint 的 repo-relative REPORT/script；需要新工作区时以相应 checkpoint 建立 checkout。不要使用旧 worktree 绝对路径。八个已结束的实际 worktrees 已正常移除，另三个异常 registrations 因 normal remove 拒绝而保留。详细 candidate 状态、保留/删除项、old-path → archived-path 和恢复映射见 [archive manifest](FP_PERFORMANCE_RND_ARCHIVE_MANIFEST.md)。
 
-| Agent/research branch | Final commit | Worktree clean? | Non-git persistent artifacts | Archive recommendation |
-|---|---|---|---|---|
-| `codex/fp-programme-corrections-rnd` | `c6d31a5350f0dfd4b605af7c74b626270cb2a2c8` | Yes | 无必须另外保留的本轮产物；`joint_v1/`、`convergence_v1/` 已提交。保留 COMMANDS 中外部来源。 | SAFE_TO_ARCHIVE |
-| `codex/fp-common-load-scenario-rnd` | `4c1c97405bf3206679e81b7be82e7e56247aa3a6` | Yes | `W/fp-common-load-scenario-rnd/research/fp_common_load_scenario/` 的 `inputs/`（45 MiB）、`outputs/`（148 MiB）、`outputs_2048/` + `outputs_bank80k/`（约61 MiB）、两份 pair draws（约71 MiB）；保留 bank_registry 指向的 expanded worktree。 | SAFE_TO_ARCHIVE；上述目录不可随工作区清理 |
-| `codex/fp-race-2025-transfer-rnd` | `532cfc204ac8c0b2e194b3b6d418e8cf53286662` | Yes | `W/fp-race-2025-transfer-rnd/research/fp_race_2025_transfer/banks/`（382 MiB，含修前 Miami）、`cache/`（1.2 GiB）；`D/wodata/research_session_inputs/schema_v1/fp_race_2025_transfer_20261003/`（54 MiB，含 supplements）。 | SAFE_TO_ARCHIVE；上述目录不可随工作区清理 |
+Durable archive：`/Users/zhxutong/dr-wo/woData/research_archive/fp_performance_rnd_20261003/`。
 
-依赖保全：common-load 的 bank_registry 实际指向 `W/fp-performance-expanded-exploration/`；其 joint banks 必须保留。Sprint 独立输入/缓存/banks 的路径与可恢复紧凑证据见 [DATA_CHANGES][sprint-data]。环境探索新增18个 telemetry parser 文件（约446 MB）位于 `D/fastf1/raw_cache/schema_v1/`；当时修改共享 HTTP SQLite 前未留 before-image，事实已记录于 [DATA_CHANGES][environment-data]。最新 transfer 也记录了独立 HTTP 副本被清空、只有事后 snapshot、随后从完整共享源重新播种的历史；见 [REPRODUCE][reproduce]。不在本次补救或重跑。
+| 原 agent/research branch | Final checkpoint | Preserving ref | 持久 evidence / chat readiness |
+|---|---|---|---|
+| `codex/fp-programme-corrections-rnd` | `c6d31a5` | `archive/fp-rnd/transfer-20261003` | Git history + `frozen_git/`；SAFE_TO_ARCHIVE |
+| `codex/fp-common-load-scenario-rnd` | `4c1c974` | 同上 | `non_git/fp-common-load-scenario-rnd/` + `relocated_bank_registry.json`；SAFE_TO_ARCHIVE |
+| `codex/fp-race-2025-transfer-rnd` | `532cfc2` | 同上 | `non_git/fp-race-2025-transfer-rnd/` banks/cache；SAFE_TO_ARCHIVE |
 
-三个 closure handoff 均报告 `No material session-only knowledge remains.`；其重要边界与保全历史可在原文档定位。归档聊天无已发现的技术阻碍，但 Git 不能单独恢复上述忽略产物。本索引以包含它的 Git commit 为恢复入口；归档建议不授权删除或清理任何含非 Git 产物的工作区。
+Versioned woData research inputs（2025 transfer、Sprint）、共享 FastF1/parser 数据原位保留，实际路径列于 archive manifest。环境探索共享 HTTP SQLite 无 before-image、transfer 独立副本清空后重新播种的历史限制保持原记录；不在本次补救。三个 handoff 均确认无重要 session-only knowledge。聊天可归档；archive/tag/非 Git evidence 不是可任意删除的缓存。
 
 [tyre]: ../doc/CROSS_EVENT_TYRE_PREDICTION_V1.md
-[selector]: .worktrees/fp-race-2025-transfer-rnd/research/fp_longrun_selector_exploration/REPORT.md
-[repeatability]: .worktrees/fp-race-2025-transfer-rnd/research/fp_longrun_same_session_repeatability_rnd/REPORT.md
-[correction]: .worktrees/fp-programme-corrections-rnd/research/fp_programme_corrections_rnd/REPORT.md
-[discovery]: .worktrees/fp-race-correction-discovery/research/fp_race_correction_discovery/REPORT.md
-[common]: .worktrees/fp-common-load-scenario-rnd/research/fp_common_load_scenario/REPORT.md
-[geometry]: .worktrees/fp-race-2025-transfer-rnd/research/fp_race_relative_geometry_rnd/REPORT.md
-[expanded]: .worktrees/fp-performance-expanded-exploration/research/fp_performance_expanded/REPORT.md
-[environment]: .worktrees/fp3-q1-environment-rnd/research/fp3_q1_environment/REPORT.md
-[sprint]: .worktrees/fp-sprint-race-relationship-rnd/research/fp_sprint_race/REPORT.md
-[transfer]: .worktrees/fp-race-2025-transfer-rnd/research/fp_race_2025_transfer/REPORT.md
-[sprint-data]: .worktrees/fp-sprint-race-relationship-rnd/research/fp_sprint_race/DATA_CHANGES.md
-[environment-data]: .worktrees/fp3-q1-environment-rnd/research/fp3_q1_environment/DATA_CHANGES.md
-[reproduce]: .worktrees/fp-race-2025-transfer-rnd/research/fp_race_2025_transfer/REPRODUCE.md
+[selector]: ../../woData/research_archive/fp_performance_rnd_20261003/frozen_git/research/fp_longrun_selector_exploration/REPORT.md
+[repeatability]: ../../woData/research_archive/fp_performance_rnd_20261003/frozen_git/research/fp_longrun_same_session_repeatability_rnd/REPORT.md
+[correction]: ../../woData/research_archive/fp_performance_rnd_20261003/frozen_git/research/fp_programme_corrections_rnd/REPORT.md
+[discovery]: ../../woData/research_archive/fp_performance_rnd_20261003/frozen_git/research/fp_race_correction_discovery/REPORT.md
+[common]: ../../woData/research_archive/fp_performance_rnd_20261003/frozen_git/research/fp_common_load_scenario/REPORT.md
+[geometry]: ../../woData/research_archive/fp_performance_rnd_20261003/frozen_git/research/fp_race_relative_geometry_rnd/REPORT.md
+[expanded]: ../../woData/research_archive/fp_performance_rnd_20261003/frozen_git/research/fp_performance_expanded/REPORT.md
+[environment]: ../../woData/research_archive/fp_performance_rnd_20261003/frozen_git/research/fp3_q1_environment/REPORT.md
+[sprint]: ../../woData/research_archive/fp_performance_rnd_20261003/frozen_git/research/fp_sprint_race/REPORT.md
+[transfer]: ../../woData/research_archive/fp_performance_rnd_20261003/frozen_git/research/fp_race_2025_transfer/REPORT.md
+[sprint-data]: ../../woData/research_archive/fp_performance_rnd_20261003/frozen_git/research/fp_sprint_race/DATA_CHANGES.md
+[environment-data]: ../../woData/research_archive/fp_performance_rnd_20261003/frozen_git/research/fp3_q1_environment/DATA_CHANGES.md
+[reproduce]: ../../woData/research_archive/fp_performance_rnd_20261003/frozen_git/research/fp_race_2025_transfer/REPRODUCE.md
