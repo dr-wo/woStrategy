@@ -19,6 +19,7 @@ from .contract import (
     frozen_round_contract, validate_frozen_source_identity,
 )
 from .frozen_sources import resolve_frozen_sources, verify_frozen_sources
+from .input_coverage import complete_clean_laps, graph_support_summary, degraded_warning
 
 
 def _sha(path):
@@ -147,9 +148,12 @@ def get_bsf_event(*, season, round_number, data_root=None, artifact_root=None,
     d = pd.read_csv(sources['clean']).reset_index(drop=True)
     if not len(d):
         raise ValueError('No usable canonical clean-lap inputs; BSF unavailable, no substitute')
+    d, coverage = complete_clean_laps(d)
     prediction, base, counts = canonical_reference_inputs(d, sources)
     table, terms = calculate_bsf_reference(
         d, prediction, base, counts, season=season, round_number=round_number)
+    support = graph_support_summary(table)
+    degraded = coverage['excluded_rows'] > 0
     root.mkdir(parents=True, exist_ok=True)
     temp = table_path.with_suffix('.csv.tmp')
     table.to_csv(temp, index=False, float_format='%.17g')
@@ -160,7 +164,10 @@ def get_bsf_event(*, season, round_number, data_root=None, artifact_root=None,
                 json.dump(_jsonable(terms), stream, allow_nan=False, sort_keys=True)
     terms_path.with_suffix('.gz.tmp').replace(terms_path)
     meta = dict(
-        status='available', year=season, round=round_number, method=METHOD,
+        status='degraded_input' if degraded else 'available',
+        input_coverage=_jsonable(coverage), graph_support=support,
+        warnings=[degraded_warning(round_number, coverage, support)] if degraded else [],
+        year=season, round=round_number, method=METHOD,
         method_version=VERSION, acceptance='B; restricted interpretation', title=TITLE,
         methodology=METHODOLOGY, limitation=LIMITATION, report_caption=CAPTION,
         gauge='all_eleven_teams_arithmetic_mean_zero; lower_is_faster',
@@ -215,14 +222,21 @@ def generate_bsf_season(*, season, round_number, output_dir, figures_dir,
         except (ValueError, FileNotFoundError, KeyError, AssertionError) as exc:
             unavailable[str(r)] = f'{type(exc).__name__}: {exc}'
     history = mercedes_relative_history(pd.concat(tables, ignore_index=True))
+    degraded_rounds = {r: meta for r, meta in provenance.items()
+                       if meta.get('status') == 'degraded_input'}
+    warnings = [warning for meta in degraded_rounds.values() for warning in meta['warnings']]
     root = Path(output_dir)
     root.mkdir(parents=True, exist_ok=True)
     current.to_csv(root / 'bsf_junction_reference.current.csv', index=False, float_format='%.17g')
     history.to_csv(root / 'bsf_junction_reference.season.csv', index=False, float_format='%.17g')
     figures = plot_bsf_season(history, figures_dir, season=season,
-                              requested_rounds=list(range(1, round_number + 1)))
+                              requested_rounds=list(range(1, round_number + 1)),
+                              degraded_rounds=degraded_rounds)
     output = dict(
-        status='available' if not unavailable else 'partial_history', method=METHOD,
+        status=('degraded_input' if degraded_rounds else
+                'partial_history' if unavailable else 'available'),
+        history_status='partial_history' if unavailable else 'complete',
+        degraded_rounds=sorted(map(int, degraded_rounds)), warnings=warnings, method=METHOD,
         method_version=VERSION, acceptance='B; restricted interpretation', title=TITLE,
         methodology=METHODOLOGY, limitation=LIMITATION, report_caption=CAPTION,
         current_event=current_meta, requested_rounds=list(range(1, round_number + 1)),

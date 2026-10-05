@@ -31,7 +31,7 @@ def season_plot_data(history, field):
                             prior_rounds=rows.loc[rows.support_flag.eq('N'), 'round'].tolist())
     return output
 
-def plot_bsf_season(history, output_dir, *, season, requested_rounds=None):
+def plot_bsf_season(history, output_dir, *, season, requested_rounds=None, degraded_rounds=None):
     history = mercedes_relative_history(history)
     ROOT = Path(output_dir)
     ROOT.mkdir(parents=True, exist_ok=True)
@@ -48,11 +48,21 @@ def plot_bsf_season(history, output_dir, *, season, requested_rounds=None):
     codes = np.array([[{'P':0,'F':1,'N':2,'—':3}[f] for f in line] for line in flags])
     neutral_rounds = [int(r) for r,g in history.groupby('round') if
                       not g.support_flag.eq('P').any() and np.ptp(g.score_s_per_lap) < 1e-12]
+    degraded_note = '; '.join(
+        f'R{r}: excluded {meta["input_coverage"]["excluded_rows"]}/'
+        f'{meta["input_coverage"]["original_rows"]} rows'
+        for r, meta in (degraded_rounds or {}).items())
+    def mark_degraded(fig):
+        if degraded_note:
+            fig.text(.09, .985, 'DEGRADED INPUT — ' + degraded_note
+                     + ' · reduced evidence coverage; see report warning',
+                     ha='left', va='top', fontsize=10, color='#9a3412', fontweight='bold')
     def draw(field, stem, title, ylabel, sign_note):
         # Companion artifacts are file exports; never create a native GUI window
         # or change the canonical plotter's global backend.
         fig = Figure(figsize=(17, 11))
         FigureCanvasAgg(fig)
+        mark_degraded(fig)
         ax = fig.add_axes([.09, .435, .69, .42])
         support = fig.add_axes([.09, .14, .69, .20], sharex=ax)
         # R6 is numerical completion, even though Mercedes itself carries F.
@@ -92,7 +102,8 @@ def plot_bsf_season(history, output_dir, *, season, requested_rounds=None):
         ax.set_ylabel(ylabel, labelpad=12)
         ax.grid(axis='both', color='#e2e8f0', linewidth=.6, alpha=.8)
         ax.set_axisbelow(True)
-        fig.text(.09, .962, title, ha='left', fontsize=21, fontweight='bold')
+        fig.text(.09, .944 if degraded_note else .962, title,
+                 ha='left', fontsize=21, fontweight='bold')
         fig.text(.09, .907, NOTE, ha='left', fontsize=11, color='#334155', linespacing=1.4)
         fig.text(.09, .865, sign_note, ha='left', fontsize=10, color='#526175')
         handles = [Line2D([0], [0], color=palette[t], marker='o',
@@ -161,6 +172,7 @@ def plot_bsf_season(history, output_dir, *, season, requested_rounds=None):
          '(BSF team − BSF Mercedes) − (canonical team − canonical Mercedes) · positive = BSF places the team slower relative to Mercedes')
     fig = Figure(figsize=(17, 7))
     FigureCanvasAgg(fig)
+    mark_degraded(fig)
     ax = fig.subplots()
     fig.subplots_adjust(left=.14, right=.97, top=.84, bottom=.16)
     ax.imshow(codes, cmap=ListedColormap(['#e1edf7','#fff0d6','#e5e7eb','#fff']),
@@ -172,7 +184,8 @@ def plot_bsf_season(history, output_dir, *, season, requested_rounds=None):
                     ha='center',va='center',fontsize=9)
     ax.set_xticks(range(len(rounds)), [f'R{r}' for r in rounds])
     ax.set_yticks(range(11), teams)
-    fig.suptitle(f'{season} BSF support / fallback provenance', x=.14, ha='left', fontsize=19)
+    fig.suptitle(f'{season} BSF support / fallback provenance', x=.14,
+                 y=.935 if degraded_note else .98, ha='left', fontsize=19)
     fig.text(.14,.88,'P: projected graph support · F: full canonical fallback · N: prior only · —: unavailable event',fontsize=11)
     fig.text(.14,.07,'e = incident local-library edges (overlapping, not independent) · n = projected observed-support nodes',fontsize=10)
     fig.text(.14,.03,'P denotes provenance, not confidence. Every score is fallback-dependent; N is numerical completion only.',fontsize=10)
@@ -183,6 +196,7 @@ def plot_bsf_season(history, output_dir, *, season, requested_rounds=None):
         'support_flags': {t: flags[i].tolist() for i,t in enumerate(teams)},
         'unit': 's/lap', 'Mercedes_exact_zero': True,
         'P_is_provenance_not_confidence': True,
+        'degraded_rounds': sorted(map(int, degraded_rounds or {})),
     }, indent=2) + '\n')
     return {key:ROOT/f'{stem}.png' for key,stem in {
         'tracker':'bsf_junction_reference_mercedes',
