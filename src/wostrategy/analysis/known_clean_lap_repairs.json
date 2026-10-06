@@ -1,0 +1,418 @@
+{
+  "schema_version": 1,
+  "repairs": [
+    {
+      "schema_version": 1,
+      "repair_id": "2026-16-R-physical-tyre-life-v1",
+      "retrieved_utc": "2026-10-06",
+      "event": {
+        "year": 2026,
+        "round": 16,
+        "session": "R",
+        "event_name": "Bahrain Grand Prix",
+        "event_country": "Bahrain",
+        "session_key": 11731,
+        "meeting_key": 1308,
+        "session_name": "R"
+      },
+      "sources": {
+        "openf1_session": {
+          "url": "https://api.openf1.org/v1/sessions?session_key=11731",
+          "file": "doc/data_repairs/2026_16_R/openf1_session.json",
+          "sha256": "aab87ace8f8792128fabe190e9e9b79ca818a2ad7229df449a1662175a81ceea"
+        },
+        "openf1_stints": {
+          "url": "https://api.openf1.org/v1/stints?session_key=11731",
+          "file": "doc/data_repairs/2026_16_R/openf1_stints.json",
+          "sha256": "b69646c79c683ac60f6dfc33c0a8dcaa099d4f1c2535e6ded3a91aee7613b49f"
+        },
+        "openf1_drivers": {
+          "url": "https://api.openf1.org/v1/drivers?session_key=11731",
+          "file": "doc/data_repairs/2026_16_R/openf1_drivers.json",
+          "sha256": "1671f3f6d19cd7bd64dac286d6fca75dadc1eaa0bad75556d13a74de2fb1d554"
+        },
+        "f1_stream": {
+          "url": "https://livetiming.formula1.com/static/2026/2026-10-04_Bahrain_Grand_Prix/2026-10-04_Race/TimingAppData.jsonStream",
+          "file": "doc/data_repairs/2026_16_R/TimingAppData.jsonStream",
+          "sha256": "3872ee70314ec286bc0bbc3e8cbfbdb0831f8d99691d00736ab149960651c7ae"
+        },
+        "f1_final": {
+          "url": "https://livetiming.formula1.com/static/2026/2026-10-04_Bahrain_Grand_Prix/2026-10-04_Race/TimingAppData.json",
+          "file": "doc/data_repairs/2026_16_R/TimingAppData.json",
+          "sha256": "94d3e56452d54c36d5d04e117585d1ed5ae1a5ff16431394ed6965a48aad5ec6"
+        },
+        "pirelli_pitstop": {
+          "url": "https://content.presspage.com/uploads/2363/fa648611-1484-4754-9b2a-30129e9af641/16-bh26-pitstop-en.jpg?10000",
+          "file": "doc/data_repairs/2026_16_R/pirelli_pitstop.jpg",
+          "sha256": "28ac53e0453a7d352fccc88527ce11e432518f544a19f00d3498569fa590e368"
+        },
+        "pirelli_release": {
+          "url": "https://press.pirelli.com/sepang-debuts-the-intermediates-and-crowns-verstappen/"
+        },
+        "f1_pit_stops": {
+          "url": "https://www.formula1.com/en/results/2026/races/1308/bahrain/pit-stop-summary"
+        },
+        "alpine_race": {
+          "url": "https://media.alpinecars.com/2026-formula-one-bahrain-grand-prix-in-malaysia-sunday/?lang=eng"
+        },
+        "williams_race": {
+          "url": "https://www.williamsf1.com/2026-bahrain-grand-prix-in-malaysia"
+        }
+      },
+      "corrections": [
+        {
+          "driver": "ALB",
+          "driver_number": "23",
+          "lap_number": 33,
+          "stint": 4,
+          "compound": "SOFT",
+          "tyre_life": 4,
+          "first_replacement_lap": 30,
+          "prior_tyre_laps": 0,
+          "sources": [
+            "pirelli_pitstop",
+            "f1_pit_stops",
+            "f1_stream",
+            "f1_final"
+          ],
+          "derivation": "Pirelli NEW tyre legend establishes prior life 0; F1 stop 29 establishes first replacement lap 30; TyreLife = 0 + 33 - 30 + 1 = 4."
+        },
+        {
+          "driver": "ALB",
+          "driver_number": "23",
+          "lap_number": 34,
+          "stint": 4,
+          "compound": "SOFT",
+          "tyre_life": 5,
+          "first_replacement_lap": 30,
+          "prior_tyre_laps": 0,
+          "sources": [
+            "pirelli_pitstop",
+            "f1_pit_stops",
+            "f1_stream",
+            "f1_final"
+          ],
+          "derivation": "Pirelli NEW tyre legend establishes prior life 0; F1 stop 29 establishes first replacement lap 30; TyreLife = 0 + 34 - 30 + 1 = 5."
+        },
+        {
+          "driver": "ALB",
+          "driver_number": "23",
+          "lap_number": 35,
+          "stint": 4,
+          "compound": "SOFT",
+          "tyre_life": 6,
+          "first_replacement_lap": 30,
+          "prior_tyre_laps": 0,
+          "sources": [
+            "pirelli_pitstop",
+            "f1_pit_stops",
+            "f1_stream",
+            "f1_final"
+          ],
+          "derivation": "Pirelli NEW tyre legend establishes prior life 0; F1 stop 29 establishes first replacement lap 30; TyreLife = 0 + 35 - 30 + 1 = 6."
+        },
+        {
+          "driver": "ALB",
+          "driver_number": "23",
+          "lap_number": 36,
+          "stint": 4,
+          "compound": "SOFT",
+          "tyre_life": 7,
+          "first_replacement_lap": 30,
+          "prior_tyre_laps": 0,
+          "sources": [
+            "pirelli_pitstop",
+            "f1_pit_stops",
+            "f1_stream",
+            "f1_final"
+          ],
+          "derivation": "Pirelli NEW tyre legend establishes prior life 0; F1 stop 29 establishes first replacement lap 30; TyreLife = 0 + 36 - 30 + 1 = 7."
+        },
+        {
+          "driver": "ALB",
+          "driver_number": "23",
+          "lap_number": 37,
+          "stint": 4,
+          "compound": "SOFT",
+          "tyre_life": 8,
+          "first_replacement_lap": 30,
+          "prior_tyre_laps": 0,
+          "sources": [
+            "pirelli_pitstop",
+            "f1_pit_stops",
+            "f1_stream",
+            "f1_final"
+          ],
+          "derivation": "Pirelli NEW tyre legend establishes prior life 0; F1 stop 29 establishes first replacement lap 30; TyreLife = 0 + 37 - 30 + 1 = 8."
+        },
+        {
+          "driver": "ALB",
+          "driver_number": "23",
+          "lap_number": 38,
+          "stint": 4,
+          "compound": "SOFT",
+          "tyre_life": 9,
+          "first_replacement_lap": 30,
+          "prior_tyre_laps": 0,
+          "sources": [
+            "pirelli_pitstop",
+            "f1_pit_stops",
+            "f1_stream",
+            "f1_final"
+          ],
+          "derivation": "Pirelli NEW tyre legend establishes prior life 0; F1 stop 29 establishes first replacement lap 30; TyreLife = 0 + 38 - 30 + 1 = 9."
+        },
+        {
+          "driver": "COL",
+          "driver_number": "43",
+          "lap_number": 38,
+          "stint": 3,
+          "compound": "HARD",
+          "tyre_life": 7,
+          "first_replacement_lap": 32,
+          "prior_tyre_laps": 0,
+          "sources": [
+            "pirelli_pitstop",
+            "f1_pit_stops",
+            "f1_stream",
+            "f1_final"
+          ],
+          "derivation": "Pirelli NEW tyre legend establishes prior life 0; F1 stop 31 establishes first replacement lap 32; TyreLife = 0 + 38 - 32 + 1 = 7."
+        },
+        {
+          "driver": "COL",
+          "driver_number": "43",
+          "lap_number": 39,
+          "stint": 3,
+          "compound": "HARD",
+          "tyre_life": 8,
+          "first_replacement_lap": 32,
+          "prior_tyre_laps": 0,
+          "sources": [
+            "pirelli_pitstop",
+            "f1_pit_stops",
+            "f1_stream",
+            "f1_final"
+          ],
+          "derivation": "Pirelli NEW tyre legend establishes prior life 0; F1 stop 31 establishes first replacement lap 32; TyreLife = 0 + 39 - 32 + 1 = 8."
+        },
+        {
+          "driver": "COL",
+          "driver_number": "43",
+          "lap_number": 40,
+          "stint": 3,
+          "compound": "HARD",
+          "tyre_life": 9,
+          "first_replacement_lap": 32,
+          "prior_tyre_laps": 0,
+          "sources": [
+            "pirelli_pitstop",
+            "f1_pit_stops",
+            "f1_stream",
+            "f1_final"
+          ],
+          "derivation": "Pirelli NEW tyre legend establishes prior life 0; F1 stop 31 establishes first replacement lap 32; TyreLife = 0 + 40 - 32 + 1 = 9."
+        },
+        {
+          "driver": "COL",
+          "driver_number": "43",
+          "lap_number": 41,
+          "stint": 3,
+          "compound": "HARD",
+          "tyre_life": 10,
+          "first_replacement_lap": 32,
+          "prior_tyre_laps": 0,
+          "sources": [
+            "pirelli_pitstop",
+            "f1_pit_stops",
+            "f1_stream",
+            "f1_final"
+          ],
+          "derivation": "Pirelli NEW tyre legend establishes prior life 0; F1 stop 31 establishes first replacement lap 32; TyreLife = 0 + 41 - 32 + 1 = 10."
+        },
+        {
+          "driver": "LAW",
+          "driver_number": "30",
+          "lap_number": 32,
+          "stint": 3,
+          "compound": "HARD",
+          "tyre_life": 2,
+          "first_replacement_lap": 31,
+          "prior_tyre_laps": 0,
+          "sources": [
+            "pirelli_pitstop",
+            "f1_pit_stops",
+            "f1_stream",
+            "f1_final"
+          ],
+          "derivation": "Pirelli NEW tyre legend establishes prior life 0; F1 stop 30 establishes first replacement lap 31; TyreLife = 0 + 32 - 31 + 1 = 2."
+        },
+        {
+          "driver": "LAW",
+          "driver_number": "30",
+          "lap_number": 33,
+          "stint": 3,
+          "compound": "HARD",
+          "tyre_life": 3,
+          "first_replacement_lap": 31,
+          "prior_tyre_laps": 0,
+          "sources": [
+            "pirelli_pitstop",
+            "f1_pit_stops",
+            "f1_stream",
+            "f1_final"
+          ],
+          "derivation": "Pirelli NEW tyre legend establishes prior life 0; F1 stop 30 establishes first replacement lap 31; TyreLife = 0 + 33 - 31 + 1 = 3."
+        },
+        {
+          "driver": "LAW",
+          "driver_number": "30",
+          "lap_number": 34,
+          "stint": 3,
+          "compound": "HARD",
+          "tyre_life": 4,
+          "first_replacement_lap": 31,
+          "prior_tyre_laps": 0,
+          "sources": [
+            "pirelli_pitstop",
+            "f1_pit_stops",
+            "f1_stream",
+            "f1_final"
+          ],
+          "derivation": "Pirelli NEW tyre legend establishes prior life 0; F1 stop 30 establishes first replacement lap 31; TyreLife = 0 + 34 - 31 + 1 = 4."
+        },
+        {
+          "driver": "LAW",
+          "driver_number": "30",
+          "lap_number": 35,
+          "stint": 3,
+          "compound": "HARD",
+          "tyre_life": 5,
+          "first_replacement_lap": 31,
+          "prior_tyre_laps": 0,
+          "sources": [
+            "pirelli_pitstop",
+            "f1_pit_stops",
+            "f1_stream",
+            "f1_final"
+          ],
+          "derivation": "Pirelli NEW tyre legend establishes prior life 0; F1 stop 30 establishes first replacement lap 31; TyreLife = 0 + 35 - 31 + 1 = 5."
+        }
+      ],
+      "unresolved": [
+        {
+          "driver": "VER",
+          "driver_number": "3",
+          "lap_number": 35,
+          "stint": 3,
+          "compound": "SOFT",
+          "sources": [
+            "pirelli_pitstop",
+            "f1_stream",
+            "f1_final",
+            "openf1_stints"
+          ],
+          "reason": "Pirelli marks the lap-34 replacement SOFT as USED. F1 final StartLaps=0 contradicts this; stream supplied no explicit StartLaps at the reindexed lap-33 stop. OpenF1 stint boundaries disagree with pit/lap boundaries. Prior physical use unknown; later lap-44 set StartLaps=3 does not identify this earlier set."
+        },
+        {
+          "driver": "VER",
+          "driver_number": "3",
+          "lap_number": 36,
+          "stint": 3,
+          "compound": "SOFT",
+          "sources": [
+            "pirelli_pitstop",
+            "f1_stream",
+            "f1_final",
+            "openf1_stints"
+          ],
+          "reason": "Pirelli marks the lap-34 replacement SOFT as USED. F1 final StartLaps=0 contradicts this; stream supplied no explicit StartLaps at the reindexed lap-33 stop. OpenF1 stint boundaries disagree with pit/lap boundaries. Prior physical use unknown; later lap-44 set StartLaps=3 does not identify this earlier set."
+        },
+        {
+          "driver": "VER",
+          "driver_number": "3",
+          "lap_number": 37,
+          "stint": 3,
+          "compound": "SOFT",
+          "sources": [
+            "pirelli_pitstop",
+            "f1_stream",
+            "f1_final",
+            "openf1_stints"
+          ],
+          "reason": "Pirelli marks the lap-34 replacement SOFT as USED. F1 final StartLaps=0 contradicts this; stream supplied no explicit StartLaps at the reindexed lap-33 stop. OpenF1 stint boundaries disagree with pit/lap boundaries. Prior physical use unknown; later lap-44 set StartLaps=3 does not identify this earlier set."
+        },
+        {
+          "driver": "VER",
+          "driver_number": "3",
+          "lap_number": 38,
+          "stint": 3,
+          "compound": "SOFT",
+          "sources": [
+            "pirelli_pitstop",
+            "f1_stream",
+            "f1_final",
+            "openf1_stints"
+          ],
+          "reason": "Pirelli marks the lap-34 replacement SOFT as USED. F1 final StartLaps=0 contradicts this; stream supplied no explicit StartLaps at the reindexed lap-33 stop. OpenF1 stint boundaries disagree with pit/lap boundaries. Prior physical use unknown; later lap-44 set StartLaps=3 does not identify this earlier set."
+        },
+        {
+          "driver": "VER",
+          "driver_number": "3",
+          "lap_number": 39,
+          "stint": 3,
+          "compound": "SOFT",
+          "sources": [
+            "pirelli_pitstop",
+            "f1_stream",
+            "f1_final",
+            "openf1_stints"
+          ],
+          "reason": "Pirelli marks the lap-34 replacement SOFT as USED. F1 final StartLaps=0 contradicts this; stream supplied no explicit StartLaps at the reindexed lap-33 stop. OpenF1 stint boundaries disagree with pit/lap boundaries. Prior physical use unknown; later lap-44 set StartLaps=3 does not identify this earlier set."
+        },
+        {
+          "driver": "VER",
+          "driver_number": "3",
+          "lap_number": 40,
+          "stint": 3,
+          "compound": "SOFT",
+          "sources": [
+            "pirelli_pitstop",
+            "f1_stream",
+            "f1_final",
+            "openf1_stints"
+          ],
+          "reason": "Pirelli marks the lap-34 replacement SOFT as USED. F1 final StartLaps=0 contradicts this; stream supplied no explicit StartLaps at the reindexed lap-33 stop. OpenF1 stint boundaries disagree with pit/lap boundaries. Prior physical use unknown; later lap-44 set StartLaps=3 does not identify this earlier set."
+        },
+        {
+          "driver": "VER",
+          "driver_number": "3",
+          "lap_number": 41,
+          "stint": 3,
+          "compound": "SOFT",
+          "sources": [
+            "pirelli_pitstop",
+            "f1_stream",
+            "f1_final",
+            "openf1_stints"
+          ],
+          "reason": "Pirelli marks the lap-34 replacement SOFT as USED. F1 final StartLaps=0 contradicts this; stream supplied no explicit StartLaps at the reindexed lap-33 stop. OpenF1 stint boundaries disagree with pit/lap boundaries. Prior physical use unknown; later lap-44 set StartLaps=3 does not identify this earlier set."
+        },
+        {
+          "driver": "VER",
+          "driver_number": "3",
+          "lap_number": 42,
+          "stint": 3,
+          "compound": "SOFT",
+          "sources": [
+            "pirelli_pitstop",
+            "f1_stream",
+            "f1_final",
+            "openf1_stints"
+          ],
+          "reason": "Pirelli marks the lap-34 replacement SOFT as USED. F1 final StartLaps=0 contradicts this; stream supplied no explicit StartLaps at the reindexed lap-33 stop. OpenF1 stint boundaries disagree with pit/lap boundaries. Prior physical use unknown; later lap-44 set StartLaps=3 does not identify this earlier set."
+        }
+      ]
+    }
+  ]
+}

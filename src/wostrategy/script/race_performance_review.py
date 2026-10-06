@@ -30,6 +30,7 @@ from wostrategy.analysis.long_run_performance import (
     TYRE_AGE_MODE_STINT,
     TYRE_AGE_MODES,
 )
+from wostrategy.analysis.clean_lap_repairs import persist_clean_laps
 from wostrategy.plots.race_performance import (
     RacePerformancePlotter,
     result_output_path as race_result_output_path,
@@ -1265,6 +1266,9 @@ def load_cached_monte_carlo_outputs(
     event_name = None
     if clean_laps_path.exists():
         clean_laps = pd.read_csv(clean_laps_path)
+        paths.extend(persist_clean_laps(
+            clean_laps, clean_laps_path, year=year, race=race, session=session, cached=True,
+        ))
         event_name = event_name_from_laps(clean_laps)
         paths.append(clean_laps_path)
 
@@ -1681,6 +1685,8 @@ def save_race_outputs(
         path = output_dir / filename
         if filename == "tyre_information.csv":
             write_tyre_information(frame, path)
+        elif filename == f"{prefix}_clean_laps.csv":
+            paths.extend(persist_clean_laps(frame, path, year=year, race=race, session=session))
         else:
             frame.to_csv(path, index=False)
         paths.append(path)
