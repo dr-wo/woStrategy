@@ -107,6 +107,21 @@ def stint_cost(n: int, compound: str, current_tyre_age: int, model: StrategyMode
     """
     if n < 0 or current_tyre_age < 0:
         raise ValueError("Lap count and tyre age cannot be negative.")
+    return _tyre_cost(n, compound, current_tyre_age, model)
+
+
+def modelled_tyre_pace(compound: str, age: int, model: StrategyModel) -> float:
+    """Tyre-only pace at model age, including the theoretical age-zero intercept.
+
+    A one-lap cost advances age by one, so evaluate its polynomial with
+    starting age ``age - 1``. This does not represent an observed out-lap.
+    """
+    if age < 0:
+        raise ValueError("Model tyre age cannot be negative.")
+    return _tyre_cost(1, compound, age - 1, model)
+
+
+def _tyre_cost(n: int, compound: str, current_tyre_age: int, model: StrategyModel) -> float:
     compound = compound.upper()
     delta = float(model.compound_delta[compound])
     degradation = float(model.degradation[compound])
