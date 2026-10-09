@@ -1,0 +1,20 @@
+{
+  "source_run": "woData/woweekend/runs/schema_v1/event=2026-16/workflow=race_preparation/runs/20261003T225359.171082Z-f370e12cf1",
+  "total_laps": 56,
+  "pit_loss": 23.7,
+  "max_stops": 4,
+  "compound_delta": {"HARD": 0.2752115388974766, "MEDIUM": 0.0, "SOFT": -0.31214405241230747},
+  "degradation": {"HARD": 0.033, "MEDIUM": 0.039, "SOFT": 0.062},
+  "initial_scan_min": 0.00975,
+  "scan_max": 0.117,
+  "unrestricted": {
+    "cutoffs": [0.0204140625, 0.0911015625, null],
+    "boundary_costs": [111.86699999999998, 120.24],
+    "boundary_margin": 8.373
+  },
+  "rules_compliant": {
+    "cutoffs": [null, 0.0935390625, null],
+    "boundary_costs": [113.67601923905204, 122.0624154234646],
+    "boundary_margin": 8.386396184412561
+  }
+}

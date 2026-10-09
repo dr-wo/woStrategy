@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
-from math import ceil
+from math import ceil, isfinite
 from typing import Callable, Mapping
 
 from wodata.contracts import StrategySearchState
@@ -38,6 +38,8 @@ class DegradationCutoffResult:
     sweep: tuple[CutoffPoint, ...]
     warnings: tuple[str, ...]
     rules: StrategyRules
+    initial_scan_max: float | None = None
+    effective_scan_max: float | None = None
 
     def to_dict(self) -> dict[str, object]:
         payload = asdict(self)
@@ -65,6 +67,25 @@ class DegradationCutoffResult:
                 ),
             },
         ]
+        # Older in-memory results can infer the upper bound from their sweep.
+        upper = self.sweep[-1].medium_degradation if self.sweep else None
+        payload["initial_scan_max"] = (
+            self.initial_scan_max if self.initial_scan_max is not None else upper
+        )
+        payload["effective_scan_max"] = (
+            self.effective_scan_max if self.effective_scan_max is not None else upper
+        )
+        for row, pair in zip(payload["cutoff_table"], ((0, 1), (1, 2), (2, 3))):
+            # 2→3 selection intentionally excludes the lower-extension samples.
+            points = tuple(
+                point for point in self.sweep
+                if pair != (2, 3)
+                or point.medium_degradation >= self.initial_scan_min - 1e-12
+            )
+            row["coverage"] = _transition_coverage(
+                points, pair, rules_unavailable=row["status"] == "unavailable_rules_compliant",
+            )
+            row["display_text"] = _cutoff_display_text(row)
         return payload
 
 
@@ -244,7 +265,96 @@ def calculate_degradation_cutoffs(
         sweep=tuple(points),
         warnings=tuple(warnings),
         rules=rules,
+        initial_scan_max=maximum,
+        effective_scan_max=points[-1].medium_degradation,
     )
+
+
+def _transition_coverage(points, pair, *, rules_unavailable=False):
+    """Describe sampled evidence, never an untested mathematical bound."""
+    def finite_cost(point, stops):
+        value = point.costs.get(stops)
+        return float(value) if value is not None and isfinite(value) else None
+
+    comparable = [all(finite_cost(point, stops) is not None for stops in pair)
+                  for point in points]
+    intervals = sum(left and right for left, right in zip(comparable, comparable[1:]))
+    boundary = points[-1] if points else None
+    costs = [finite_cost(boundary, stops) if boundary else None for stops in pair]
+    feasible = [
+        (None if boundary is None else
+         False if boundary.costs.get(stops) is None else
+         True if costs[index] is not None else None)
+        for index, stops in enumerate(pair)
+    ]
+    margin = costs[1] - costs[0] if all(value is not None for value in costs) else None
+    if rules_unavailable:
+        status = "unavailable_rules_compliant"
+    elif feasible == [False, False]:
+        status = "both_classes_unavailable"
+    elif feasible[0] is False:
+        status = "lower_class_unavailable"
+    elif feasible[1] is False:
+        status = "higher_class_unavailable"
+    elif feasible != [True, True] or not intervals:
+        status = "insufficient_comparable_samples"
+    else:
+        status = "both_classes_feasible"
+    return {
+        "scan_min": points[0].medium_degradation if points else None,
+        "scan_max": boundary.medium_degradation if boundary else None,
+        "comparable_sample_count": sum(comparable),
+        "comparable_interval_count": intervals,
+        "status": status,
+        "upper_boundary": {
+            "medium_degradation": boundary.medium_degradation if boundary else None,
+            "lower_stop_count": pair[0],
+            "higher_stop_count": pair[1],
+            "lower_stop_feasible": feasible[0],
+            "higher_stop_feasible": feasible[1],
+            "lower_stop_cost": costs[0],
+            "higher_stop_cost": costs[1],
+            "higher_minus_lower_cost": margin,
+            "lower_cost_stop_count": (
+                pair[0] if margin is not None and margin > 0 else
+                pair[1] if margin is not None and margin < 0 else None
+            ),
+        },
+    }
+
+
+def _cutoff_display_text(row):
+    label = row["display_label"]
+    value = row["cutoff_medium_degradation"]
+    if value is not None:
+        return f"{label}: {value:.6g} s/lap ({row['status']})."
+    if row["status"] == "unavailable_rules_compliant":
+        return f"{label}: unavailable under rules."
+    coverage = row["coverage"]
+    upper, lower = coverage["scan_max"], coverage["scan_min"]
+    if upper is None:
+        return f"{label}: cutoff unavailable; scan coverage unavailable."
+    text = (f"{label}: cutoff not found through M degradation = {upper:.6g} s/lap "
+            f"(tested from {lower:.6g}).")
+    boundary = coverage["upper_boundary"]
+    status = coverage["status"]
+    if status == "both_classes_feasible":
+        margin = boundary["higher_minus_lower_cost"]
+        winner = boundary["lower_cost_stop_count"]
+        if margin == 0:
+            return text + " Both fixed-stop classes had equal cost at the scan limit."
+        loser = (boundary["higher_stop_count"] if winner == boundary["lower_stop_count"]
+                 else boundary["lower_stop_count"])
+        return text + (f" At the scan limit, {winner}-stop was {abs(margin):.2f} s "
+                       f"lower-cost than {loser}-stop.")
+    unavailable = {
+        "lower_class_unavailable": f"{boundary['lower_stop_count']}-stop was unavailable",
+        "higher_class_unavailable": f"{boundary['higher_stop_count']}-stop was unavailable",
+        "both_classes_unavailable": "Both fixed-stop classes were unavailable",
+    }
+    if status in unavailable:
+        return text + f" {unavailable[status]} at the scan limit; no boundary comparison."
+    return text + " Insufficient adjacent comparable samples to test a crossing."
 
 
 def _scan_values(minimum: float, maximum: float, step: float) -> list[float]:

@@ -199,12 +199,13 @@ def test_unrestricted_cutoff_calculates_serializes_and_plots_zero_to_one() -> No
     assert result.primary_2_to_3 == pytest.approx(0.3, abs=0.001)
     payload = result.to_dict()
     assert payload["primary_0_to_1"] == result.primary_0_to_1
-    assert payload["cutoff_table"][0] == {
+    expected = {
         "transition": "0_to_1",
         "display_label": "0→1",
         "cutoff_medium_degradation": result.primary_0_to_1,
         "status": "found_initial_scan",
     }
+    assert {key: payload["cutoff_table"][0][key] for key in expected} == expected
     figure, axis = plot_degradation_cutoff(result)
     try:
         labels = axis.get_legend_handles_labels()[1]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from textwrap import wrap
 from typing import Mapping, Sequence
 
 import matplotlib.pyplot as plt
@@ -23,8 +24,11 @@ def plot_degradation_cutoff(
         if any(value is not None for value in y):
             axis.plot(x, y, label=f"Best {stops}-stop", color=colours[stops], linewidth=2)
         elif stops == 0:
+            unavailable_label = ("0-stop unavailable (rules)"
+                                 if result.primary_0_to_1_status == "unavailable_rules_compliant"
+                                 else "0-stop unavailable")
             axis.plot([], [], color=colours[stops], linewidth=2,
-                      label="0-stop unavailable (rules)")
+                      label=unavailable_label)
     axis.axvline(result.predicted_medium_degradation, color="black", linestyle="--", label="Predicted MEDIUM degradation")
     for value, label, colour in (
         (result.primary_0_to_1, "0→1 cutoff", "#e377c2"),
@@ -61,7 +65,13 @@ def plot_degradation_cutoff(
     axis.set_title("Strategy envelope versus MEDIUM degradation")
     axis.grid(alpha=0.25)
     axis.legend()
-    figure.tight_layout()
+    notes = [line for row in result.to_dict()["cutoff_table"]
+             if row["cutoff_medium_degradation"] is None
+             and row["status"] != "unavailable_rules_compliant"
+             for line in wrap(row["display_text"], width=110)]
+    if notes:
+        figure.text(0.02, 0.01, "\n".join(notes), fontsize=8, va="bottom")
+    figure.tight_layout(rect=(0, 0.025 * len(notes) + 0.02 if notes else 0, 1, 1))
     return figure, axis
 
 
