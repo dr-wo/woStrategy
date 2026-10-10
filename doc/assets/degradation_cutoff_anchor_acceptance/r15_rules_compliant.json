@@ -1,0 +1,386 @@
+{
+  "predicted_medium_degradation": 0.039,
+  "initial_scan_min": 0.00975,
+  "effective_scan_min": 0.00975,
+  "primary_0_to_1": null,
+  "primary_0_to_1_status": "unavailable_rules_compliant",
+  "primary_1_to_2": 0.0709921875,
+  "primary_1_to_2_status": "found_initial_scan",
+  "primary_2_to_3": null,
+  "non_monotonic": false,
+  "reversal_regions": [],
+  "sweep": [
+    {
+      "medium_degradation": 0.00975,
+      "costs": {
+        "0": null,
+        "1": 18.974719707842308,
+        "2": 32.40663519589339,
+        "3": 48.57046829350361
+      },
+      "preferred_stop_count": 1
+    },
+    {
+      "medium_degradation": 0.014625,
+      "costs": {
+        "0": null,
+        "1": 23.70944224436202,
+        "2": 36.378024634802884,
+        "3": 51.93107956176347
+      },
+      "preferred_stop_count": 1
+    },
+    {
+      "medium_degradation": 0.0195,
+      "costs": {
+        "0": null,
+        "1": 28.099553512621874,
+        "2": 39.84988590306274,
+        "3": 54.89355209828318
+      },
+      "preferred_stop_count": 1
+    },
+    {
+      "medium_degradation": 0.024375,
+      "costs": {
+        "0": null,
+        "1": 32.35423414675181,
+        "2": 43.1204971713226,
+        "3": 57.60328836654303
+      },
+      "preferred_stop_count": 1
+    },
+    {
+      "medium_degradation": 0.02925,
+      "costs": {
+        "0": null,
+        "1": 36.53516478088173,
+        "2": 46.294858439582455,
+        "3": 60.223774634802886
+      },
+      "preferred_stop_count": 1
+    },
+    {
+      "medium_degradation": 0.034125,
+      "costs": {
+        "0": null,
+        "1": 40.68022041501166,
+        "2": 49.41223343958245,
+        "3": 62.74358026893282
+      },
+      "preferred_stop_count": 1
+    },
+    {
+      "medium_degradation": 0.039,
+      "costs": {
+        "0": null,
+        "1": 44.79847041501166,
+        "2": 52.50141407371238,
+        "3": 65.23958026893281
+      },
+      "preferred_stop_count": 1
+    },
+    {
+      "medium_degradation": 0.043875,
+      "costs": {
+        "0": null,
+        "1": 48.90865104914159,
+        "2": 55.54646970784231,
+        "3": 67.72301090306274
+      },
+      "preferred_stop_count": 1
+    },
+    {
+      "medium_degradation": 0.04875,
+      "costs": {
+        "0": null,
+        "1": 52.99002604914159,
+        "2": 58.580719707842306,
+        "3": 70.18044153719266
+      },
+      "preferred_stop_count": 1
+    },
+    {
+      "medium_degradation": 0.053625,
+      "costs": {
+        "0": null,
+        "1": 57.071401049141585,
+        "2": 61.614969707842306,
+        "3": 72.60656653719266
+      },
+      "preferred_stop_count": 1
+    },
+    {
+      "medium_degradation": 0.0585,
+      "costs": {
+        "0": null,
+        "1": 61.152776049141586,
+        "2": 64.6492197078423,
+        "3": 75.0249971713226
+      },
+      "preferred_stop_count": 1
+    },
+    {
+      "medium_degradation": 0.063375,
+      "costs": {
+        "0": null,
+        "1": 65.23415104914159,
+        "2": 67.50716548805107,
+        "3": 77.4234971713226
+      },
+      "preferred_stop_count": 1
+    },
+    {
+      "medium_degradation": 0.06825,
+      "costs": {
+        "0": null,
+        "1": 69.29983168327152,
+        "2": 70.097471122181,
+        "3": 79.82199717132261
+      },
+      "preferred_stop_count": 1
+    },
+    {
+      "medium_degradation": 0.073125,
+      "costs": {
+        "0": null,
+        "1": 73.22235204837847,
+        "2": 72.67109612218101,
+        "3": 82.22049717132259
+      },
+      "preferred_stop_count": 2
+    },
+    {
+      "medium_degradation": 0.078,
+      "costs": {
+        "0": null,
+        "1": 76.27410204837847,
+        "2": 75.244721122181,
+        "3": 84.61899717132259
+      },
+      "preferred_stop_count": 2
+    },
+    {
+      "medium_degradation": 0.082875,
+      "costs": {
+        "0": null,
+        "1": 79.3201961303136,
+        "2": 77.81834612218101,
+        "3": 86.81415104914159
+      },
+      "preferred_stop_count": 2
+    },
+    {
+      "medium_degradation": 0.08775,
+      "costs": {
+        "0": null,
+        "1": 82.3524461303136,
+        "2": 80.391971122181,
+        "3": 88.7293880245708
+      },
+      "preferred_stop_count": 2
+    },
+    {
+      "medium_degradation": 0.092625,
+      "costs": {
+        "0": null,
+        "1": 85.38469613031359,
+        "2": 82.96559612218101,
+        "3": 90.64001302457079
+      },
+      "preferred_stop_count": 2
+    },
+    {
+      "medium_degradation": 0.0975,
+      "costs": {
+        "0": null,
+        "1": 88.41694613031359,
+        "2": 85.539221122181,
+        "3": 92.53444365870071
+      },
+      "preferred_stop_count": 2
+    },
+    {
+      "medium_degradation": 0.102375,
+      "costs": {
+        "0": null,
+        "1": 91.4491961303136,
+        "2": 88.10327675631093,
+        "3": 94.42806865870071
+      },
+      "preferred_stop_count": 2
+    },
+    {
+      "medium_degradation": 0.10725,
+      "costs": {
+        "0": null,
+        "1": 94.4814461303136,
+        "2": 90.66102675631095,
+        "3": 96.32169365870072
+      },
+      "preferred_stop_count": 2
+    },
+    {
+      "medium_degradation": 0.112125,
+      "costs": {
+        "0": null,
+        "1": 97.5136961303136,
+        "2": 92.96547439289736,
+        "3": 98.21531865870071
+      },
+      "preferred_stop_count": 2
+    },
+    {
+      "medium_degradation": 0.117,
+      "costs": {
+        "0": null,
+        "1": 100.54594613031361,
+        "2": 95.08834939289736,
+        "3": 100.10894365870072
+      },
+      "preferred_stop_count": 2
+    }
+  ],
+  "warnings": [
+    "No 2\u21923 stop crossing was found inside the scan range."
+  ],
+  "rules": {
+    "minimum_distinct_dry_compounds": 2,
+    "available_compounds": null
+  },
+  "initial_scan_max": 0.11699999999999999,
+  "effective_scan_max": 0.117,
+  "primary_2_to_3_status": null,
+  "primary_3_to_4": null,
+  "primary_3_to_4_status": null,
+  "supported_max_stops": 4,
+  "anchor_coverage": {
+    "coverage_anchor_semantics": "medium_degradation_context",
+    "anchor_type": "fp_medium_posterior_median",
+    "anchors": [
+      {
+        "medium_degradation": 0.025389934661121005,
+        "session": "FP1",
+        "source_family": "fp_diagnostic"
+      },
+      {
+        "medium_degradation": 0.038457877486155145,
+        "session": "FP2",
+        "source_family": "fp_diagnostic"
+      }
+    ],
+    "anchor_min": 0.025389934661121005,
+    "anchor_max": 0.038457877486155145,
+    "upper_extension_triggered": false,
+    "boundary_tolerance": 0.000625,
+    "boundary_tolerance_source": "refine_tolerance",
+    "explicit_scan_max": null,
+    "max_upper_extension_blocks": 128,
+    "extension_history": [],
+    "transitions_encountered": [],
+    "transition_sought": null,
+    "right_transition": {
+      "transition": "1_to_2",
+      "cutoff": 0.0709921875
+    },
+    "left_transition": null,
+    "at_transition": null,
+    "stop_reason": "right_boundary_found",
+    "boundary_coverage": {
+      "scan_min": 0.00975,
+      "scan_max": 0.117,
+      "comparable_sample_count": 23,
+      "comparable_interval_count": 22,
+      "status": "both_classes_feasible",
+      "upper_boundary": {
+        "medium_degradation": 0.117,
+        "lower_stop_count": 1,
+        "higher_stop_count": 2,
+        "lower_stop_feasible": true,
+        "higher_stop_feasible": true,
+        "lower_stop_cost": 100.54594613031361,
+        "higher_stop_cost": 95.08834939289736,
+        "higher_minus_lower_cost": -5.457596737416253,
+        "lower_cost_stop_count": 2
+      }
+    },
+    "display_text": "FP MEDIUM coverage anchors: 0.0253899\u20130.0384579 s/lap. Conditional sensitivity uses effective compound ratios; FP is a scalar reference only. Right boundary: 1\u21922 = 0.0709922. Right-side coverage complete; scanned through 0.117 s/lap."
+  },
+  "cutoff_table": [
+    {
+      "transition": "0_to_1",
+      "display_label": "0\u21921",
+      "cutoff_medium_degradation": null,
+      "status": "unavailable_rules_compliant",
+      "coverage": {
+        "scan_min": 0.00975,
+        "scan_max": 0.117,
+        "comparable_sample_count": 0,
+        "comparable_interval_count": 0,
+        "status": "unavailable_rules_compliant",
+        "upper_boundary": {
+          "medium_degradation": 0.117,
+          "lower_stop_count": 0,
+          "higher_stop_count": 1,
+          "lower_stop_feasible": false,
+          "higher_stop_feasible": true,
+          "lower_stop_cost": null,
+          "higher_stop_cost": 100.54594613031361,
+          "higher_minus_lower_cost": null,
+          "lower_cost_stop_count": null
+        }
+      },
+      "display_text": "0\u21921: unavailable under rules."
+    },
+    {
+      "transition": "1_to_2",
+      "display_label": "1\u21922",
+      "cutoff_medium_degradation": 0.0709921875,
+      "status": "found_initial_scan",
+      "coverage": {
+        "scan_min": 0.00975,
+        "scan_max": 0.117,
+        "comparable_sample_count": 23,
+        "comparable_interval_count": 22,
+        "status": "both_classes_feasible",
+        "upper_boundary": {
+          "medium_degradation": 0.117,
+          "lower_stop_count": 1,
+          "higher_stop_count": 2,
+          "lower_stop_feasible": true,
+          "higher_stop_feasible": true,
+          "lower_stop_cost": 100.54594613031361,
+          "higher_stop_cost": 95.08834939289736,
+          "higher_minus_lower_cost": -5.457596737416253,
+          "lower_cost_stop_count": 2
+        }
+      },
+      "display_text": "1\u21922: 0.0709922 s/lap (found_initial_scan)."
+    },
+    {
+      "transition": "2_to_3",
+      "display_label": "2\u21923",
+      "cutoff_medium_degradation": null,
+      "status": "not_found_in_scan_range",
+      "coverage": {
+        "scan_min": 0.00975,
+        "scan_max": 0.117,
+        "comparable_sample_count": 23,
+        "comparable_interval_count": 22,
+        "status": "both_classes_feasible",
+        "upper_boundary": {
+          "medium_degradation": 0.117,
+          "lower_stop_count": 2,
+          "higher_stop_count": 3,
+          "lower_stop_feasible": true,
+          "higher_stop_feasible": true,
+          "lower_stop_cost": 95.08834939289736,
+          "higher_stop_cost": 100.10894365870072,
+          "higher_minus_lower_cost": 5.020594265803368,
+          "lower_cost_stop_count": 2
+        }
+      },
+      "display_text": "2\u21923: cutoff not found through M degradation = 0.117 s/lap (tested from 0.00975). At the scan limit, 2-stop was 5.02 s lower-cost than 3-stop."
+    }
+  ]
+}

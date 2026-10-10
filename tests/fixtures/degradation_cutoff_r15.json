@@ -1,0 +1,48 @@
+{
+  "source_run": "/Users/zhxutong/dr-wo/woData/woweekend/runs/schema_v1/event=2026-15/workflow=race_preparation/runs/20260926T095545.276998Z-9809d20b84",
+  "total_laps": 51,
+  "pit_loss": 19.3,
+  "max_stops": 4,
+  "compound_delta": {
+    "HARD": 0.3258440819351384,
+    "MEDIUM": 0.0,
+    "SOFT": -0.32380563412992786
+  },
+  "degradation": {
+    "HARD": 0.033,
+    "MEDIUM": 0.039,
+    "SOFT": 0.062
+  },
+  "coverage_anchors": [
+    {
+      "fp_structural_identifiability": "absolute_not_identifiable; combined_slope_or_contrasts_only",
+      "medium_degradation": 0.025389934661121005,
+      "p10": 0.009075725119887872,
+      "p90": 0.05923998812060946,
+      "production_input": false,
+      "session": "FP1",
+      "source_family": "fp_diagnostic",
+      "support": {
+        "status": "measured",
+        "usable_laps": 12,
+        "usable_runs": 2
+      },
+      "unit": "s/lap"
+    },
+    {
+      "fp_structural_identifiability": "absolute_not_identifiable; combined_slope_or_contrasts_only",
+      "medium_degradation": 0.038457877486155145,
+      "p10": 0.01129318353146782,
+      "p90": 0.09561414021829442,
+      "production_input": false,
+      "session": "FP2",
+      "source_family": "fp_diagnostic",
+      "support": {
+        "status": "measured",
+        "usable_laps": 8,
+        "usable_runs": 2
+      },
+      "unit": "s/lap"
+    }
+  ]
+}

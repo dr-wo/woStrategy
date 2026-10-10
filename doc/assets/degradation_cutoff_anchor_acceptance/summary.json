@@ -1,0 +1,90 @@
+[
+  {
+    "event": 15,
+    "branch": "unrestricted",
+    "anchor_max": 0.038457877486155145,
+    "initial": [
+      0.00975,
+      0.11699999999999999
+    ],
+    "final": [
+      0.00975,
+      0.117
+    ],
+    "cutoffs": [
+      0.0185859375,
+      0.0886640625,
+      null,
+      null
+    ],
+    "stop_reason": "right_boundary_found",
+    "extension": false,
+    "source_run": "/Users/zhxutong/dr-wo/woData/woweekend/runs/schema_v1/event=2026-15/workflow=race_preparation/runs/20260926T095545.276998Z-9809d20b84"
+  },
+  {
+    "event": 15,
+    "branch": "rules_compliant",
+    "anchor_max": 0.038457877486155145,
+    "initial": [
+      0.00975,
+      0.11699999999999999
+    ],
+    "final": [
+      0.00975,
+      0.117
+    ],
+    "cutoffs": [
+      null,
+      0.0709921875,
+      null,
+      null
+    ],
+    "stop_reason": "right_boundary_found",
+    "extension": false,
+    "source_run": "/Users/zhxutong/dr-wo/woData/woweekend/runs/schema_v1/event=2026-15/workflow=race_preparation/runs/20260926T095545.276998Z-9809d20b84"
+  },
+  {
+    "event": 16,
+    "branch": "unrestricted",
+    "anchor_max": 0.19165665065407897,
+    "initial": [
+      0.00975,
+      0.11699999999999999
+    ],
+    "final": [
+      0.00975,
+      0.362
+    ],
+    "cutoffs": [
+      0.0204140625,
+      0.0911015625,
+      0.1825508804321289,
+      0.3590908737182617
+    ],
+    "stop_reason": "right_boundary_found",
+    "extension": true,
+    "source_run": "/Users/zhxutong/dr-wo/woData/woweekend/runs/schema_v1/event=2026-16/workflow=race_preparation/runs/20261003T225359.171082Z-f370e12cf1"
+  },
+  {
+    "event": 16,
+    "branch": "rules_compliant",
+    "anchor_max": 0.19165665065407897,
+    "initial": [
+      0.00975,
+      0.11699999999999999
+    ],
+    "final": [
+      0.00975,
+      0.197
+    ],
+    "cutoffs": [
+      null,
+      0.0935390625,
+      0.19274413299560544,
+      null
+    ],
+    "stop_reason": "right_boundary_found",
+    "extension": true,
+    "source_run": "/Users/zhxutong/dr-wo/woData/woweekend/runs/schema_v1/event=2026-16/workflow=race_preparation/runs/20261003T225359.171082Z-f370e12cf1"
+  }
+]

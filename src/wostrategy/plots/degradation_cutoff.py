@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from math import isfinite
 from textwrap import wrap
 from typing import Mapping, Sequence
 
@@ -18,8 +19,8 @@ def plot_degradation_cutoff(
 ):
     figure, axis = plt.subplots(figsize=(9, 5.5))
     x = [point.medium_degradation for point in result.sweep]
-    colours = {0: "#17becf", 1: "#1f77b4", 2: "#ff7f0e", 3: "#2ca02c"}
-    for stops in (0, 1, 2, 3):
+    colours = {0: "#17becf", 1: "#1f77b4", 2: "#ff7f0e", 3: "#2ca02c", 4: "#bcbd22"}
+    for stops in range(result.supported_max_stops + 1):
         y = [point.costs.get(stops) for point in result.sweep]
         if any(value is not None for value in y):
             axis.plot(x, y, label=f"Best {stops}-stop", color=colours[stops], linewidth=2)
@@ -34,6 +35,7 @@ def plot_degradation_cutoff(
         (result.primary_0_to_1, "0→1 cutoff", "#e377c2"),
         (result.primary_1_to_2, "1→2 cutoff", "#9467bd"),
         (result.primary_2_to_3, "2→3 cutoff", "#8c564b"),
+        (result.primary_3_to_4, "3→4 cutoff", "#bcbd22"),
     ):
         if value is not None:
             axis.axvline(value, color=colour, linestyle=":", label=label)
@@ -47,7 +49,12 @@ def plot_degradation_cutoff(
     }
     for marker in fp_diagnostic_markers:
         session = str(marker["session"]).upper()
-        value = float(marker["medium_degradation"])
+        try:
+            value = float(marker.get("medium_degradation"))
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if not isfinite(value) or value < 0:
+            continue
         colour, linestyle, symbol = fp_styles.get(session, ("#777777", "-.", "D"))
         label = f"{session} diagnostic"
         axis.axvline(
@@ -69,6 +76,8 @@ def plot_degradation_cutoff(
              if row["cutoff_medium_degradation"] is None
              and row["status"] != "unavailable_rules_compliant"
              for line in wrap(row["display_text"], width=110)]
+    if result.anchor_coverage and result.anchor_coverage["anchor_max"] is not None:
+        notes += wrap(result.anchor_coverage["display_text"], width=110)
     if notes:
         figure.text(0.02, 0.01, "\n".join(notes), fontsize=8, va="bottom")
     figure.tight_layout(rect=(0, 0.025 * len(notes) + 0.02 if notes else 0, 1, 1))

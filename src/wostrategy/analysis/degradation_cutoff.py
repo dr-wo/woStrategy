@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
+from functools import lru_cache
 from math import ceil, isfinite
-from typing import Callable, Mapping
+from typing import Callable, Mapping, Sequence
 
 from wodata.contracts import StrategySearchState
 
@@ -40,6 +41,11 @@ class DegradationCutoffResult:
     rules: StrategyRules
     initial_scan_max: float | None = None
     effective_scan_max: float | None = None
+    primary_2_to_3_status: str | None = None
+    primary_3_to_4: float | None = None
+    primary_3_to_4_status: str | None = None
+    supported_max_stops: int = 3
+    anchor_coverage: Mapping[str, object] | None = None
 
     def to_dict(self) -> dict[str, object]:
         payload = asdict(self)
@@ -60,13 +66,20 @@ class DegradationCutoffResult:
                 "transition": "2_to_3",
                 "display_label": "2→3",
                 "cutoff_medium_degradation": self.primary_2_to_3,
-                "status": (
+                "status": self.primary_2_to_3_status or (
                     "found_initial_scan"
                     if self.primary_2_to_3 is not None
                     else "not_found_in_scan_range"
                 ),
             },
         ]
+        payload["cutoff_table"] = payload["cutoff_table"][:self.supported_max_stops]
+        if self.primary_3_to_4_status is not None:
+            payload["cutoff_table"].append({
+                "transition": "3_to_4", "display_label": "3→4",
+                "cutoff_medium_degradation": self.primary_3_to_4,
+                "status": self.primary_3_to_4_status,
+            })
         # Older in-memory results can infer the upper bound from their sweep.
         upper = self.sweep[-1].medium_degradation if self.sweep else None
         payload["initial_scan_max"] = (
@@ -75,11 +88,11 @@ class DegradationCutoffResult:
         payload["effective_scan_max"] = (
             self.effective_scan_max if self.effective_scan_max is not None else upper
         )
-        for row, pair in zip(payload["cutoff_table"], ((0, 1), (1, 2), (2, 3))):
+        for row, pair in zip(payload["cutoff_table"], ((0, 1), (1, 2), (2, 3), (3, 4))):
             # 2→3 selection intentionally excludes the lower-extension samples.
             points = tuple(
                 point for point in self.sweep
-                if pair != (2, 3)
+                if pair[0] < 2
                 or point.medium_degradation >= self.initial_scan_min - 1e-12
             )
             row["coverage"] = _transition_coverage(
@@ -100,6 +113,8 @@ def calculate_degradation_cutoffs(
     coarse_step: float | None = None,
     refine_tolerance: float | None = None,
     evaluator: Callable[[float, int, StrategyRules], float | None] | None = None,
+    coverage_anchors: Sequence[Mapping[str, object]] = (),
+    max_upper_extension_blocks: int = 128,
 ) -> DegradationCutoffResult:
     rules = strategy_rules or StrategyRules()
     predicted = float(model.degradation.get("MEDIUM", 0.0))
@@ -116,9 +131,16 @@ def calculate_degradation_cutoffs(
     if maximum <= minimum or step <= 0 or tolerance <= 0:
         raise ValueError("degradation cutoff scan bounds/steps must be positive and ordered")
 
+    supported_max = min(4, max(0, state.max_future_stops))
+    if max_upper_extension_blocks < 0 or int(max_upper_extension_blocks) != max_upper_extension_blocks:
+        raise ValueError("max_upper_extension_blocks must be a non-negative integer")
+
+    @lru_cache(maxsize=None)
     def cost(value: float, stops: int) -> float | None:
         if value < 0:
             raise ValueError("MEDIUM degradation scan cannot evaluate negative values")
+        if stops > supported_max:
+            return None
         if stops == 0 and rules.minimum_distinct_dry_compounds > 1:
             return None
         if evaluator is not None:
@@ -134,6 +156,9 @@ def calculate_degradation_cutoffs(
 
     initial_minimum = minimum
     values = _scan_values(minimum, maximum, step)
+    if scan_max is not None:
+        # Rounded grid endpoints must not exceed a high-precision explicit cap.
+        values = [min(value, maximum) for value in values]
     stop_counts = (0, 1, 2, 3)
     zero_stop_rules_available = rules.minimum_distinct_dry_compounds <= 1
     points = [
@@ -227,7 +252,7 @@ def calculate_degradation_cutoffs(
     warnings = []
     if non_monotonic:
         warnings.append("Strategy envelope is non-monotonic; primary cutoffs are simplified references.")
-    if primary_01 is None and zero_stop_rules_available:
+    if primary_01 is None and zero_stop_rules_available and supported_max >= 1:
         if primary_01_status == "no_positive_degradation_crossing":
             warnings.append(
                 "No positive-degradation 0→1 stop crossing was found after "
@@ -238,7 +263,7 @@ def calculate_degradation_cutoffs(
                 "No 0→1 stop crossing was found at or above the explicit "
                 "scan_min hard lower bound."
             )
-    if primary_12 is None:
+    if primary_12 is None and supported_max >= 2:
         if primary_12_status == "no_positive_degradation_crossing":
             warnings.append(
                 "No positive-degradation 1→2 stop crossing was found after "
@@ -249,9 +274,9 @@ def calculate_degradation_cutoffs(
                 "No 1→2 stop crossing was found at or above the explicit "
                 "scan_min hard lower bound."
             )
-    if primary_23 is None:
+    if primary_23 is None and supported_max >= 3:
         warnings.append("No 2→3 stop crossing was found inside the scan range.")
-    return DegradationCutoffResult(
+    result = DegradationCutoffResult(
         predicted_medium_degradation=predicted,
         initial_scan_min=initial_minimum,
         effective_scan_min=minimum,
@@ -267,7 +292,246 @@ def calculate_degradation_cutoffs(
         rules=rules,
         initial_scan_max=maximum,
         effective_scan_max=points[-1].medium_degradation,
+        supported_max_stops=supported_max,
     )
+    return _cover_anchors(
+        result, coverage_anchors, cost, step, tolerance,
+        explicit_scan_max=scan_max, max_blocks=max_upper_extension_blocks,
+    )
+
+
+def _cover_anchors(result, anchors, cost, step, tolerance, *, explicit_scan_max, max_blocks):
+    """Complete scalar coverage, without interpreting FP as a joint tyre model."""
+    accepted = []
+    for anchor in anchors:
+        try:
+            value = float(anchor.get("medium_degradation"))
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if isfinite(value) and value >= 0:
+            accepted.append({"medium_degradation": value,
+                             "session": anchor.get("session"),
+                             "source_family": anchor.get("source_family", "fp_diagnostic")})
+    anchor_max = max((a["medium_degradation"] for a in accepted), default=None)
+    meta = {
+        "coverage_anchor_semantics": "medium_degradation_context",
+        "anchor_type": "fp_medium_posterior_median",
+        "anchors": accepted, "anchor_min": min((a["medium_degradation"] for a in accepted), default=None),
+        "anchor_max": anchor_max, "upper_extension_triggered": False,
+        "boundary_tolerance": tolerance, "boundary_tolerance_source": "refine_tolerance",
+        "explicit_scan_max": explicit_scan_max,
+        "max_upper_extension_blocks": max_blocks,
+        "extension_history": [], "transitions_encountered": [],
+        "transition_sought": None, "right_transition": None, "left_transition": None,
+        "at_transition": None, "stop_reason": "no_valid_anchors",
+    }
+    points = list(result.sweep)
+    found = {(0, 1): result.primary_0_to_1, (1, 2): result.primary_1_to_2,
+             (2, 3): result.primary_2_to_3, (3, 4): None}
+    updates = {}
+
+    def name(pair):
+        return f"{pair[0]}_to_{pair[1]}"
+
+    def finish(reason, pair=None):
+        meta["stop_reason"] = reason
+        if pair is not None:
+            meta["boundary_coverage"] = _transition_coverage(pair_points(pair), pair)
+        for transition, value in found.items():
+            if value is not None and anchor_max is not None and value < anchor_max - tolerance:
+                meta["left_transition"] = {"transition": name(transition), "cutoff": value}
+        final = replace(result, sweep=tuple(points), effective_scan_max=points[-1].medium_degradation,
+                        anchor_coverage=meta, **updates)
+        meta["display_text"] = _anchor_display_text(meta, final.effective_scan_max)
+        # Existing warnings describe the initial calculation; remove only resolved misses.
+        warnings = tuple(w for w in final.warnings if not any(
+            found[pair] is not None and w.startswith(f"No {pair[0]}→{pair[1]} stop crossing")
+            for pair in found
+        ))
+        reversals = tuple((a.medium_degradation, b.medium_degradation)
+                         for a, b in zip(points, points[1:])
+                         if a.preferred_stop_count is not None and b.preferred_stop_count is not None
+                         and b.preferred_stop_count < a.preferred_stop_count)
+        if reversals and not final.non_monotonic:
+            warnings += ("Strategy envelope is non-monotonic; primary cutoffs are simplified references.",)
+        return replace(final, warnings=warnings, reversal_regions=reversals, non_monotonic=bool(reversals))
+
+    def pair_points(pair):
+        return [p for p in points if pair[0] < 2 or p.medium_degradation >= result.initial_scan_min - 1e-12]
+
+    def covered(pair, value):
+        if abs(value - anchor_max) <= tolerance:
+            meta["at_transition"] = {"transition": name(pair), "cutoff": value}
+            return "anchor_at_boundary"
+        if value > anchor_max + tolerance:
+            meta["right_transition"] = {"transition": name(pair), "cutoff": value}
+            return "right_boundary_found"
+        return None
+
+    if anchor_max is None:
+        return finish("no_valid_anchors")
+    known = [pair for pair, value in found.items()
+             if value is not None and pair[1] <= result.supported_max_stops]
+    for pair in known:
+        reason = covered(pair, found[pair])
+        if reason:
+            return finish(reason, pair)
+    next_lower = max((p[1] for p in known), default=(1 if result.rules.minimum_distinct_dry_compounds > 1 else 0))
+    blocks = 0
+    active_max = min(3, result.supported_max_stops)
+    for lower in range(next_lower, result.supported_max_stops):
+        pair = (lower, lower + 1)
+        meta["transition_sought"] = name(pair)
+        if pair == (3, 4):
+            active_max = 4
+            updates["primary_3_to_4_status"] = "not_found_in_scan_range"
+            # Lazy evaluation: no four-stop search unless earlier boundaries fail coverage.
+            points = [_point(p.medium_degradation, {**p.costs, 4: cost(p.medium_degradation, 4)})
+                      if p.medium_degradation >= result.initial_scan_min - 1e-12 else p for p in points]
+        inspected = 0
+        while True:
+            candidates = pair_points(pair)
+            for left, right in list(zip(candidates, candidates[1:]))[inspected:]:
+                inspected += 1
+                margins = [_finite_margin(p, pair) for p in (left, right)]
+                if None in margins or not (margins[0] >= 0 and margins[1] <= 0):
+                    continue
+                if margins == [0, 0] or right.medium_degradation <= 0:
+                    continue
+                try:
+                    value, verification = _stable_upper_crossing(
+                        left.medium_degradation, right.medium_degradation, pair, cost, tolerance,
+                    )
+                except ValueError as exc:
+                    meta["refinement_failure"] = str(exc)
+                    return finish("unstable_crossing", pair)
+                found[pair] = value
+                status = ("found_after_upper_evidence_extension"
+                          if right.medium_degradation > result.initial_scan_max + 1e-12
+                          else "found_initial_scan")
+                updates[f"primary_{name(pair)}"] = value
+                updates[f"primary_{name(pair)}_status"] = status
+                meta["transitions_encountered"].append({
+                    "transition": name(pair), "cutoff": value, "status": status,
+                    "verification": verification,
+                })
+                reason = covered(pair, value)
+                if reason:
+                    return finish(reason, pair)
+                break
+            if found[pair] is not None:
+                break
+            coverage = _transition_coverage(candidates, pair)
+            boundary = candidates[-1]
+            if any(boundary.costs.get(s) is None for s in pair):
+                return finish("fixed_stop_class_unavailable", pair)
+            if _finite_margin(boundary, pair) is None:
+                return finish("nonfinite_strategy_cost", pair)
+            if not coverage["comparable_interval_count"]:
+                return finish("insufficient_comparable_samples", pair)
+            # A class already winning without a reliable bracket calls for different
+            # coverage, not blind extension to ever larger degradation.
+            if _finite_margin(boundary, pair) <= 0:
+                return finish("no_reliable_crossing_in_comparable_samples", pair)
+            if explicit_scan_max is not None:
+                return finish("explicit_scan_max_reached", pair)
+            if blocks >= max_blocks:
+                return finish("computational_guard_reached", pair)
+            start = points[-1].medium_degradation
+            history = {"transition": name(pair), "start": start, "end": start, "samples": 0}
+            meta["extension_history"].append(history)
+            meta["upper_extension_triggered"] = True
+            blocks += 1
+            # Five original coarse intervals per block, checking every sample so
+            # the final sweep ends at most one coarse step beyond the crossing.
+            for index in range(1, 6):
+                value = round(start + index * step, 12)
+                if not isfinite(value) or value <= points[-1].medium_degradation:
+                    return finish("computational_guard_reached", pair)
+                point = _point(value, {s: cost(value, s) for s in range(active_max + 1)})
+                previous = points[-1]
+                points.append(point)
+                history.update(end=value, samples=index)
+                margin = _finite_margin(point, pair)
+                if margin is None or margin <= 0 or _finite_margin(previous, pair) is None:
+                    break
+    limit = "unsupported_beyond_4_stop" if result.supported_max_stops == 4 else "event_max_stops_reached"
+    last = known[-1] if known else None
+    encountered = [pair for pair, value in found.items() if value is not None]
+    return finish(limit, encountered[-1] if encountered else last)
+
+
+def _finite_margin(point, pair):
+    values = [point.costs.get(s) for s in pair]
+    if any(v is None or not isfinite(v) for v in values):
+        return None
+    return values[1] - values[0]
+
+
+def _stable_upper_crossing(a, b, pair, cost, tolerance):
+    """Check direction, finite refinement and residual continuity inside a bracket."""
+    def margin(x):
+        value = _finite_margin(_point(x, {s: cost(x, s) for s in pair}), pair)
+        if value is None:
+            raise ValueError("Unavailable/nonfinite strategy cost during refinement")
+        return value
+    original_a, original_b = a, b
+    fa, fb = margin(a), margin(b)
+    if not (fa >= 0 and fb <= 0 and fa > fb):
+        raise ValueError("Crossing is not a lower-to-higher-stop transition")
+    scale = (fa - fb) / (b - a)
+    fine = min(tolerance / 16, 1e-7)
+    def bisect(width):
+        lo, hi = original_a, original_b
+        for _ in range(128):
+            if hi - lo <= width:
+                return (lo + hi) / 2, lo, hi
+            mid = (lo + hi) / 2
+            if mid in (lo, hi):
+                raise ValueError("Refinement exceeds floating-point resolution")
+            if margin(mid) >= 0:
+                lo = mid
+            else:
+                hi = mid
+        raise ValueError("Refinement iteration budget reached")
+    coarse, _, _ = bisect(fine * 4)
+    value, a, b = bisect(fine)
+    residual = margin(value)
+    if (abs(value - coarse) > fine * 4
+            or abs(residual) > max(1e-7, scale * fine * 4)
+            or not (margin(a) >= 0 and margin(b) <= 0)):
+        raise ValueError("Crossing failed refinement stability/continuity checks")
+    return value, {"bracket": [original_a, original_b], "refined_bracket": [a, b],
+                   "tolerance": fine, "lower_stop_cost": cost(value, pair[0]),
+                   "higher_stop_cost": cost(value, pair[1]), "higher_minus_lower_cost": residual}
+
+
+def _anchor_display_text(meta, upper):
+    if meta["anchor_max"] is None:
+        return "No valid FP MEDIUM coverage anchors; upper scan unchanged."
+    text = (f"FP MEDIUM coverage anchors: {meta['anchor_min']:.6g}–{meta['anchor_max']:.6g} s/lap. "
+            "Conditional sensitivity uses effective compound ratios; FP is a scalar reference only. ")
+    for key, label in (("left_transition", "Left boundary"), ("right_transition", "Right boundary"),
+                       ("at_transition", "At boundary within refinement tolerance")):
+        boundary = meta[key]
+        if boundary:
+            text += f"{label}: {boundary['transition'].replace('_to_', '→')} = {boundary['cutoff']:.6g}. "
+    if meta["upper_extension_triggered"]:
+        text += "Anchor-driven upper extension. "
+    reasons = {
+        "right_boundary_found": "Right-side coverage complete",
+        "anchor_at_boundary": "Coverage complete at a coincident boundary",
+        "explicit_scan_max_reached": "Coverage incomplete due to explicit scan_max",
+        "unsupported_beyond_4_stop": "Anchor beyond highest supported 4-stop sensitivity boundary; 4→5 is not searched",
+        "event_max_stops_reached": "Further transition prevented by event max stops",
+        "computational_guard_reached": "Computational block budget reached (not a physical limit)",
+        "fixed_stop_class_unavailable": "Next comparison has an unavailable fixed-stop class",
+        "nonfinite_strategy_cost": "Next comparison has a nonfinite strategy cost",
+        "insufficient_comparable_samples": "Insufficient adjacent comparable samples",
+        "no_reliable_crossing_in_comparable_samples": "Higher-stop class already wins without a reliable crossing bracket",
+        "unstable_crossing": "Crossing could not be robustly refined",
+    }
+    return text + f"{reasons.get(meta['stop_reason'], meta['stop_reason'])}; scanned through {upper:.6g} s/lap."
 
 
 def _transition_coverage(points, pair, *, rules_unavailable=False):

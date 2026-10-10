@@ -1,8 +1,26 @@
 # Degradation cutoff upper-range study — 2026-10-09
 
-**R&D/design only. Automatic upper extension is not implemented.** Production
-still uses the existing upper bound and respects an explicit `scan_max`.
-Phase 1 adds coverage reporting, documented in [DEGRADATION_CUTOFF.md](DEGRADATION_CUTOFF.md).
+**Historical R&D results; policy updated after the scalar-anchor decision.**
+Production now implements evidence-aware right-side coverage, documented in
+[DEGRADATION_CUTOFF.md](DEGRADATION_CUTOFF.md), preserving Phase-1 coverage.
+
+The original strict full-vector comparability gate was intentionally relaxed:
+FP MEDIUM posterior medians are accepted as scalar x-axis coverage anchors, not
+as a complete FP tyre-model vector on the effective S/M/H ray. The selected
+product objective is the first supported boundary right of the right-most anchor,
+with refinement-tolerance equality accepted as at-boundary. Supported transitions
+end at 3→4; 4→5 is not searched. Explicit `scan_max` remains authoritative.
+
+**No fixed 5× rule was adopted.** Neither these R15/R16 diagnostics nor the new
+computational block budget establish a universal physical multiplier or ceiling.
+The old explicit-ceiling proposal below is retained as historical design context,
+not current production policy. Current production uses progressive coarse blocks
+with a separately reported computational budget.
+
+Actual saved R15 anchors are 0.0253899347 and 0.0384578775, requiring no extension.
+R16 anchors are 0.1697604657, 0.1916566507 and 0.1535152235: compliant 2→3 completes
+coverage, but unrestricted 2→3 is left of the maximum and production must seek
+3→4. These are conditional sensitivity statements, not FP stop-count predictions.
 
 ## Sample and reproducibility
 
@@ -164,9 +182,9 @@ envelope with sporting rules and integer stint lengths.
 | A: fixed multiple of effective M | Required observed ratios span approximately 0.71–4.94. A 5× multiple happens to cover these cases but is not calibrated. Common rescaling of manual compound rates preserves the sensitivity ray/cutoff while shrinking an effective-M-based upper bound, so any fixed multiplier can fail. Larger multiples also inflate coverage for already-high inputs. |
 | B: include automatic/canonical scale | Helps expose low manual scenarios, but automatic M is only a coordinate reference on the effective ray. It supplies neither the automatic vector nor a validity ceiling. Retain as explicit diagnostic/operator context rather than an automatic physical bound. |
 | C: adaptive extension with explicit ceiling | Avoids doing extra searches for already-resolved transitions. Phase 1 supplies the feasibility, comparability and boundary margin needed to decide whether extension is useful. A separate configured absolute ceiling makes coverage reproducible without pretending it is physically calibrated. |
-| D: explicit `scan_max` only | Preserves current operation and gives exact operator control. Requires event-specific input and can miss useful crossings if omitted; Phase 1 now communicates that omission honestly. This remains the available production behavior. |
+| D: explicit `scan_max` only | Preserves current operation and gives exact operator control. Requires event-specific input and can miss useful crossings if omitted; Phase 1 now communicates that omission honestly. This was the production behavior at the time of this study. |
 
-## Recommended future design — not implemented
+## Historical proposed design — superseded by scalar-anchor coverage
 
 Recommend **opt-in adaptive extension requiring an explicit configured engineering
 ceiling**. Until a separate implementation is authorized, use existing explicit

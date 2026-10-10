@@ -3,18 +3,87 @@
   "total_laps": 56,
   "pit_loss": 23.7,
   "max_stops": 4,
-  "compound_delta": {"HARD": 0.2752115388974766, "MEDIUM": 0.0, "SOFT": -0.31214405241230747},
-  "degradation": {"HARD": 0.033, "MEDIUM": 0.039, "SOFT": 0.062},
+  "compound_delta": {
+    "HARD": 0.2752115388974766,
+    "MEDIUM": 0.0,
+    "SOFT": -0.31214405241230747
+  },
+  "degradation": {
+    "HARD": 0.033,
+    "MEDIUM": 0.039,
+    "SOFT": 0.062
+  },
   "initial_scan_min": 0.00975,
   "scan_max": 0.117,
   "unrestricted": {
-    "cutoffs": [0.0204140625, 0.0911015625, null],
-    "boundary_costs": [111.86699999999998, 120.24],
+    "cutoffs": [
+      0.0204140625,
+      0.0911015625,
+      null
+    ],
+    "boundary_costs": [
+      111.86699999999998,
+      120.24
+    ],
     "boundary_margin": 8.373
   },
   "rules_compliant": {
-    "cutoffs": [null, 0.0935390625, null],
-    "boundary_costs": [113.67601923905204, 122.0624154234646],
+    "cutoffs": [
+      null,
+      0.0935390625,
+      null
+    ],
+    "boundary_costs": [
+      113.67601923905204,
+      122.0624154234646
+    ],
     "boundary_margin": 8.386396184412561
-  }
+  },
+  "coverage_anchors": [
+    {
+      "fp_structural_identifiability": "absolute_not_identifiable; combined_slope_or_contrasts_only",
+      "medium_degradation": 0.16976046572887563,
+      "p10": 0.09832916900709229,
+      "p90": 0.19679298165952996,
+      "production_input": false,
+      "session": "FP1",
+      "source_family": "fp_diagnostic",
+      "support": {
+        "status": "measured",
+        "usable_laps": 62,
+        "usable_runs": 11
+      },
+      "unit": "s/lap"
+    },
+    {
+      "fp_structural_identifiability": "absolute_not_identifiable; combined_slope_or_contrasts_only",
+      "medium_degradation": 0.19165665065407897,
+      "p10": 0.16992456944427092,
+      "p90": 0.1990527808426681,
+      "production_input": false,
+      "session": "FP2",
+      "source_family": "fp_diagnostic",
+      "support": {
+        "status": "measured",
+        "usable_laps": 119,
+        "usable_runs": 23
+      },
+      "unit": "s/lap"
+    },
+    {
+      "fp_structural_identifiability": "absolute_not_identifiable; combined_slope_or_contrasts_only",
+      "medium_degradation": 0.15351522352979044,
+      "p10": 0.0745129268751032,
+      "p90": 0.19392755207855464,
+      "production_input": false,
+      "session": "FP3",
+      "source_family": "fp_diagnostic",
+      "support": {
+        "status": "measured",
+        "usable_laps": 14,
+        "usable_runs": 3
+      },
+      "unit": "s/lap"
+    }
+  ]
 }
