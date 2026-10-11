@@ -1,0 +1,265 @@
+{
+  "reproductions": {
+    "after": {
+      "delayed_publication": {
+        "mean_ahead_gap_s": null,
+        "ahead_coverage": 0.0,
+        "status": "unknown",
+        "target_samples": 21,
+        "ahead_samples": 0,
+        "circuit_length_m": null,
+        "method": "PHYSICAL_CIRCULAR",
+        "evaluator_version": null
+      },
+      "retraction": {
+        "end_anchor": null,
+        "history": []
+      },
+      "distance_sanity": {
+        "history": [
+          1000.0
+        ],
+        "result": {
+          "mean_ahead_gap_s": null,
+          "ahead_coverage": 0.0,
+          "status": "unknown",
+          "target_samples": 21,
+          "ahead_samples": 0,
+          "circuit_length_m": 1000.0,
+          "method": "PHYSICAL_CIRCULAR",
+          "evaluator_version": "quali-physical-phase-v1"
+        }
+      },
+      "pit_transition": {
+        "106.5": null,
+        "107.0": "C"
+      }
+    },
+    "before": {
+      "delayed_publication": {
+        "mean_ahead_gap_s": 1.0,
+        "ahead_coverage": 0.9047619047619048,
+        "status": "ok",
+        "target_samples": 21,
+        "ahead_samples": 19,
+        "circuit_length_m": 1000.0,
+        "method": "PHYSICAL_CIRCULAR",
+        "evaluator_version": "quali-physical-phase-v1"
+      },
+      "retraction": {
+        "end_anchor": 110.0,
+        "history": [
+          1000.0
+        ]
+      },
+      "distance_sanity": {
+        "history": [
+          1000.0,
+          2500.0
+        ],
+        "result": {
+          "mean_ahead_gap_s": 1.2333333333333332,
+          "ahead_coverage": 1.0,
+          "status": "ok",
+          "target_samples": 21,
+          "ahead_samples": 21,
+          "circuit_length_m": 1750.0,
+          "method": "PHYSICAL_CIRCULAR",
+          "evaluator_version": "quali-physical-phase-v1"
+        }
+      },
+      "pit_transition": {
+        "106.5": null,
+        "107.0": null
+      }
+    }
+  },
+  "source_sha256": {
+    "/Users/zhxutong/dr-wo/woPlanner/scripts/verify_quali_traffic_phase_review.py": "6c5332a0e97ce291cb58f63f44b75e8251ac310215f1d5b12f51c78ac4298860",
+    "/Users/zhxutong/dr-wo/woPlanner/src/woplanner/quali/physical_traffic.py": "9820fdf6fe7111a857dd2082874aa7a404322bd74d372febabd39b8812eaa66f",
+    "/Users/zhxutong/dr-wo/woPlanner/tests/test_quali_traffic_review_blockers.py": "54286137342f43ef5eb8574b50becdd41ccb3d76196b8ec17010c9f13a423cb8",
+    "/Users/zhxutong/dr-wo/woData/src/wodata/live/quali_models.py": "1c0a3c79fd85a86e4260880de30045bbcc40d20bc74470101991f74bbe8e9511",
+    "/Users/zhxutong/dr-wo/woData/src/wodata/live/quali_reducer.py": "de0cccc1d46f5d69ebc1d96212571141e16d486dd0283821779390ec960563a9",
+    "/Users/zhxutong/dr-wo/woStrategy/src/wostrategy/analysis/traffic.py": "82d9c575d790b4ed56965ad32210804e57e741eb3bd30d60bb4fd659e9667cf5"
+  },
+  "baseline_adapter_sha256": "b34a4968e5ec10fa0758144358e6ab2b6b47083c19a8cbae51068b8494d918de",
+  "events": [
+    {
+      "round": 13,
+      "input": "/Users/zhxutong/dr-wo/woData/wodata/live_archive/schema_v1/year=2026/round=13/session=Q/replay/merged_replay_v1.jsonl",
+      "sha256": "36e14cc0d3b46f360252fa5f834f2b0b9b6ea222656323217e42c1c0c629855d",
+      "message_count": 19076,
+      "production_field_fraction": 0.02,
+      "clean_air_gap_s": 3.0,
+      "metrics": {
+        "after": {
+          "pace_samples": 87,
+          "available_traffic": 0,
+          "diagnostic_laps": 0,
+          "aggregate": null,
+          "automatic_source": "FP prior",
+          "circuit_history_members": 0,
+          "by_part": {
+            "Q1": {
+              "pace_samples": 37,
+              "available_traffic": 0
+            },
+            "Q2": {
+              "pace_samples": 32,
+              "available_traffic": 0
+            },
+            "Q3": {
+              "pace_samples": 18,
+              "available_traffic": 0
+            }
+          }
+        },
+        "before": {
+          "pace_samples": 87,
+          "available_traffic": 0,
+          "diagnostic_laps": 0,
+          "aggregate": null,
+          "automatic_source": "FP prior",
+          "circuit_history_members": 0,
+          "by_part": {
+            "Q1": {
+              "pace_samples": 37,
+              "available_traffic": 0
+            },
+            "Q2": {
+              "pace_samples": 32,
+              "available_traffic": 0
+            },
+            "Q3": {
+              "pace_samples": 18,
+              "available_traffic": 0
+            }
+          }
+        }
+      },
+      "maximum_history_members": {
+        "after": 0,
+        "before": 0
+      },
+      "traffic_changes": []
+    },
+    {
+      "round": 14,
+      "input": "/Users/zhxutong/dr-wo/woData/wodata/live_archive/schema_v1/year=2026/round=14/session=Q/replay/merged_replay_v1.jsonl",
+      "sha256": "db4f43887902850dde1dc9f0a108ae9ba2ab85612429a6183ae907cce6b6279d",
+      "message_count": 21139,
+      "production_field_fraction": 0.02,
+      "clean_air_gap_s": 3.0,
+      "metrics": {
+        "after": {
+          "pace_samples": 79,
+          "available_traffic": 0,
+          "diagnostic_laps": 0,
+          "aggregate": null,
+          "automatic_source": "FP prior",
+          "circuit_history_members": 0,
+          "by_part": {
+            "Q1": {
+              "pace_samples": 31,
+              "available_traffic": 0
+            },
+            "Q2": {
+              "pace_samples": 28,
+              "available_traffic": 0
+            },
+            "Q3": {
+              "pace_samples": 20,
+              "available_traffic": 0
+            }
+          }
+        },
+        "before": {
+          "pace_samples": 79,
+          "available_traffic": 0,
+          "diagnostic_laps": 0,
+          "aggregate": null,
+          "automatic_source": "FP prior",
+          "circuit_history_members": 0,
+          "by_part": {
+            "Q1": {
+              "pace_samples": 31,
+              "available_traffic": 0
+            },
+            "Q2": {
+              "pace_samples": 28,
+              "available_traffic": 0
+            },
+            "Q3": {
+              "pace_samples": 20,
+              "available_traffic": 0
+            }
+          }
+        }
+      },
+      "maximum_history_members": {
+        "after": 0,
+        "before": 0
+      },
+      "traffic_changes": []
+    },
+    {
+      "round": 16,
+      "input": "/Users/zhxutong/dr-wo/woPlanner/temp/r16_q_diagnostic_20261003_01a10147/data/r16_Q_recording.jsonl",
+      "sha256": "b353aa941dcd21112f48c38b2bd558a5e1d89af799555109e21af6dfa354c71b",
+      "message_count": 16496,
+      "production_field_fraction": 0.02,
+      "clean_air_gap_s": 3.0,
+      "metrics": {
+        "after": {
+          "pace_samples": 62,
+          "available_traffic": 0,
+          "diagnostic_laps": 0,
+          "aggregate": null,
+          "automatic_source": "FP prior",
+          "circuit_history_members": 0,
+          "by_part": {
+            "Q1": {
+              "pace_samples": 28,
+              "available_traffic": 0
+            },
+            "Q2": {
+              "pace_samples": 18,
+              "available_traffic": 0
+            },
+            "Q3": {
+              "pace_samples": 16,
+              "available_traffic": 0
+            }
+          }
+        },
+        "before": {
+          "pace_samples": 62,
+          "available_traffic": 0,
+          "diagnostic_laps": 0,
+          "aggregate": null,
+          "automatic_source": "FP prior",
+          "circuit_history_members": 0,
+          "by_part": {
+            "Q1": {
+              "pace_samples": 28,
+              "available_traffic": 0
+            },
+            "Q2": {
+              "pace_samples": 18,
+              "available_traffic": 0
+            },
+            "Q3": {
+              "pace_samples": 16,
+              "available_traffic": 0
+            }
+          }
+        }
+      },
+      "maximum_history_members": {
+        "after": 0,
+        "before": 0
+      },
+      "traffic_changes": []
+    }
+  ]
+}

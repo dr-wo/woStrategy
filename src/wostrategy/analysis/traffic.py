@@ -50,6 +50,9 @@ class TrafficEvaluationConfig:
     combination_mode: str = COMBINATION_MODE_COMPATIBILITY_MIN
     evaluator_version: str = TRAFFIC_EVALUATOR_VERSION
     coverage_policy: TrafficCoveragePolicy | None = None
+    # Qualifying's retained buffers require explicit timing-line anchors. Keep
+    # the retrospective adapters' existing contract separate.
+    require_phase_validity: bool = False
 
 
 @dataclass(frozen=True)
@@ -228,6 +231,7 @@ def evaluate_physical_traffic(
     config: TrafficEvaluationConfig,
     group_columns: tuple[str, ...] | None = None,
     target_lap: tuple[str, int] | None = None,
+    candidate_states: pd.DataFrame | None = None,
 ) -> TrafficEvaluationResult:
     """Evaluate nearest physical cars from original timestamped speed samples.
 
@@ -254,7 +258,8 @@ def evaluate_physical_traffic(
         else [((), prepared)]
     )
     for _, session in sessions:
-        sample_frames.extend(_evaluate_session(session, config=config, target_lap=target_lap))
+        sample_frames.extend(_evaluate_session(session, config=config, target_lap=target_lap,
+                                              candidate_states=candidate_states))
     if not sample_frames:
         return TrafficEvaluationResult(
             _empty_samples(groups), _unknown_laps(prepared, groups, config)
@@ -718,8 +723,9 @@ def _prepare_progress(
     output["_SessionSeconds"] = _seconds(output["SessionTime"])
     output["_SpeedKph"] = pd.to_numeric(output["Speed"], errors="coerce")
     output["LapNumber"] = pd.to_numeric(output["LapNumber"], errors="coerce")
-    output = output.dropna(subset=["Driver", "LapNumber", "_SessionSeconds", "_SpeedKph"])
-    output = output.loc[output["_SpeedKph"] >= 0].copy()
+    output = output.dropna(subset=["Driver", "LapNumber", "_SessionSeconds"])
+    if not config.require_phase_validity:
+        output = output.loc[output["_SpeedKph"].ge(0)].copy()
     if output.empty:
         return output
 
@@ -737,12 +743,16 @@ def _prepare_progress(
     lap_count = output.groupby(lap_groups, dropna=False)["_IntegratedLapDistance"].transform("size")
     complete = (
         lap_count.ge(config.minimum_lap_samples)
-        & lap_span.gt(config.circuit_length_m * 0.5)
-        & lap_span.lt(config.circuit_length_m * 1.5)
+        & lap_span_within_circuit_range(lap_span, config.circuit_length_m)
     )
+    if config.require_phase_validity:
+        anchored = pd.Series(False, index=output.index)
+        for _, lap in output.groupby(lap_groups, dropna=False, sort=False):
+            anchored.loc[lap.index] = validated_complete_lap_span(lap, config=config) is not None
+        complete &= anchored
     scale = pd.Series(1.0, index=output.index, dtype="float64")
     scale.loc[complete] = config.circuit_length_m / lap_span.loc[complete]
-    if "Distance" in output.columns:
+    if "Distance" in output.columns and not config.require_phase_validity:
         supplied_distance = pd.to_numeric(output["Distance"], errors="coerce")
         first_supplied = supplied_distance.groupby(
             [output[c] for c in lap_groups], dropna=False
@@ -759,7 +769,60 @@ def _prepare_progress(
         + output["_LapProgress"]
     )
     output["_ProgressQuality"] = np.where(complete, "normalized_complete_lap", "partial_lap")
+    if config.require_phase_validity:
+        output["_PhaseValid"] = complete
+        output.loc[~complete, ["_LapProgress", "_CircuitPhase", "_UnwrappedProgress"]] = np.nan
+        output.loc[~complete, "_ProgressQuality"] = "phase_unavailable"
     return output
+
+
+def lap_span_within_circuit_range(lap_span: float | pd.Series, circuit_length_m: float):
+    """Existing distance sanity check, shared with pre-admission validation."""
+    return (lap_span > circuit_length_m * 0.5) & (lap_span < circuit_length_m * 1.5)
+
+
+def validated_complete_lap_span(
+    lap: pd.DataFrame, *, config: TrafficEvaluationConfig,
+) -> float | None:
+    """Return integrated length only for a retained, anchored full traversal.
+
+    LapStartTime on the first row and LapEndTime on the last row are producer-
+    supplied common finish-line anchors, never inferred from distance or
+    retained row extrema. Evicting either anchor invalidates the span.
+    Boundary coverage uses the existing temporal
+    tolerance; interior integration must have no unsupported telemetry gaps.
+    No partial-span offset is supported by this contract.
+    """
+    if len(lap) < config.minimum_lap_samples:
+        return None
+    if not {"LapStartTime", "LapEndTime"}.issubset(lap.columns):
+        return None
+    times = _seconds(lap["SessionTime"]).to_numpy(dtype=float)
+    speeds = pd.to_numeric(lap["Speed"], errors="coerce").to_numpy(dtype=float)
+    if not all(np.isfinite(values).all() for values in (times, speeds)):
+        return None
+    if (speeds < 0).any():
+        return None
+    order = np.argsort(times, kind="stable")
+    times, speeds = times[order], speeds[order]
+    start = _seconds(lap["LapStartTime"]).iloc[order[0]]
+    end = _seconds(lap["LapEndTime"]).iloc[order[-1]]
+    if not np.isfinite(start) or not np.isfinite(end):
+        return None
+    delta = np.diff(times)
+    tolerance = config.interpolation_tolerance_seconds
+    if (end <= start
+            or abs(times[0] - start) > tolerance
+            or abs(times[-1] - end) > tolerance
+            or (delta <= 0).any()
+            or (delta > config.maximum_bracketing_interval_seconds).any()):
+        return None
+    if "CandidateEligible" in lap and not lap["CandidateEligible"].eq(True).all():
+        return None
+    if "PhaseRouteValid" in lap and not lap["PhaseRouteValid"].eq(True).all():
+        return None
+    span = float(np.sum(delta * speeds[1:] / 3.6))
+    return span if span > 0 else None
 
 
 def _evaluate_session(
@@ -767,6 +830,7 @@ def _evaluate_session(
     *,
     config: TrafficEvaluationConfig,
     target_lap: tuple[str, int] | None = None,
+    candidate_states: pd.DataFrame | None = None,
 ) -> list[pd.DataFrame]:
     frames: list[pd.DataFrame] = []
     by_driver = {
@@ -784,15 +848,25 @@ def _evaluate_session(
         times = target["_SessionSeconds"].to_numpy(dtype="float64")
         target_phase = target["_CircuitPhase"].to_numpy(dtype="float64")
         target_speed = target["_SpeedKph"].to_numpy(dtype="float64")
+        uncertain = (~target["_PhaseValid"].to_numpy(dtype=bool)
+                     if config.require_phase_validity else np.zeros(len(target), dtype=bool))
         candidates: list[pd.DataFrame] = []
         for other_driver, other in by_driver.items():
             if other_driver == target_driver:
                 continue
-            if "CandidateEligible" in other:
+            if "CandidateEligible" in other and not config.require_phase_validity:
                 other = other.loc[other["CandidateEligible"].eq(True)]
                 if other.empty:
                     continue
             interpolation = _interpolate_driver(other, times, config=config)
+            if config.require_phase_validity:
+                if candidate_states is not None and not candidate_states.empty:
+                    states = candidate_states.loc[candidate_states["Driver"].eq(other_driver)]
+                    for column in ("Year", "Round", "SessionName"):
+                        if column in session and column in states:
+                            states = states.loc[states[column].eq(session[column].iloc[0])]
+                    _apply_candidate_states(interpolation, states, times)
+                uncertain |= interpolation["uncertain"]
             valid = interpolation["valid"]
             if not valid.any():
                 continue
@@ -813,7 +887,13 @@ def _evaluate_session(
             candidate.loc[candidate["_AheadDistance"] <= config.minimum_gap_m, "_Valid"] = False
             candidate.loc[candidate["_BehindDistance"] <= config.minimum_gap_m, "_Valid"] = False
             candidates.append(candidate)
-        frames.append(_select_nearest(target, candidates, target_speed=target_speed, config=config))
+        frame = _select_nearest(target, candidates, target_speed=target_speed, config=config)
+        if config.require_phase_validity:
+            frame["TrafficPhaseUnavailable"] = uncertain
+            for column in frame:
+                if column.startswith("Physical") or column == "InterpolationAgeSeconds":
+                    frame.loc[uncertain, column] = None if "Driver" in column else np.nan
+        frames.append(frame)
     return frames
 
 
@@ -823,6 +903,8 @@ def _interpolate_driver(
     *,
     config: TrafficEvaluationConfig,
 ) -> dict[str, np.ndarray]:
+    if config.require_phase_validity:
+        return _interpolate_validated_driver(other, target_times, config=config)
     source = (
         other.loc[:, ["_SessionSeconds", "_UnwrappedProgress", "_SpeedKph"]]
         .drop_duplicates("_SessionSeconds", keep="last")
@@ -876,6 +958,71 @@ def _interpolate_driver(
     speed[~valid] = np.nan
     nearest_age[~valid] = np.nan
     return {"progress": progress, "speed": speed, "age": nearest_age, "valid": valid}
+
+
+def _interpolate_validated_driver(
+    other: pd.DataFrame,
+    target_times: np.ndarray,
+    *,
+    config: TrafficEvaluationConfig,
+) -> dict[str, np.ndarray]:
+    # Keep invalid and pit rows in the time axis: deleting them would bridge
+    # unsupported phase or a pit-route transition.
+    source = other.sort_values("_SessionSeconds", kind="stable").drop_duplicates(
+        "_SessionSeconds", keep="last"
+    )
+    times = source["_SessionSeconds"].to_numpy(dtype=float)
+    right = np.searchsorted(times, target_times, side="left").clip(0, len(times) - 1)
+    left = (np.searchsorted(times, target_times, side="right") - 1).clip(0, len(times) - 1)
+    exact = times[right] == target_times
+    left = np.where(exact, right, left)
+    eligible = (source["CandidateEligible"].eq(True).to_numpy()
+                if "CandidateEligible" in source else np.ones(len(source), dtype=bool))
+    phase_valid = source["_PhaseValid"].to_numpy(dtype=bool)
+    # An invalid on-track car remains a possible competitor until explicit
+    # off-track evidence. Lack of a later row is not evidence of irrelevance.
+    uncertain = ((eligible[left] & ~phase_valid[left])
+                 | (eligible[right] & ~phase_valid[right]))
+    span = times[right] - times[left]
+    age = np.minimum(abs(target_times - times[left]), abs(times[right] - target_times))
+    laps = source["LapNumber"].to_numpy(dtype=float)
+    in_range = (target_times >= times[0]) & (target_times <= times[-1])
+    valid = (in_range
+             & eligible[left] & eligible[right] & phase_valid[left] & phase_valid[right]
+             & (span <= config.maximum_bracketing_interval_seconds)
+             & (age <= config.interpolation_tolerance_seconds)
+             & ((laps[right] == laps[left]) | (laps[right] == laps[left] + 1)))
+    uncertain |= in_range & (eligible[left] | eligible[right]) & ~valid
+    weight = np.divide(target_times - times[left], span,
+                       out=np.zeros(len(target_times)), where=span > 0)
+    result = {"valid": valid, "uncertain": uncertain, "age": np.where(valid, age, np.nan)}
+    for name, column in (("progress", "_UnwrappedProgress"), ("speed", "_SpeedKph")):
+        values = source[column].to_numpy(dtype=float)
+        result[name] = np.where(valid, values[left] + weight * (values[right] - values[left]), np.nan)
+    return result
+
+
+def _apply_candidate_states(interpolation, states: pd.DataFrame, target_times: np.ndarray) -> None:
+    """Apply affirmative state as a step function, never retroactively.
+
+    These causal transitions need no speed/position bracket. They only govern
+    candidate eligibility; they cannot create a progress integration sample.
+    """
+    if states.empty:
+        return
+    states = states.sort_values("SessionTime", kind="stable").drop_duplicates(
+        "SessionTime", keep="last"
+    )
+    times = states["SessionTime"].to_numpy(dtype=float)
+    indices = np.searchsorted(times, target_times, side="right") - 1
+    known = indices >= 0
+    eligible = states["CandidateEligible"].to_numpy(dtype=bool)[indices.clip(0)]
+    off_track = known & ~eligible
+    interpolation["uncertain"][off_track] = False
+    interpolation["valid"][off_track] = False
+    # A return makes the car relevant at this timestamp. Historical valid
+    # endpoints alone cannot support phase outside a valid current bracket.
+    interpolation["uncertain"] |= known & eligible & ~interpolation["valid"]
 
 
 def _select_nearest(
@@ -1004,6 +1151,15 @@ def _summarize_physical_samples(
         default="no synchronized other-driver telemetry",
     )
     summary["TrafficEvaluatorVersion"] = config.evaluator_version
+    if config.require_phase_validity:
+        unavailable = grouped["TrafficPhaseUnavailable"].any()["TrafficPhaseUnavailable"]
+        # Coverage cannot turn a mean of only the known competitors into clean
+        # evidence when any part of the target lap has uncertain competition.
+        summary.loc[unavailable, "TrafficStatus"] = TRAFFIC_STATUS_UNKNOWN
+        summary.loc[unavailable, "TrafficStatusReason"] = "physical phase unavailable"
+        for column in summary:
+            if column.startswith("Physical"):
+                summary.loc[unavailable, column] = np.nan
     return summary
 
 

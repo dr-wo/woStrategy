@@ -1,0 +1,1476 @@
+{
+  "baseline_sha256": {
+    "/private/tmp/quali-phase-lifecycle-before/traffic.py": "82d9c575d790b4ed56965ad32210804e57e741eb3bd30d60bb4fd659e9667cf5",
+    "/private/tmp/quali-phase-lifecycle-before/physical_traffic.py": "9820fdf6fe7111a857dd2082874aa7a404322bd74d372febabd39b8812eaa66f"
+  },
+  "reproductions": {
+    "before": {
+      "on_track_return": {
+        "104.0": {
+          "PhysicalDriverAhead": "C",
+          "PhysicalDistanceToDriverAhead": 200.0,
+          "PhysicalTimeDeltaToDriverAhead": 2.0,
+          "uncertain": false
+        },
+        "104.5": {
+          "PhysicalDriverAhead": "C",
+          "PhysicalDistanceToDriverAhead": 200.0,
+          "PhysicalTimeDeltaToDriverAhead": 2.0,
+          "uncertain": false
+        },
+        "105.0": {
+          "PhysicalDriverAhead": "C",
+          "PhysicalDistanceToDriverAhead": 200.0,
+          "PhysicalTimeDeltaToDriverAhead": 2.0,
+          "uncertain": false
+        },
+        "105.5": {
+          "PhysicalDriverAhead": "C",
+          "PhysicalDistanceToDriverAhead": 200.0,
+          "PhysicalTimeDeltaToDriverAhead": 2.0,
+          "uncertain": false
+        }
+      },
+      "history_eviction": {
+        "completion_count": 34,
+        "active_count": 32,
+        "oldest_key": [
+          "Q1",
+          "A",
+          2,
+          102.5
+        ],
+        "oldest_evicted_before_refinalization": true,
+        "median_before_m": 1100.0,
+        "medians_after_repeated_finalization_m": [
+          1000.0,
+          1000.0,
+          1000.0
+        ],
+        "history_unchanged": false,
+        "active_history_before": [
+          [
+            [
+              "Q1",
+              "A",
+              4,
+              107.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              5,
+              110.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              6,
+              112.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              7,
+              115.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              8,
+              117.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              9,
+              120.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              10,
+              122.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              11,
+              125.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              12,
+              127.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              13,
+              130.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              14,
+              132.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              15,
+              135.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              16,
+              137.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              17,
+              140.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              18,
+              142.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              19,
+              145.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              20,
+              147.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              21,
+              150.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              22,
+              152.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              23,
+              155.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              24,
+              157.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              25,
+              160.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              26,
+              162.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              27,
+              165.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              28,
+              167.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              29,
+              170.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              30,
+              172.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              31,
+              175.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              32,
+              177.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              33,
+              180.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              34,
+              182.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              35,
+              185.0
+            ],
+            1000.0
+          ]
+        ],
+        "active_history_after": [
+          [
+            [
+              "Q1",
+              "A",
+              5,
+              110.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              6,
+              112.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              7,
+              115.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              8,
+              117.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              9,
+              120.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              10,
+              122.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              11,
+              125.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              12,
+              127.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              13,
+              130.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              14,
+              132.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              15,
+              135.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              16,
+              137.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              17,
+              140.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              18,
+              142.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              19,
+              145.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              20,
+              147.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              21,
+              150.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              22,
+              152.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              23,
+              155.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              24,
+              157.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              25,
+              160.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              26,
+              162.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              27,
+              165.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              28,
+              167.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              29,
+              170.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              30,
+              172.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              31,
+              175.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              32,
+              177.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              33,
+              180.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              34,
+              182.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              35,
+              185.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              2,
+              102.5
+            ],
+            1000.0
+          ]
+        ]
+      }
+    },
+    "after": {
+      "on_track_return": {
+        "104.0": {
+          "PhysicalDriverAhead": "C",
+          "PhysicalDistanceToDriverAhead": 200.0,
+          "PhysicalTimeDeltaToDriverAhead": 2.0,
+          "uncertain": false
+        },
+        "104.5": {
+          "PhysicalDriverAhead": "C",
+          "PhysicalDistanceToDriverAhead": 200.0,
+          "PhysicalTimeDeltaToDriverAhead": 2.0,
+          "uncertain": false
+        },
+        "105.0": {
+          "PhysicalDriverAhead": null,
+          "PhysicalDistanceToDriverAhead": null,
+          "PhysicalTimeDeltaToDriverAhead": null,
+          "uncertain": true
+        },
+        "105.5": {
+          "PhysicalDriverAhead": null,
+          "PhysicalDistanceToDriverAhead": null,
+          "PhysicalTimeDeltaToDriverAhead": null,
+          "uncertain": true
+        }
+      },
+      "history_eviction": {
+        "completion_count": 34,
+        "active_count": 32,
+        "oldest_key": [
+          "Q1",
+          "A",
+          2,
+          102.5
+        ],
+        "oldest_evicted_before_refinalization": true,
+        "median_before_m": 1100.0,
+        "medians_after_repeated_finalization_m": [
+          1100.0,
+          1100.0,
+          1100.0
+        ],
+        "history_unchanged": true,
+        "active_history_before": [
+          [
+            [
+              "Q1",
+              "A",
+              4,
+              107.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              5,
+              110.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              6,
+              112.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              7,
+              115.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              8,
+              117.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              9,
+              120.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              10,
+              122.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              11,
+              125.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              12,
+              127.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              13,
+              130.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              14,
+              132.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              15,
+              135.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              16,
+              137.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              17,
+              140.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              18,
+              142.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              19,
+              145.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              20,
+              147.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              21,
+              150.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              22,
+              152.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              23,
+              155.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              24,
+              157.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              25,
+              160.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              26,
+              162.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              27,
+              165.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              28,
+              167.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              29,
+              170.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              30,
+              172.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              31,
+              175.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              32,
+              177.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              33,
+              180.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              34,
+              182.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              35,
+              185.0
+            ],
+            1000.0
+          ]
+        ],
+        "active_history_after": [
+          [
+            [
+              "Q1",
+              "A",
+              4,
+              107.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              5,
+              110.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              6,
+              112.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              7,
+              115.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              8,
+              117.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              9,
+              120.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              10,
+              122.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              11,
+              125.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              12,
+              127.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              13,
+              130.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              14,
+              132.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              15,
+              135.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              16,
+              137.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              17,
+              140.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              18,
+              142.5
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              19,
+              145.0
+            ],
+            1200.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              20,
+              147.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              21,
+              150.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              22,
+              152.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              23,
+              155.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              24,
+              157.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              25,
+              160.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              26,
+              162.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              27,
+              165.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              28,
+              167.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              29,
+              170.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              30,
+              172.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              31,
+              175.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              32,
+              177.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              33,
+              180.0
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              34,
+              182.5
+            ],
+            1000.0
+          ],
+          [
+            [
+              "Q1",
+              "A",
+              35,
+              185.0
+            ],
+            1000.0
+          ]
+        ]
+      }
+    }
+  },
+  "phase_validity_disabled_compatibility": [
+    {
+      "case": "anchored_return",
+      "samples": 21,
+      "samples_identical": true,
+      "lap_summaries_identical": true
+    },
+    {
+      "case": "partial_return",
+      "samples": 21,
+      "samples_identical": true,
+      "lap_summaries_identical": true
+    },
+    {
+      "case": "OCO",
+      "samples": 151,
+      "samples_identical": true,
+      "lap_summaries_identical": true
+    },
+    {
+      "case": "BEA",
+      "samples": 144,
+      "samples_identical": true,
+      "lap_summaries_identical": true
+    }
+  ],
+  "events": [
+    {
+      "round": 13,
+      "input": "/Users/zhxutong/dr-wo/woData/wodata/live_archive/schema_v1/year=2026/round=13/session=Q/replay/merged_replay_v1.jsonl",
+      "sha256": "36e14cc0d3b46f360252fa5f834f2b0b9b6ea222656323217e42c1c0c629855d",
+      "message_count": 19076,
+      "production_field_fraction": 0.02,
+      "clean_air_gap_s": 3.0,
+      "metrics": {
+        "after": {
+          "pace_samples": 87,
+          "available_traffic": 0,
+          "diagnostic_laps": 0,
+          "aggregate": null,
+          "automatic_source": "FP prior",
+          "circuit_history_members": 0,
+          "by_part": {
+            "Q1": {
+              "pace_samples": 37,
+              "available_traffic": 0
+            },
+            "Q2": {
+              "pace_samples": 32,
+              "available_traffic": 0
+            },
+            "Q3": {
+              "pace_samples": 18,
+              "available_traffic": 0
+            }
+          }
+        },
+        "before": {
+          "pace_samples": 87,
+          "available_traffic": 0,
+          "diagnostic_laps": 0,
+          "aggregate": null,
+          "automatic_source": "FP prior",
+          "circuit_history_members": 0,
+          "by_part": {
+            "Q1": {
+              "pace_samples": 37,
+              "available_traffic": 0
+            },
+            "Q2": {
+              "pace_samples": 32,
+              "available_traffic": 0
+            },
+            "Q3": {
+              "pace_samples": 18,
+              "available_traffic": 0
+            }
+          }
+        }
+      },
+      "maximum_history_members": {
+        "after": 0,
+        "before": 0
+      },
+      "traffic_changes": []
+    },
+    {
+      "round": 14,
+      "input": "/Users/zhxutong/dr-wo/woData/wodata/live_archive/schema_v1/year=2026/round=14/session=Q/replay/merged_replay_v1.jsonl",
+      "sha256": "db4f43887902850dde1dc9f0a108ae9ba2ab85612429a6183ae907cce6b6279d",
+      "message_count": 21139,
+      "production_field_fraction": 0.02,
+      "clean_air_gap_s": 3.0,
+      "metrics": {
+        "after": {
+          "pace_samples": 79,
+          "available_traffic": 0,
+          "diagnostic_laps": 0,
+          "aggregate": null,
+          "automatic_source": "FP prior",
+          "circuit_history_members": 0,
+          "by_part": {
+            "Q1": {
+              "pace_samples": 31,
+              "available_traffic": 0
+            },
+            "Q2": {
+              "pace_samples": 28,
+              "available_traffic": 0
+            },
+            "Q3": {
+              "pace_samples": 20,
+              "available_traffic": 0
+            }
+          }
+        },
+        "before": {
+          "pace_samples": 79,
+          "available_traffic": 0,
+          "diagnostic_laps": 0,
+          "aggregate": null,
+          "automatic_source": "FP prior",
+          "circuit_history_members": 0,
+          "by_part": {
+            "Q1": {
+              "pace_samples": 31,
+              "available_traffic": 0
+            },
+            "Q2": {
+              "pace_samples": 28,
+              "available_traffic": 0
+            },
+            "Q3": {
+              "pace_samples": 20,
+              "available_traffic": 0
+            }
+          }
+        }
+      },
+      "maximum_history_members": {
+        "after": 0,
+        "before": 0
+      },
+      "traffic_changes": []
+    },
+    {
+      "round": 16,
+      "input": "/Users/zhxutong/dr-wo/woPlanner/temp/r16_q_diagnostic_20261003_01a10147/data/r16_Q_recording.jsonl",
+      "sha256": "b353aa941dcd21112f48c38b2bd558a5e1d89af799555109e21af6dfa354c71b",
+      "message_count": 16496,
+      "production_field_fraction": 0.02,
+      "clean_air_gap_s": 3.0,
+      "metrics": {
+        "after": {
+          "pace_samples": 62,
+          "available_traffic": 0,
+          "diagnostic_laps": 0,
+          "aggregate": null,
+          "automatic_source": "FP prior",
+          "circuit_history_members": 0,
+          "by_part": {
+            "Q1": {
+              "pace_samples": 28,
+              "available_traffic": 0
+            },
+            "Q2": {
+              "pace_samples": 18,
+              "available_traffic": 0
+            },
+            "Q3": {
+              "pace_samples": 16,
+              "available_traffic": 0
+            }
+          }
+        },
+        "before": {
+          "pace_samples": 62,
+          "available_traffic": 0,
+          "diagnostic_laps": 0,
+          "aggregate": null,
+          "automatic_source": "FP prior",
+          "circuit_history_members": 0,
+          "by_part": {
+            "Q1": {
+              "pace_samples": 28,
+              "available_traffic": 0
+            },
+            "Q2": {
+              "pace_samples": 18,
+              "available_traffic": 0
+            },
+            "Q3": {
+              "pace_samples": 16,
+              "available_traffic": 0
+            }
+          }
+        }
+      },
+      "maximum_history_members": {
+        "after": 0,
+        "before": 0
+      },
+      "traffic_changes": []
+    }
+  ],
+  "source_sha256": {
+    "/Users/zhxutong/dr-wo/woPlanner/scripts/verify_quali_traffic_lifecycle.py": "50ec06662fdc3bd146d54ee5735382e64f2edf76cb72fd7657b7d306eee73ad3",
+    "/Users/zhxutong/dr-wo/woPlanner/scripts/verify_quali_traffic_phase_review.py": "6c5332a0e97ce291cb58f63f44b75e8251ac310215f1d5b12f51c78ac4298860",
+    "/Users/zhxutong/dr-wo/woPlanner/src/woplanner/quali/physical_traffic.py": "4153498e96a49408d599419a9926705ac2ef2d6b941c1fc86a9b33727ef91902",
+    "/Users/zhxutong/dr-wo/woPlanner/tests/test_quali_traffic_lifecycle.py": "3a1ebeecc172853cabceb449513eb0905fe7b6d84d0226617a1e0b50299b0a36",
+    "/Users/zhxutong/dr-wo/woPlanner/tests/test_quali_traffic_review_blockers.py": "59207b93bfaa7c78f3cc188812c97511372ed5f6c1b8dec258575a3f110fb841",
+    "/Users/zhxutong/dr-wo/woStrategy/src/wostrategy/analysis/traffic.py": "16f44199b8e515aa048bed684e524dcb6f259ead5d4892fc31b8f5275dafb933",
+    "/Users/zhxutong/dr-wo/woStrategy/tests/test_quali_traffic_phase_validity.py": "4f38df258d884f80257f5a29acebfe96b3fd0e06e6d6a38ffa7f1aef054804c2",
+    "/Users/zhxutong/dr-wo/woData/src/wodata/live/quali_models.py": "1c0a3c79fd85a86e4260880de30045bbcc40d20bc74470101991f74bbe8e9511",
+    "/Users/zhxutong/dr-wo/woData/src/wodata/live/quali_reducer.py": "de0cccc1d46f5d69ebc1d96212571141e16d486dd0283821779390ec960563a9"
+  }
+}

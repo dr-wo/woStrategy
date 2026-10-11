@@ -1,0 +1,116 @@
+{
+  "saved_inputs": [
+    {
+      "target": "OCO",
+      "lap": 6,
+      "elapsed_s": 95.3280792236328,
+      "before_ahead": "BOT",
+      "before_gap_s": 0.0328836973701832,
+      "before_distance_m": 1.7720659138376504,
+      "after_ahead": null,
+      "after_gap_s": null,
+      "after_status": "unknown"
+    },
+    {
+      "target": "OCO",
+      "lap": 6,
+      "elapsed_s": 37.46783113479614,
+      "before_ahead": "LAW",
+      "before_gap_s": 0.0402581090598597,
+      "before_distance_m": 2.594411472746515,
+      "after_ahead": null,
+      "after_gap_s": null,
+      "after_status": "unknown"
+    },
+    {
+      "target": "BEA",
+      "lap": 6,
+      "elapsed_s": 70.3427529335022,
+      "before_ahead": "BOR",
+      "before_gap_s": 0.0240970125722237,
+      "before_distance_m": 1.69348449465906,
+      "after_ahead": null,
+      "after_gap_s": null,
+      "after_status": "unknown"
+    },
+    {
+      "target": "BEA",
+      "lap": 6,
+      "elapsed_s": 81.36208605766296,
+      "before_ahead": "BOT",
+      "before_gap_s": 0.0406564510783053,
+      "before_distance_m": 2.789484282317062,
+      "after_ahead": null,
+      "after_gap_s": null,
+      "after_status": "unknown"
+    }
+  ],
+  "production_replay": {
+    "baseline": false,
+    "recording": "/Users/zhxutong/dr-wo/woPlanner/temp/r16_q_diagnostic_20261003_01a10147/data/r16_Q_recording.jsonl",
+    "recording_sha256": "b353aa941dcd21112f48c38b2bd558a5e1d89af799555109e21af6dfa354c71b",
+    "runtime_sources": {
+      "service": "/Users/zhxutong/dr-wo/woPlanner/src/woplanner/quali/service.py",
+      "diagnostic": "/Users/zhxutong/dr-wo/woPlanner/src/woplanner/quali/track_evolution.py",
+      "legacy": "/Users/zhxutong/dr-wo/woStrategy/src/wostrategy/analysis/live_qualifying.py"
+    },
+    "source_sha256": {
+      "service": "45107e5b2425424b45b246ad305cf6b8cb8dbf39e68f95518f6bd73dce5edadf",
+      "diagnostic": "2588b7bd1ea0c3badd6b5f4fa36fc48276ea6e3b8c462cb0db145f370ef85263",
+      "legacy": "7c79e8ba2cec70d2142f58d3c4d4613f4f544425136dfc6b1d70752e89b5d996"
+    },
+    "consumer_path": [
+      "QualiLiveService._build_snapshot",
+      "track_evolution_diagnostic",
+      "build_track_evolution_diagnostic",
+      "fit_driver_track_progression (per driver)",
+      "aggregate_driver_track_progression (slope, support count)",
+      "_update_track_from_diagnostic",
+      "CutoffProjection"
+    ],
+    "production_push_threshold_fraction": 0.02,
+    "live_consumer_legacy_calls": 0,
+    "supported_states_checked": 0,
+    "transitions": [
+      {
+        "sequence": 1,
+        "part": "Q1",
+        "aggregate": null,
+        "automatic_rate": 0.0,
+        "effective_rate": 0.0,
+        "source": "FP prior",
+        "support": 0
+      }
+    ],
+    "checkpoints": [
+      {
+        "sequence": 6451,
+        "part": "Q1",
+        "series": [],
+        "aggregate": null,
+        "reconstructed_aggregate": null,
+        "legacy_pooled_scalar": -0.002904150197627227,
+        "legacy_pooled_support": 23,
+        "automatic_rate": 0.0,
+        "effective_rate": 0.0,
+        "effective_source": "FP prior",
+        "snapshot": {
+          "target_kind": "CUTOFF",
+          "cutoff_rank": 16,
+          "driver": "BOR",
+          "current_cutoff_s": 97.99000000000001,
+          "unfinished_driver_count": 6,
+          "track_rate_s_per_field_push": 0.0,
+          "projected_correction_s": 0.0,
+          "projected_cutoff_s": 97.99000000000001
+        },
+        "admitted_sample_count": 23,
+        "traffic_available_sample_count": 0,
+        "traffic_circuit_history_size": 0,
+        "admitted_samples_sha256": "02d71c41562056e6109a5fec7b26ba5139ffcef59705684dd5f2fa39b209f86e",
+        "actual_aggregate_call": null,
+        "actual_driver_fit_calls": []
+      }
+    ]
+  }
+}
