@@ -98,7 +98,9 @@ records parameter history. Unsupported compounds retain explicit base or derived
 values. Provisional timing displayed in the GUI is kept separate from analytical
 inputs, and missing evidence can leave the model unchanged. The historical figure
 illustrates that update mechanism, not a guarantee that every current recording
-or traffic-filter mode supplies enough usable evidence.
+or traffic-filter mode supplies enough usable evidence. On woPlanner main,
+automatic Race traffic retains the existing model; new Race fits require explicit
+sector-boundary mode and sufficient eligible clean laps.
 
 ## Performance and methodology
 
