@@ -1,1048 +1,213 @@
 # woStrategy
 
-`woStrategy` models Formula 1 performance, tyre behaviour and race-strategy
-trade-offs from public data. It includes qualifying and race performance
-tracking, Monte Carlo Race/Retro inference, cross-event pre-race tyre
-prediction, causal live tyre-model updating, exact compound-sequence search and
-fixed-stop degradation envelopes. The project keeps uncertainty,
-identifiability limits and deliberate production compromises visible.
-
-The season-level performance figure uses the validated 2026 results through
-R12. The event-specific tyre and strategy figures use the completed **2026-R13
-Italian Grand Prix** weekend.
-
-## How competitive is each team?
-
-![2026 race-corrected baseline team pace through R12](doc/assets/race_performance_tracker_2026_r1-r12.png)
-
-- **Question:** how does underlying race pace compare after accounting for the
-  major observable lap-time effects?
-- **Method:** the Race Monte Carlo separates team baseline, fuel, track,
-  compound degradation and residual noise, then plots pace relative to Mercedes.
-- **Interpretation:** this is a model-relative baseline from public lap data;
-  changing identifiability and clean-lap support varies by event.
-
-## What tyre behaviour should be assumed before or during the race?
-
-![2026-R13 causal live tyre-degradation evolution](doc/assets/tyre_degradation_evolution_2026_r13.png)
-
-- **Question:** how should the pre-race degradation assumptions change as usable
-  Race evidence arrives?
-- **Method:** causal leader-lap cuts update directly informed compounds while
-  retaining explicit assumed/derived values for unsupported coordinates. In
-  this R13 replay, MEDIUM is directly informed, HARD changes from derived to
-  direct once supported, and unsupported SOFT remains derived from MEDIUM using
-  the implemented pre-race compound relationship.
-- **Interpretation:** an informed point is still an estimate; sampler adequacy
-  and identifiability are reported separately from apparent curve stability.
-  Dotted, dashed and solid lines denote base, derived and direct values.
-
-## What strategy implications follow?
-
-![2026-R13 rules-compliant strategy envelope versus MEDIUM degradation](doc/assets/strategy_degradation_cutoff_2026_r13_rules_compliant.png)
-
-- **Question:** at what MEDIUM degradation does the best fixed stop count change?
-- **Method:** the exact optimiser evaluates rules-compliant 1-, 2- and 3-stop
-  envelopes while preserving predicted compound ratios and pace deltas.
-- **Interpretation:** FP markers are diagnostics, not automatic strategy inputs;
-  the envelope is conditional on pit loss, race distance and tyre assumptions.
-
-## Technical documentation
-
-- [`../woData/CANONICAL_PACE_CONTRACT.md`](../woData/CANONICAL_PACE_CONTRACT.md)
-  — shared pace/tyre units, frames, reference, uncertainty and provenance rules.
-- [`doc/RACE_MC_AND_FP_ARCHITECTURE.md`](doc/RACE_MC_AND_FP_ARCHITECTURE.md) —
-  Race MC, live-retro, identifiability and accelerated evaluation.
-- [`doc/DEGRADATION_CUTOFF.md`](doc/DEGRADATION_CUTOFF.md) — fixed-stop envelopes,
-  lower-bound search, statuses and limitations.
-- [`doc/FP_TYRE_ESTIMATION_STATUS_AND_ROADMAP.md`](doc/FP_TYRE_ESTIMATION_STATUS_AND_ROADMAP.md)
-  — causal FP snapshots, tyre evidence and current compromises.
-- [`doc/CROSS_EVENT_TYRE_PREDICTION_V1.md`](doc/CROSS_EVENT_TYRE_PREDICTION_V1.md)
-  — the production pre-race prediction boundary.
-
-All analysis uses public F1 data. These are engineering models for comparison
-and decision support, not privileged team data or definitive causal estimates.
-
-### Empirical pit-loss evidence
-
-Post-race pit-loss output is empirical evidence, never operational configuration.
-GREEN, SC, and VSC are summarized separately. A VSC sample is accepted only when
-the defined pit interval has clean, consistent VSC status; GREEN/VSC transitions,
-VSC ending, SC/VSC mixtures, red flags or suspension, and malformed or unknown
-states are rejected. Required GREEN baselines must exist and be finite—missing
-baseline data is not converted to zero.
-
-Each available result records the driver/lap sample identity, sample count,
-aggregation statistic, support, and provenance with an explicit non-operational
-role. If no valid sample remains, the result is unavailable with `sample_count`
-equal to zero and no fabricated numeric total. These artifacts may be reported beside
-operational assumptions, but never overwrite them.
-
-## 0. Examples
-
-### 0.1 Qualifying performance tracker
-
-```bash
-python -m wostrategy.script.quali_performance_tracker \
-  --year 2026 \
-  --race-range "[1, 8]" \
-  --target-team Mercedes \
-  --new-tyre-only \
-  --last-quali-part-only \
-  --track-evolution-fit exponential \
-  --output doc/assets/quali_performance_tracker_2026_1-8_mercedes.png
-```
-
-The published tracker uses plain qualifying lap timing and writes one
-fastest/better-driver team result. Average and best-sector helpers remain
-available for internal diagnostics, but are not additional published series.
-
-<p>
-  <img src="doc/assets/quali_performance_tracker_2026_1-8_mercedes_exponential_fastest.png" alt="Qualifying performance fastest tracker example" width="70%">
-</p>
-
-### 0.2 Race performance tracker
-
-```bash
-python -m wostrategy.script.race_performance_review \
-  --year 2026 \
-  --race "[1, 8]" \
-  --session R \
-  --sample-count 5000 \
-  --sampling-strategy latin-hypercube \
-  --fuel-rate-bounds 0 0.10 \
-  --track-rate-bounds -0.05 0.05 \
-  --limit-negative-track-correction \
-  --tyre-deg-bounds 0 0.50 \
-  --tyre-delta-bounds -1.0 1.0 \
-  --compound-delta-reference HARD \
-  --team-variation-fraction 0.5 \
-  --team-variation-absolute-min 0.005 \
-  --clean-lap-noise-sigma 0.5 \
-  --team-baseline-mode average-drivers \
-  --reference-team Mercedes \
-  --plot-output doc/assets/race_performance_tracker_2026_1-8_mercedes.png \
-  --use-cached-monte-carlo
-```
-
-Race-scoped lap-compound corrections can be supplied when public timing data
-contains a known stint-compound issue:
-
-```bash
-python -m wostrategy.script.race_performance_review \
-  --year 2026 \
-  --race "[1, 10]" \
-  --session R \
-  --lap-compound-overrides-json '[{"race":10,"driver":"ANT","lap_range":[19,44],"compound":"HARD"}]' \
-  --use-cached-monte-carlo
-```
-
-Each override must name the race, driver, lap range, and corrected compound.
-Only matching races apply the correction and require matching Monte Carlo cache
-metadata. Races without a matching override can still reuse existing cached
-Monte Carlo results.
-
-This command writes the final team-baseline tracker plot:
-
-<p>
-  <img src="doc/assets/race_performance_tracker_2026_1-8_mercedes_team_baseline.png" alt="Race performance baseline tracker example" width="70%">
-</p>
-
-### Offline local pairwise race-performance diagnostic
-
-The local pairwise diagnostic compares teams only on exact overlapping race
-laps, corrects each pair for production posterior-median tyre effects, and
-solves each short race window independently:
-
-```bash
-python -m wostrategy.script.local_pairwise_race_performance \
-  --year 2026 --first-round 1 --last-round 13 \
-  --window-sizes 3 5 10 \
-  --input-root ../woData/wostrategy/race_performance_review/schema_v1 \
-  --output-dir ../temp/local_pairwise_race_performance
-```
-
-It is an offline diagnostic rather than a replacement estimator: it reads
-persisted production clean laps and posterior medians, never loads FastF1, does
-not refit fuel or tyre parameters, and does not link separate windows. See
-[`doc/LOCAL_PAIRWISE_RACE_PERFORMANCE.md`](doc/LOCAL_PAIRWISE_RACE_PERFORMANCE.md)
-for graph semantics, outputs, and interpretation limits.
-
-### Offline FP push–cool sequence evidence
-
-This completed R&D diagnostic preserves five manually reviewed, pit-bounded
-2026 R14 FP2 HAM/RUS/GAS/TSU/SAI runs and eight push-to-push intervals. It is an
-auxiliary within-run net-change constraint and model-consistency check, not
-fuel/tyre truth or an independent decomposition model. Physical decomposition
-is deferred unless new independent information or a specific testable assumption
-justifies re-evaluation. See
-[`doc/push_cool_sequence_evidence/REPORT.md`](doc/push_cool_sequence_evidence/REPORT.md)
-for the tables, identifiability limits and exact offline reproduction command.
-
-### Offline telemetry-intensity validation
-
-This closed R&D study found that local, within-run telemetry summaries and
-distance profiles add useful driving-state context beyond binary lap-timing
-labels, without validating a universal intensity scale or any relative fuel-burn
-calibration. See
-[`doc/telemetry_intensity_validation/REPORT.md`](doc/telemetry_intensity_validation/REPORT.md)
-for the fixed cross-event sample, artifacts and interpretation limits.
-
-### 0.3 Pure lap-time trace
-
-```bash
-python -m wostrategy.script.pure_lap_time_trace \
-  --year 2026 \
-  --race 7 \
-  --session R \
-  --traces-json '{"RUS": {"lap": ["37-61"], "off-set": 0.12}, "HAM": {"lap": ["41-61"], "off-set": 0}}' \
-  --delta-traces-json '{"RUS vs HAM": {"trace_a": "RUS", "trace_b": "HAM", "lap": ["7-21"]}}' \
-  --y-range 80 83 \
-  --output doc/assets/pure_lap_time_trace_2026_7_R.png
-```
-
-<p>
-  <img src="doc/assets/pure_lap_time_trace_2026_7_R.png" alt="Pure lap-time trace example" width="70%">
-</p>
-
-### 0.4 Race performance weight prediction
-
-This keeps the existing first-order heuristic: the fitted Race fuel-proxy rate
-is divided by the assumed kilograms per fuel-proxy lap. The resulting
-`EquivalentFuelSecondsPerKg` is assumption-dependent; it is not an independently
-calibrated physical fuel sensitivity and does not resolve the underlying
-fuel/track confounding. `FuelSecondsPerKg` remains in CSV output only as an
-explicitly labelled legacy alias of the same value.
-
-```bash
-python -m wostrategy.script.race_performance_weight_predict \
-  --year 2026 \
-  --race "1-8" \
-  --session R \
-  --team Mercedes \
-  --reference-team Mercedes \
-  --weight-delta-kg 5 \
-  --full-fuel-weight-kg 100 \
-  --output doc/assets/race_performance_weight_predict_2026_1-8_mercedes_plus5kg.png
-```
-
-<p>
-  <img src="doc/assets/race_performance_weight_predict_2026_1-8_mercedes_plus5kg.png" alt="Race performance weight prediction example" width="70%">
-</p>
-
-### 0.5 Tyre strategy summary
-
-```bash
-python -m wostrategy.script.tyre_strategy_summary \
-  --year 2026 \
-  --race 6 \
-  --output doc/assets/tyre_strategy_summary_2026_6_R
-```
-
-This writes CSV tables and can be rendered as a compact table for review:
-
-<p>
-  <img src="doc/assets/tyre_strategy_summary_2026_6_R_english.png" alt="Tyre strategy summary table example" width="55%">
-</p>
-
-### 0.6 Pre-season analysis
-
-```bash
-python -m wostrategy.script.pre_season_analysis
-```
-
-This script writes pre-season plots to `temp/` by default. Example outputs are
-shown from `doc/assets`:
-
-<p>
-  <img src="doc/assets/cumulative_laps_by_day_drivers.png" alt="Pre-season cumulative driver laps example" width="32%">
-  <img src="doc/assets/cumulative_laps_by_day_teams.png" alt="Pre-season cumulative team laps example" width="32%">
-</p>
-
-<p>
-  <img src="doc/assets/r2s2_r2s3_race_sim_uncorrected.png" alt="Pre-season race simulation uncorrected example" width="32%">
-  <img src="doc/assets/r2s2_r2s3_race_sim_corrected.png" alt="Pre-season race simulation corrected example" width="32%">
-  <img src="doc/assets/single_lap_comparison.png" alt="Pre-season single-lap comparison example" width="32%">
-</p>
-
-## 1. Code
-
-### Strategy Prediction weekend model and exact strategy search
-
-Strategy Prediction uses a joint, deterministic Latin-hypercube weekend model
-with a shared fuel parameter, session-specific track/tyre parameters, per-run nuisance
-intercepts, and an exact top-K dynamic-programming strategy engine. Select any FP
-combination in `SCRIPT_CONFIG`; every session is filtered independently and contributes
-additively to one joint posterior.
-
-Set `enforce_compound_order` in `SCRIPT_CONFIG` (or use
-`--enforce-compound-order`) to constrain every sampled dry-compound candidate to
-SOFT ≤ MEDIUM ≤ HARD for baseline lap time and SOFT ≥ MEDIUM ≥ HARD for
-degradation. The chosen `reference_compound` remains the zero point for compound
-deltas.
-
-```bash
-python -m wostrategy.script.pre_race_analysis \
-  --year 2026 --round 12 --sessions FP1 FP2 FP3 \
-  --sample-count 5000 --reference-compound HARD
-```
-
-The strategy APIs are `revalue_fixed_strategy`, `optimise_same_sequence`,
-`full_reoptimisation`, and `search_best_continuations`. Tyre age always means completed
-laps on the physical set after the last completed lap; the first future lap uses age+1.
-
-For interactive/local use, edit `SCRIPT_CONFIG` near the top of
-`src/wostrategy/script/pre_race_analysis.py`, then run the module with no options:
-
-```bash
-MPLBACKEND=Agg MPLCONFIGDIR=/private/tmp \
-  ../.venv/bin/python -m wostrategy.script.pre_race_analysis
-```
-
-The workflow checks enriched session laps under `WODATA_ROOT/fastf1/session_laps/`
-first. Cache misses are loaded through FastF1; FastF1's raw cache and derived telemetry
-also live below `WODATA_ROOT/fastf1/`. With `primary_seed=None`, a stable event-specific
-seed is derived from year and round and reused for the whole weekend.
-
-### 1.1 Install
-
-```bash
-python -m pip install -e .
-```
-
-The package depends on `fastf1`, `pandas`, `numpy`, and `matplotlib`. Your
-installed FastF1 version determines which events, timing columns, and telemetry
-formats are supported.
-
-`woStrategy` also depends on the sibling `woData` package for shared data-root
-and planner-facing cache path resolution. Team and driver plotting colours also
-come from `wodata.colours`, which is populated from FastF1's live-timing
-`DriverList`. In the normal local checkout layout:
+[dr-wo project home](https://github.com/dr-wo/dr-wo) · [Desktop application](https://github.com/dr-wo/woPlanner) · [Weekend reports](https://github.com/dr-wo/woWeekend)
+
+**The performance, tyre and race-strategy analysis engine of dr-wo.**
+
+`woStrategy` estimates model-relative pace and tyre behaviour from public F1 data,
+searches compound sequences and pit timing, and evaluates strategy sensitivity
+and retrospective comparisons. This README covers the analytical methods and
+examples; the [main project homepage](https://github.com/dr-wo/dr-wo) introduces
+the complete five-component ecosystem.
+
+The interface examples below show how [woPlanner](https://github.com/dr-wo/woPlanner)
+uses these models. [woData](https://github.com/dr-wo/woData) supplies shared data
+contracts, and [woWeekend](https://github.com/dr-wo/woWeekend) coordinates reports.
+
+![Historical race replay showing cumulative time gaps, tyre changes and driver rankings](doc/assets/showcase/race_replay_r13.png)
+
+*woPlanner replay of the 2026 R13 Italian Grand Prix, relative to Russell's
+actual pace. This preserved historical capture shows tyre changes, field order
+and pit-loss overlays; current controls resolve GREEN, SC and VSC separately.*
+
+[Strategy analysis](#strategy-analysis) · [Race decision support](#race-decision-support) ·
+[Performance and methodology](#performance-and-methodology) · [Getting started](#getting-started)
+
+## From race data to a strategy decision
+
+| Stage | What the project does | What the analyst can inspect |
+| --- | --- | --- |
+| Prepare | Load public timing and telemetry; filter usable laps; combine historical tyre evidence with event descriptors | Data coverage, clean-air support and pre-race compound assumptions |
+| Model | Estimate pace and tyre effects with weighted Monte Carlo sampling; keep FP evidence and race inference distinct | Parameter ranges, compound support and model diagnostics |
+| Compare | Search compound sequences and pit laps; revalue a fixed plan or optimise its continuation | Ranked alternatives, stop-count crossovers and tyre-only undercut potential |
+| Follow | Display timing, track position and pit windows in live/replay views | Traffic context, selected-driver scenarios and model-update history |
+| Review | Fit retrospective pace/tyre models and compare strategies against a hypothetical green-race optimum | Team pace, tyre behaviour, assumptions and reproducible report artifacts |
+
+## Strategy analysis
+
+### Which strategy is best under these assumptions?
+
+The deterministic strategy engine searches compound sequences and integer pit
+laps using dynamic programming. It can revalue a fixed strategy, optimise pit
+timing within the same sequence, or search new continuations from a driver's
+completed lap, current compound and physical tyre age. Compound availability,
+maximum stops and a minimum number of distinct dry compounds constrain the search.
+
+The Planner exposes ranked sequences, stint bars, global or supported team tyre
+models, editable assumptions and pinned comparisons. These are conditional
+minimum-cost strategies; the search does not assign a probability of winning.
+
+![Rules-compliant strategy costs across MEDIUM degradation, with FP evidence and crossover markers](doc/assets/showcase/strategy_cutoff_r16.png)
+
+*Recomputed from the saved 2026 R16 scenario: 56 laps, 23.7 s pit loss and at
+least two dry compounds. The 1→2 and 2→3 stop crossovers are approximately
+0.0935 and 0.1927 s/lap respectively.*
+
+The sensitivity sweep scales S:M:H degradation together while holding compound
+pace deltas fixed. It extends its range when needed to cover usable FP MEDIUM
+markers, reports tested boundaries and can evaluate a fourth stop when required.
+FP markers remain diagnostics: they do not replace production tyre assumptions
+or establish the true optimal stop count. See [cutoff methodology](doc/DEGRADATION_CUTOFF.md).
+
+### How much tyre pace could a stop recover?
+
+![Modelled undercut power for all source and replacement compound pairs](doc/assets/showcase/modelled_undercut_r16.png)
+
+*The same R16 tyre model, evaluated through the existing report renderer.
+Positive values mean the fresh replacement has a lower modelled lap-time cost.*
+
+Undercut curves reuse the strategy engine's tyre-cost definition for all ordered
+compound pairs. The fresh reference is the theoretical age-zero intercept,
+not an observed out-lap. This isolates tyre pace; pit loss, warm-up, traffic and
+an opponent's response must be considered separately before making a stop decision.
+
+## Race decision support
+
+woPlanner provides completed-race what-if editing and live/replay timing views,
+with driver selection, cumulative deltas, tyre markers, range controls and
+pit-loss overlays. Recorded messages pass through the shared timing reducers
+for repeatable replay. The qualifying monitor adds driver/run state, sectors,
+cutoff projections and track-evolution analysis.
+
+![Historical track map showing Russell, surrounding cars and time-based pit-window markers](doc/assets/showcase/track_map_r13.png)
+
+*Preserved R13 Track Map capture: selected Russell and surrounding cars, with
+GREEN and SC time-window markers. Time offsets are mapped approximately along
+an observed reference-lap trajectory; they are not predictions of rejoin order.*
+
+### How do tyre assumptions evolve during a race?
+
+![Historical R13 tyre-degradation evolution at causal leader-lap cutoffs](doc/assets/tyre_degradation_evolution_2026_r13.png)
+
+*Preserved R13 replay analysis. MEDIUM is directly informed; HARD becomes direct
+when supported; unsupported SOFT remains derived. Line styles distinguish base,
+derived and directly informed values.*
+
+The live model consumes committed evidence at causal race-progress cutoffs and
+records parameter history. Unsupported compounds retain explicit base or derived
+values. Provisional timing displayed in the GUI is kept separate from analytical
+inputs, and missing evidence can leave the model unchanged. The historical figure
+illustrates that update mechanism, not a guarantee that every current recording
+or traffic-filter mode supplies enough usable evidence.
+
+## Performance and methodology
+
+![Model-relative team race pace through 2026 R12, referenced to Mercedes](doc/assets/race_performance_tracker_2026_r1-r12.png)
+
+*Preserved season analysis through R12: inferred team baseline pace relative to
+Mercedes after the model's fuel, track and tyre corrections. Event support and
+identifiability vary.*
+
+**Race inference.** Clean laps are selected using timing, tyre, track-status and
+traffic evidence. Weighted random, Latin-hypercube or Halton candidates explore
+fuel proxy, track evolution, compound pace, degradation and team variation.
+Corrected driver/team baselines and fit residuals determine candidate weights;
+P10/median/P90 summaries retain parameter spread. This is weighted Monte Carlo
+sampling, not MCMC, and its spread is conditional on the model and priors.
+
+**Pre-race tyre prediction.** A separate rolling pipeline consumes prior Race
+Retro results and processed Pirelli descriptors. It retains historical-baseline
+and Pirelli-informed model families, chronological validation and immutable
+prediction versions. FP sessions provide a joint weekend fit and diagnostic
+evidence; absolute FP degradation remains confounded with fuel/load, and practice
+compound performance is not independently identified.
+
+**Post-race evaluation.** Race Retro feeds performance tracking and a
+*Retro Green Optimum*: a hypothetical uninterrupted race using retrospective tyre
+estimates and a fixed green pit loss. It is a comparison baseline, not a full
+SC/VSC-aware reconstruction of the best possible race. Local pairwise pace and
+BSF junction references provide additional diagnostics with explicit support and
+fallback semantics; the canonical estimator remains primary.
+
+**Operational meaning.** Shared contracts specify units, compound references,
+physical tyre age and provenance. The next modelled lap uses completed tyre age
+plus one. Effective strategy compound deltas use MEDIUM = 0. Empirical post-race
+pit losses remain separate from adopted operational GREEN/SC/VSC assumptions.
+Optional prior-venue interruption and traffic summaries provide context without
+automatically changing strategy inputs.
+
+All demonstrations use the project's public-data analysis artifacts. The models
+support engineering comparison and investigation; they do not have access to
+team fuel loads, tyre state or proprietary vehicle models.
+
+## Getting started
+
+Use sibling checkouts and Python 3.10+ for the combined application:
 
 ```text
 dr-wo/
   woData/
   woStrategy/
   woPlanner/
+  woStanding/
+  woWeekend/
 ```
 
-install development dependencies in dependency order:
+From `woStrategy`, create an environment with Python 3.10+ and install the data
+layer and analysis package:
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 python -m pip install -e ../woData
 python -m pip install -e .
+python -m wostrategy.script.race_performance_review --help
 ```
 
-For development and regression checks:
+For the desktop application, also install and launch woPlanner:
 
 ```bash
-python -m pytest
+python -m pip install -e ../woPlanner
+woplanner
+# Alternative entry points:
+woplanner-live
+woplanner-quali
 ```
 
-### 1.2 Architecture
-
-The package is split into five layers:
-
-```text
-model -> algorithm -> analysis -> plots -> script
-```
-
-- `wostrategy.model`: small mathematical models and constants, including track
-  evolution, fuel proxy columns, tyre-age columns, and long-run model
-  experiments.
-- `wostrategy.algorithm`: reusable algorithms that should not know about
-  FastF1 loading, plotting, or persistence. The Monte Carlo race-performance
-  sampler lives here.
-- `wostrategy.analysis`: dataframe preparation and domain aggregation. This is
-  where push laps, qualifying performance, long-run performance, and race
-  performance reviews are calculated.
-- `wostrategy.plots`: matplotlib figure rendering.
-- `wostrategy.script`: CLI entry points and workflow orchestration.
-- `wostrategy.core` and `wostrategy.tools`: session wrappers, FastF1 loading,
-  telemetry enrichment, cache handling, and convenience loaders used by the
-  analysis scripts.
-
-`woStrategy` remains analysis-only. Interactive GUI and race-planning user
-interface code lives in the sibling `woPlanner` project. The dependency
-direction is:
-
-```text
-woData -> woStrategy -> woPlanner
-```
-
-`woStrategy` may import `wodata`, but it must not import `woplanner`.
-
-Example API usage:
-
-```python
-from wostrategy import Session, run_two_day_benchmark_race_sim
-
-session = Session(2026, 2, 3, test=True)
-
-result = run_two_day_benchmark_race_sim(
-    year=2026,
-    round_number=2,
-    benchmark_session=2,
-    comparison_session=3,
-    output_prefix="temp/r2s2_r2s3",
-    min_laps=30,
-    reference_laps=57,
-    test=True,
-)
-```
-
-## 2. Workflows
-
-### BSF Junction Engineering Reference companion
-
-Normal `woWeekend` post-race runs now add **BSF Junction Engineering Reference —
-Event Consensus with Explicit Fallback**, accepted as **B: restricted
-interpretation**. The canonical estimator and canonical tracker remain primary.
-The reusable entry point is
-`wostrategy.analysis.bsf_junction.workflow.generate_bsf_season`; it reads the
-canonical producer's persisted clean laps and candidate tables, without loading
-FastF1 again, generating candidates, or modifying canonical files.
-
-Method identity is `projected_mean`, version `rd4h_projected_mean_v1`. Frozen
-projected_mean combines matched local observations through explicit full
-donor-mean junction transfers, projects reachable supports through the canonical
-reference functional, uses canonical or neutral-prior fallback where required,
-and centers the completed eleven-team field to mean zero in seconds per lap.
-The covariate matcher admits the first qualifying life/lap ladder rung per named
-pair and ten-lap window, with four pairs and a 60-second paired clock limit.
-Junction donors retain the frozen complete endpoint schedules, physical-life
-radius four, transition class and at least two donor teams. None of these rules
-is configurable through post-race overrides.
-
-The projection functional is the frozen **posterior mean** over saved Gaussian,
-team-baseline candidates with clean-lap noise sigma 0.5. It is separate from the
-producer's unchanged weighted-median summary/percentage tracker. The diagnostic
-uses that same frozen canonical functional. Unsupported producer input settings
-cause an explicit unavailable companion; there is no alternate estimator.
-The roster is the frozen 2026 eleven-team roster.
-
-Event CSV, methodology/provenance metadata and auditable score paths are stored
-under `WODATA_ROOT/wostrategy/bsf_junction_reference/schema_v1/year=YYYY/round=R/session=R/`.
-CSV scores have 17-digit serialization. Source and implementation hashes identify
-each event; table and score-path checksums protect persisted artifacts. Season
-history reuses completed event outputs only after method/kernel and source
-identity validation. The closed 2026 R1–R15 set is pinned in
-`approved_contracts.json`; a missing cache rebuilds only from hash-verified
-approved originals, otherwise it is explicitly unavailable. R15 resolves its
-original published range=1–15 bank, never the newer per-event bank. Explicit
-input paths cannot replace those frozen identities. Report-only rendering
-never refreshes or refits history.
-
-`rd4h_projected_mean_v1` is bound to an approved numerical AST/configuration
-fingerprint covering matching, transfer, graph/projection, canonical reference,
-fallback and gauge. An incompatible runtime or saved kernel is rejected without
-silent v1 recomputation. Semantic changes require an approved version bump;
-plot/report wording does not invalidate this numerical contract. Raw source and
-implementation hashes remain recorded for forensic inspection.
-
-For an identified historical replay, `get_bsf_event(..., source_paths=...)` or
-`generate_bsf_season(..., source_paths_by_round={round: source_paths, ...})` accepts
-the five explicit producer input paths (`clean`, `parameters`, `delta`,
-`team_deg`, `metadata`). The frozen R1–R15 replay uses the source identities from
-closure provenance; R15 specifically uses its original published range=1–15
-candidate rows, not the subsequently regenerated per-event bank. Those bank
-files are input dependencies, not bundled into the small test fixture. No
-research directory is imported by production code.
-
-Unvalidated engineering reference. Every score depends on canonical projection,
-fallback or a prior; support and reference sensitivity vary by event. This is
-not equal-fuel pace, age-zero pace, pure car performance, driver-independent
-capability or a validated physical decomposition. No-clean-data values are
-numerical completion only; fallback-heavy values and changes across support
-classes must not be read as measured performance differences. There are no
-calibrated team-score confidence intervals. **P** is projected graph provenance,
-**F** full canonical fallback, and **N** prior-only completion; P is not confidence.
-Plots exclude N from the performance axis, retain every flag, and connect only
-consecutive P rounds with dashed links. Mercedes-relative outputs use s/lap.
-
-### 2.0 Pre-process
-
-The loading layer wraps FastF1 sessions and normalizes the data needed by the
-analysis scripts.
-
-- `load_session_laps` loads laps for one or more events and appends `Year`,
-  `Round`, `SessionName`, event metadata, session result rank, session start
-  position/grid position, and per-lap weather columns when FastF1 exposes them.
-- `load_session_laps_with_telemetry_gap_summary` additionally loads full
-  per-lap telemetry, caches it under the shared workspace-level
-  `dr-wo/cache/telemetry/` directory by default, and merges per-lap clean-air
-  gap metrics back onto the lap dataframe.
-- Telemetry cache validity includes the traffic evaluator version and selection
-  mode; stale or incomplete derived data are rebuilt automatically.
-- Clean-air summaries include min/mean time and distance gaps to cars ahead and
-  behind when the data are available.
-
-The retrospective traffic evaluator accepts normalized `Driver`, `SessionTime`,
-`LapNumber`, and `Speed` inputs. Default live/replay Race traffic is quarantined
-as `traffic-unavailable`; existing model/history is retained, sector mode must be
-selected explicitly, and position-derived gaps remain diagnostic-only. Fresh
-traffic-derived FP evidence requires `unified-traffic-v4` / `compatibility_min`;
-saved models remain historical artefacts without retroactive v4 certification. See
-[Traffic evaluation](doc/traffic_evaluation.md) for its assumptions, component
-outputs, performance model, fallback rules, and finalization semantics.
-
-The race-performance review also writes `latest_resolved_settings.json` before
-loading session data. One copy is written at the review root and one in every
-requested event/session partition. This records the effective invocation even if
-the subsequent session is skipped or fitting fails. A successful cached event's
-metadata remains the preferred settings source; otherwise consumers use the
-event's latest invocation and then the global latest invocation. This precedence
-deliberately favors reproducibility of an existing event result over a newer
-unsuccessful command. Only settings compatible with the planner's joint model are
-imported; review-only controls such as team-variation fitting are left out rather
-than being silently reinterpreted.
-
-#### 2.0.1 Planner-facing race lap cache
-
-`woPlanner` uses `woStrategy` through the narrow planner-facing helper:
-
-```python
-from wostrategy import load_race_laps_for_planner
-
-laps = load_race_laps_for_planner(
-    year=2026,
-    round_number=12,
-    session="R",
-    data_root="/path/to/woData",  # optional
-)
-```
-
-This helper loads full race laps and caches them through `woData` using:
-
-```text
-<DATA_ROOT>/wostrategy/planner_race_laps/schema_v2/year=<year>/round=<round>/session=<session>/laps.pkl
-```
-
-`DATA_ROOT` is resolved by `wodata.get_data_root`:
-
-1. explicit `data_root`
-2. `WODATA_ROOT`
-3. `WOSTRATEGY_DATA_ROOT`
-4. `Path.cwd() / "woData"`
-
-For repeatable local development, prefer setting the shared sibling data root:
-
-```bash
-export WODATA_ROOT=/path/to/dr-wo/woData
-```
-
-The old local fallback remains readable for compatibility:
-
-```text
-<dr-wo>/cache/planner_race_laps/<year>_<round>_<session>.pkl
-```
-
-Planner cache files are considered stale and rebuilt when they do not contain
-`SessionStartPosition`, because `woPlanner` uses that column for true grid/start
-ranking. If FastF1 does not expose grid data, `woPlanner` can still fall back to
-first-lap timing, but that is not treated as the preferred start order.
-
-#### 2.0.2 Distance delta to time delta using interpolation
-
-`DistanceInterpolationTimeDeltaEstimator` converts FastF1's
-`DistanceToDriverAhead` telemetry into `TimeDeltaToDriverAhead`.
-
-For each telemetry sample it:
-
-1. Takes the current lap-distance trace: `Distance` versus `Time`.
-2. Adds `DistanceToDriverAhead` to the current car distance to get the target
-   distance.
-3. Wraps targets beyond the lap end and offsets by the lap time.
-4. Interpolates the target distance on the current lap trace to estimate when
-   the current car would arrive there.
-5. Stores the non-negative time difference in seconds.
-
-The shared evaluator keeps the finish-line-anchored direct result and the
-circular physical result independently visible. The current versioned
-`compatibility_min` selector deliberately chooses the smaller available metric,
-preserving the historical conservative rule while allowing either component to
-be compared or replaced later. Physical circuit phase—not classification lap
-difference—is used to locate nearby lapped cars in retrospective telemetry.
-The old zero-origin reconstruction is disabled for default live Race clean-lap
-decisions. There is no automatic sector fallback; explicitly selected sector
-traffic keeps its own method and status provenance.
-
-#### 2.0.3 Other data clean tools
-
-- Push-lap filtering rejects out laps, in laps, non-quick laps, non-clean laps,
-  wet/intermediate sessions, and optionally used tyres.
-- Race and long-run filtering keeps dry compounds only, removes out/in laps,
-  applies driver-relative quick-lap thresholds, and selects clean-air laps by
-  front and optional rear mean time gaps.
-- Race clean-air selection can use consecutive clean-air chunks or, with
-  `--treat-stint-as-whole`, all clean laps in a stint once the stint has enough
-  clean laps in total.
-- Tyre age can be stint-relative (`--tyre-age-mode stint`, default) or FastF1
-  session `TyreLife` based (`--tyre-age-mode overall`).
-- Long-run fitting removes obvious lap-time residual outliers inside a stint and
-  can remove field-level tyre-slope outliers before team aggregation.
-- Wet race/session guards skip workflows when wet/intermediate tyres exceed the
-  configured policy.
-
-### 2.1 Quali performance tracker
-
-Qualifying performance estimates team pace after correcting eligible push laps
-for track evolution.
-
-#### 2.1.1 Assumptions
-
-- Fuel, tyre degradation, and track evolution are the main lap-time corrections.
-  - In qualifying, drivers are assumed to run low fuel, so no fuel correction needed.
-  - New-tyre push laps are the default comparison set, so no tyre degradation needed.
-- Every eligible push lap contributes the same to the track-evolution fit;
-  - with  `--track-evolution-quick-lap-number`, the x-axis can be quick-lap count
-  instead of total session lap order.
-- Track evolution is assumed to apply the same to all cars.
-- Driver error is not explicitly modelled. The published workflow partly
-  mitigates this by using the faster driver result and last-session selection.
-
-#### 2.1.2 Algorithm
-
-1. Load plain qualifying lap timing without telemetry gap summaries.
-2. Run in lap-time-only mode. The legacy telemetry and clean-gap command-line
-   options remain accepted for compatibility but do not change this workflow.
-3. Add push-lap flags from the quick-lap threshold, out/in lap status, and
-   out-push-in run pattern.
-4. Keep configured dry compounds and, by default, only new tyres.
-5. Fit track evolution from eligible push laps on the dominant compound. The fit
-   can be linear or exponential (`y = A * exp(-k x) + B`).
-6. Correct lap and sector times to the latest eligible push-lap reference.
-7. For the final displayed performance, optionally use only each driver's last
-   qualifying part (`--last-quali-part-only`). Track evolution is still fitted
-   from all eligible Q1/Q2/Q3 push laps.
-8. Publish one team pace value from the faster driver's corrected lap. Average
-   and best-sector calculations remain internal helpers only.
-9. Plot each team as a percentage of the target team and save a usage CSV with
-   the source lap behind each plotted point.
-
-Example:
-
-```bash
-python -m wostrategy.script.quali_performance_tracker \
-  --year 2026 \
-  --race-range "[1, 8]" \
-  --target-team Mercedes \
-  --new-tyre-only \
-  --last-quali-part-only \
-  --track-evolution-fit exponential
-```
-
-Full-range final tracker plots generated for the example above:
-
-<p>
-  <img src="doc/assets/quali_performance_tracker_2026_1-8_mercedes_exponential_fastest.png" alt="Qualifying performance fastest tracker example" width="70%">
-</p>
-
-Push-lap track development is a diagnostic workflow, not the final qualifying
-tracker:
-
-```bash
-python -m wostrategy.script.push_lap_track_development \
-  --year 2026 \
-  --race 7 \
-  --section Q \
-  --new-tyre-only \
-  --allow-lap-time-only \
-  --track-evolution-fit exponential
-```
-
-#### 2.1.3 Problems
-
-- The track-evolution model is intentionally simple. It is currently one shared
-  linear or exponential curve, usually fitted on one dominant compound.
-- Driver execution error is not modelled directly.
-- A dominant compound is required for the track-evolution fit, so mixed-compound
-  sessions can be skipped or raise an error.
-- Lap-time-only fallback is useful for robustness but cannot identify traffic as
-  well as telemetry-derived clean-air filtering.
-- Sector correction scales each sector by the lap-level correction ratio; it is
-  not a sector-specific track-evolution model.
-
-### 2.2 Race performance tracker
-
-Race performance estimates corrected baseline race pace from clean-air race
-laps using weighted Monte Carlo sampling.
-
-#### 2.2.0 Limitation
-
-- Fuel, tyre degradation, and track evolution are the main corrections, which are
-  coupled together.
-- Race performance must decouple all three from noisy race laps, which is much
-  harder than qualifying.
-- The current code does not use vehicle modelling. FastF1 public telemetry is
-  useful for gap and lap context, but it is not treated as sufficient here for a
-  full vehicle model.
-- F1 teams can do better with private car, tyre, fuel, and simulator data. This
-  project does not have those resources.
-- The current choice is a simple weighted Monte Carlo sampler, not a full
-  Bayesian MCMC model.
-
-#### 2.2.1 Assumptions
-
-- Fuel correction, track evolution, and tyre degradation are sampled as linear
-  rates.
-- Fuel rate bounds are non-negative.
-- Track evolution can be sampled over configured bounds.
-  - Use `--limit-negative-track-correction` to clamp sampled track rates to
-  non-negative values.
-- Base tyre degradation is sampled per compound, with bounded team-compound
-  variation around the compound baseline.
-- Compound lap-time delta is estimated separately from degradation, relative to
-  `--compound-delta-reference` (`HARD` by default).
-- When track temperature is above
-  `--degradation-order-track-temperature`, the sampler enforces hot-track tyre
-  ordering: `SOFT >= MEDIUM >= HARD` for degradation and
-  `SOFT <= MEDIUM <= HARD` for lap-time deltas, where lower delta means faster.
-- Driver performance is not explicitly modelled. Baselines can be fitted at
-  driver level and then converted to teams by average driver, best driver, or
-  direct team baseline mode.
-
-#### 2.2.2 Algorithm
-
-1. Load race laps with telemetry gap summaries. Missing required telemetry gap
-   columns skip the race and save diagnostic outputs.
-2. Skip wet races when median driver wet/intermediate lap proportion exceeds the
-   configured threshold.
-3. Prepare dry race laps: remove out/in laps, apply driver-relative quick-lap
-   threshold, calculate stint or overall tyre age, and create a fuel proxy from
-   laps remaining.
-4. Select clean-air laps using average gap to the car ahead and, when
-   configured, behind. Selection is either consecutive clean-air chunks or whole
-   clean stints.
-5. Draw Monte Carlo samples for fuel rate, track rate, compound degradation,
-   compound delta, and team-compound degradation variation. Latin hypercube
-   sampling is available and is the script default.
-6. Correct every clean lap:
-
-   ```text
-   corrected =
-     lap_time
-     - fuel_rate * fuel_proxy_delta
-     - track_rate * race_lap_delta
-     - team_compound_degradation * tyre_age_delta
-     - compound_delta
-   ```
-
-7. Fit corrected baselines by driver or team, score each sample by RMSE, and
-   convert RMSE to weights. The default `gaussian` weighting is unnormalized;
-   `best-rmse-relative` normalizes weights relative to the best RMSE sample.
-8. Save weighted P10/median/P90 summaries for fuel, track, compound
-   degradation, compound deltas, team-compound degradation, and baseline pace.
-9. Convert baselines to team pace and plot each team's weighted median as a
-   percentage of the reference team.
-
-Example:
-
-```bash
-python -m wostrategy.script.race_performance_review \
-  --year 2026 \
-  --race "[1, 8]" \
-  --session R \
-  --sample-count 50000 \
-  --sampling-strategy latin-hypercube \
-  --fuel-rate-bounds 0 0.10 \
-  --track-rate-bounds -0.05 0.05 \
-  --limit-negative-track-correction \
-  --tyre-deg-bounds 0 0.50 \
-  --tyre-delta-bounds -1.0 1.0 \
-  --compound-delta-reference HARD \
-  --team-variation-fraction 0.5 \
-  --team-variation-absolute-min 0.005 \
-  --clean-lap-noise-sigma 0.5 \
-  --team-baseline-mode average-drivers \
-  --reference-team Mercedes \
-  --plot-output doc/assets/race_performance_tracker_2026_1-8_mercedes.png \
-  --use-cached-monte-carlo
-```
-
-Outputs are written to woData by default, partitioned by event:
-
-```text
-woData/wostrategy/race_performance_review/schema_v1/
-  year=2026/round=8/session=R/
-    tyre_information.csv
-    race_performance_2026_8_R_*.csv
-```
-
-`tyre_information.csv` is the single planner-facing tyre summary. It contains
-global and team rows for compound baseline speed, compound delta, degradation,
-uncertainty ranges, and sample/weight information. Detailed clean laps, sampled
-parameters, degradation and delta samples, baseline samples, team summaries,
-and diagnostics remain separate files in the same event directory. This keeps
-the convenient summary file small without discarding reproducibility data.
-Each successfully recalculated race atomically replaces its own
-`year=.../round=.../session=.../tyre_information.csv`; values are never appended
-across recalculations or mixed with another race.
-
-Multi-race summaries use a sibling `range=1-8/session=R/` partition. All new
-cache writes use woData. When `--use-cached-monte-carlo` finds an older cache in
-`dr-wo/cache/race_performance_review/`, it reads and promotes that event into the
-canonical woData directory; it does not delete the legacy files. Use
-`--use-cached-monte-carlo` to reuse existing per-race CSVs and calculate only
-missing races. Races with lap-compound overrides write metadata alongside the
-CSV outputs, so stale cached outputs generated without the same correction are
-not reused for that race.
-
-### Cross-event tyre prediction
-
-The complete frozen-V1 assumptions, compromises, validation rules, descriptor-domain
-diagnostics, dual-output contract, and prospective scoring procedure are documented in
-[`doc/CROSS_EVENT_TYRE_PREDICTION_V1.md`](doc/CROSS_EVENT_TYRE_PREDICTION_V1.md).
-
-The downstream tyre-prediction pipeline reads existing Race Retro artifacts without
-invoking or changing Retro MC, joins them to validated Pirelli preview descriptors,
-checks model readiness, and writes rolling pre-race predictions under
-`woData/wostrategy/tyre_prediction/schema_v1/`.
-
-Application code consumes the latest artifact through
-`wostrategy.analysis.pre_race_tyre_prediction.get_pre_race_tyre_prediction`.
-The adapter returns provider-neutral `PreRaceTyrePrediction` and
-`TyreCompoundPrediction` contracts. Raw cache loading preserves the producer's
-common additive performance gauge. The shared operational contract then
-validates event identity, complete SOFT/MEDIUM/HARD coverage, finite required
-values, and non-negative degradation before subtracting the MEDIUM performance
-value once. Strategy, Planner, reports, and plots therefore consume MEDIUM=0
-without imposing that gauge on producer/source artifacts. The adapter can invoke
-the owning producer when a caller proves the cached artifact is stale.
-
-```bash
-python -m wostrategy.script.tyre_prediction_pipeline --year 2026
-```
-
-For orchestration after manual Pirelli processing, use
-`--processed-previews-only` (API: `processed_previews_only=True`). This reads
-validated per-event JSONs and rebuilds their descriptor CSV without scanning or
-extracting images. `woweekend-race` uses this mode, ensures required FP data and
-FP model evidence, then runs the existing race analysis in one invocation.
-The race command also sets `refresh_fp_calibration=False`, leaving year-wide
-historical FP calibration in its explicit post-Retro diagnostic workflow. The
-standalone pipeline still refreshes it by default; `--no-refresh-fp-calibration`
-selects only the existing production prediction stages. These switches do not
-change regression settings, model readiness, or prediction values.
-
-Unchanged preview images are served from their SHA256-keyed per-event JSON artifacts.
-For a new or changed image, install `wodata[vision]` and pass `--vision-model`, or set
-`WODATA_PIRELLI_VISION_MODEL`. API credentials remain provider environment settings.
-The V1 performance estimator preserves Retro's event-HARD-relative coordinate; its
-readiness is evaluated separately from the absolute degradation estimator. Performance
-is fitted as four adjacent C1-C2 through C4-C5 gap intercepts with shared linear tyre
-stress and asphalt grip terms. Degradation uses five absolute-compound intercepts with
-shared linear stress, abrasion, and grip terms. Neither regression changes Retro's
-calculation or saved semantics.
-
-Every run also writes `validation.json` and `validation_predictions.csv`. Validation is
-strictly chronological, excludes the performance HARD identity rows from metrics, and
-compares each Pirelli feature model with its intercept-only baseline. The three supported
-weight policies are `uniform`, `event_normalised`, and
-`evidence_event_normalised`. The evidence policy applies `sqrt` to persisted clean-lap
-counts by compound and then normalises each event to total weight one; P10/P90 widths
-remain diagnostics and are not treated as calibrated inverse variances.
-
-The compatibility default is fixed at P0/uniform for performance and D0/uniform for
-degradation; small rolling-metric changes never promote another model automatically.
-Every compound also exposes a `historical_baseline` family (P0/D0) and a
-`pirelli_informed` family (P1/D1), so the physically informed alternative is visible
-rather than hidden. Both families are stored in each immutable prediction version.
-Human-readable FP evidence reports render the degradation families as `Historical
-degradation` and `Pirelli-informed degradation`; the internal IDs remain unchanged for
-artifact and calibration compatibility.
-`coefficient_history.csv` records rolling and current
-fit coefficients and conditioning, while `diagnostic_summary.json` ranks residuals and
-summarises descriptor groups. Once Retro becomes available for a versioned pre-race
-prediction, `prospective_validation.csv` scores that original saved P0/P1/D0/D1 output
-without recreating it. Prospective and historical-rolling metrics remain separate.
-
-Persisted FP evidence can be evaluated against the later Race Retro target without
-changing the production tyre predictor:
-
-```bash
-python -m wostrategy.script.fp_race_diagnostic \
-  --season 2026 \
-  --data-root ../woData
-```
-
-The command records direct degradation error, leave-one-compound-out event-K transfer,
-team-compound topology, HARD-relative same-team and baseline-corrected cross-team
-performance, and constrained joint-fit diagnostics. See
-[`doc/CROSS_EVENT_TYRE_PREDICTION_V1.md`](doc/CROSS_EVENT_TYRE_PREDICTION_V1.md#historical-fp-to-race-diagnostic)
-for the eligibility contract and artifact layout, and
-[`doc/FP_TYRE_ESTIMATION_STATUS_AND_ROADMAP.md`](doc/FP_TYRE_ESTIMATION_STATUS_AND_ROADMAP.md)
-for the evolving calibration evidence, reporting policy, and limitations. These outputs
-remain diagnostic and are not consumed by Strategy Prediction.
-
-Pirelli descriptor levels remain a V1 ordinal 1-5 numerical approximation. Diagnostics
-treat 1 and 5 as saturated boundary categories, record whether each level and exact
-descriptor tuple occurred in prior events, and report paired interior/boundary and
-seen/unseen-tuple metrics. These fields are descriptive only: they do not measure physical
-distance, alter a prediction, change its weight, or trigger model promotion.
-
-Optional plot controls:
-
-- `--plot-uncertainty-band` draws P10/P90 bands.
-- `--plot-rmse-background` shades events by weighted RMSE diagnostics.
-
-Full-range final race tracker plot:
-
-<p>
-  <img src="doc/assets/race_performance_tracker_2026_1-8_mercedes_team_baseline.png" alt="Race performance baseline tracker example" width="70%">
-</p>
-
-Race performance weight prediction uses cached race-performance outputs:
-
-```bash
-python -m wostrategy.script.race_performance_weight_predict \
-  --year 2026 \
-  --race "1-8" \
-  --session R \
-  --team Mercedes \
-  --reference-team Mercedes \
-  --weight-delta-kg 5 \
-  --full-fuel-weight-kg 100
-```
-
-## 3. Corrections and additions
-
-Corrections to the requested outline:
-
-- Qualifying does not explicitly correct fuel or tyre degradation; it assumes
-  low fuel and usually filters to new-tyre push laps, then corrects track
-  evolution.
-- The qualifying track-evolution fit can use total session lap order or quick
-  lap number. It is not always strictly "total push lap vs lap time" unless that
-  option is selected.
-- The qualifying final comparison uses each driver's last qualifying part only
-  when `--last-quali-part-only` is enabled; this is a presentation/performance
-  selection step, not the track-evolution fit scope.
-- Race track correction is not forced to be negative in all configurations. The
-  script can sample negative and positive track rates, or clamp to non-negative
-  with `--limit-negative-track-correction`.
-- The race CLI uses `--tyre-deg-bounds` for the default compound degradation
-  bounds; `--default-compound-degradation-bounds` is not a valid option.
-- The race workflow does not currently implement vehicle modelling. It uses
-  telemetry mainly for clean-air gap summaries.
-- The Monte Carlo implementation is a weighted random/Latin-hypercube sampler,
-  not a full MCMC model.
-
-Additional points included:
-
-- Telemetry cache behavior and automatic stale-cache rebuilds.
-- Physical same-session-time clean-air gap summaries for both ahead and behind
-  cars, with fallback behavior.
-- Wet-session skip policies.
-- Tyre-age modes, team baseline modes, compound delta estimation, sample
-  diagnostics, cached Monte Carlo reuse, uncertainty bands, and RMSE plot
-  backgrounds.
-- Durable README plot links now point to `doc/assets/` instead of `temp/`.
-
-## Development context
-
-This project is developed extensively with coding agents. The detailed
-architecture, status and investigation documents are intentional engineering
-infrastructure: they preserve assumptions, identifiability limits, interfaces,
-known compromises and validation requirements across development sessions.
-
-### Historical Safety Car / Red Flag preparation
-
-Prepare this optional pre-race context explicitly, before report assembly or opening
-Planner (acquisition may download missing original FastF1 data):
-
-```bash
-python -m wostrategy.script.interruption_history --event 2026-15 --data-root ../woData
-```
-
-The deterministic extraction and selection path is
-`wostrategy.analysis.interruption_history`; woData owns source access, matching and
-validated atomic persistence. The canonical output is
-`<data_root>/wostrategy/interruption_history/schema_v1/year=YYYY/round=RR/history.json`.
-Schedule acquisition walks backward from the target season until five prior races
-are found, or to 1950; inaccessible schedules are explicitly reported as incomplete
-selection. Source failures for an edition retain that edition as unavailable, rather
-than substituting an older race. New venues may have fewer than five editions.
-Both consumers read this artifact locally and use shared `history_rows` formatting;
-report rendering and GUI reload never fetch data.
-
-The history selects the latest five **prior races at the same venue**, including
-skipped years and multiple races in a season. It excludes the target, later rounds,
-and races not proved earlier than both the target race and acquisition cutoff.
-Missing/`NaT` race dates fall back through `Session5DateUtc`, `Session5Date` and
-`EventDate`; a same-season edition without chronological evidence is excluded and
-selection is marked incomplete. A date-only value on the cutoff day is ambiguous.
-Matching reuses woData's operational identity policy: circuit ID, then
-country/location, then circuit text; event display names are not keys. Available
-identity and schedule provenance are retained. Layout changes are not inferred,
-normalized or excluded; venue identity does not assert equivalent layouts.
-
-Only race-time Safety Car (`TrackStatus=4`) and Red Flag (`5`) occurrences are
-inventoried; pure VSC (`6`/`7`) is excluded. Stable timestamp/source order preserves
-multiple events within a lap, while contiguous repeated messages add no occurrence.
-An unknown interval can split one minimum occurrence into uncertain fragments:
-`SC → unknown → SC` proves **at least one**, not two. Only a trusted differing status
-proves an intervening exit and supports another distinct minimum occurrence.
-Fragments retain unknown boundaries and may represent separate deployments.
-
-FastF1's first SessionStatus `Started` is an initial candidate. A non-generated raw
-race-lap completion after that candidate and before suspension/start-abort
-corroborates genuine racing and locks the original start. Before corroboration,
-a mapped explicit `START ABORTED`/`ABORTED START` can move the candidate to a later
-`Started`; after corroboration, later aborted restarts never replace it. Missing or
-conflicting original-start/abort evidence leaves admission ambiguous. Raw completed
-race laps at or before any candidate `Started` prevent treating a restart as the
-original start, even if a backmarker completes the same lap later. Prior suspension
-or abort evidence does not override those earlier completions. This also
-conservatively leaves a race suspended before its first reliable completed lap
-ambiguous. Formation interruptions ending before the admitted start are excluded;
-a pre-start SC/RF still active at the start has no proven post-start deployment and
-is excluded with a coverage warning.
-
-Approximate leader boundaries require independent original timing-stream evidence:
-reported `Position=1` on consecutive leader lap labels `LAP N → LAP N+1` identifies
-the driver completing lap N. woData acquires that stream through FastF1's existing
-cached timing API; woStrategy uses only that driver's non-generated raw `laps.Time`
-for the boundary. FastF1's `laps.Position` ranks remaining completion rows and is
-not authority evidence. A missing leader row/time, missing independent lap advance,
-or unknown generation flag leaves the boundary unavailable; neither a later
-backmarker nor a later leader report repairs it. Raw session elapsed time includes
-suspension gaps. Non-monotonic/inconsistent chains still fail closed, and a missing
-boundary needed for an interval yields `lap=null` while retaining the occurrence.
-
-**The displayed SC range is the set of laps during which SC status was active for
-any portion of the lap.** Entry uses `[lap start, lap end)` and withdrawal uses
-`(lap start, lap end]`: partial L11 through partial L13 displays `~L11–13`, while
-withdrawal exactly at the L1 completion displays `~L1`, excluding L2. A direct
-SC → Red Flag transition ends the SC there and is labelled accordingly. Red Flag
-uses only its entry lap, never a suspension-duration range. Zero-duration updates
-at a boundary retain the occurrence with unavailable lap context.
-
-`schema_version=1`, `semantic_role=historical_race_interruptions` preserves the
-target, newest-first identities, selection provenance, source integrity evidence,
-start-admission evidence, coverage reasons, timeline hash, and SC/Red Flag families.
-Each family has `occurred` (true/false/null), `count` (exact integer/null),
-`observed_count` (minimum distinct occurrences), and chronological `occurrences`
-with cross-family sequence, original seconds/source indexes, uncertain fragments,
-trusted exit proof and approximate/unavailable laps. Missing deployment boundaries
-retain `start_seconds=null`, unavailable start laps and `first_observed_seconds`.
-Validation rejects unsupported enums, inconsistent null/timestamp/lap values,
-backwards/overlapping known intervals, unsupported grouping, contradictory counts,
-missing provenance, and complete records lacking required deployment boundaries.
-Legitimate partial/ambiguous records remain representable. Unsupported older draft
-artifacts degrade to unavailable and must be explicitly prepared again.
-
-**Confirmed zero requires affirmative TrackStatus integrity**, supported original
-race admission, start baseline, terminal lifecycle, valid transitions and
-unambiguous required deployment boundaries. The source must explicitly provide
-`track_status_integrity.status=verified_complete` with nonempty evidence identifying
-a completeness/integrity check. A boolean, lifecycle completion, timeline hash,
-HTTP success or parser-version match is insufficient. The inspected FastF1 3.8.3
-TrackStatus parser/cache provides no such signal: its adapter emits integrity
-`unknown` with no affirmative evidence. Therefore its historical empty streams
-show **No event observed; coverage unproven**, never confirmed “No SC”/“No Red Flag”.
-Observed positive events remain confirmed minimums with null exact totals, shown as
-**at least N (incomplete)**. Only explicit integrity-checked fixture sources currently
-exercise confirmed-zero behavior. Report and Planner use the same local artifact
-and formatting; neither acquires data on render/reload. This descriptive context
-never changes strategy, probabilities or operational inputs.
+The analysis package uses FastF1, NumPy, pandas and Matplotlib; the GUI uses
+PySide6 and pyqtgraph. `WODATA_ROOT` controls the shared data location. Workflows
+reuse supported caches and may acquire missing public session data. Live access
+has its own authentication requirements; archived analysis does not require a
+live connection.
+
+For a small, offline example using the exact strategy engine and saved R16
+inputs, see [the workflow guide](doc/WORKFLOWS.md#offline-strategy-example).
+The guide also covers single-event CLI analysis, report orchestration and visual
+provenance. [woWeekend's published R13 example](https://github.com/dr-wo/woWeekend/tree/main/examples/2026-R13)
+contains preparation and post-race reports with their assumptions and outputs.
+
+## Engineering structure and further reading
+
+The dependency boundary is `woData → woStrategy → woPlanner`; woWeekend
+coordinates the packages. Within woStrategy, mathematical models and reusable
+algorithms are separated from dataframe analysis, plotting and CLI orchestration.
+The analysis engine does not import the GUI.
+
+Tests cover exact-search agreement, rules and tyre-age boundaries, deterministic
+sampling, causal model inputs, cache contracts and missing-evidence behaviour.
+Reproducible artifacts carry event identity and provenance; reports reference
+saved run inputs instead of silently substituting later results.
+
+| Explore | Reference |
+| --- | --- |
+| Commands, offline example and figure sources | [Workflow guide](doc/WORKFLOWS.md) |
+| Race MC, live-retro and identifiability | [Race/FP architecture](doc/RACE_MC_AND_FP_ARCHITECTURE.md) |
+| Pre-race prediction and chronological validation | [Cross-event tyre prediction](doc/CROSS_EVENT_TYRE_PREDICTION_V1.md) |
+| FP evidence and interpretation limits | [FP tyre estimation](doc/FP_TYRE_ESTIMATION_STATUS_AND_ROADMAP.md) |
+| Strategy sensitivity and coverage | [Degradation cutoff analysis](doc/DEGRADATION_CUTOFF.md) |
+| Traffic and local pace diagnostics | [Traffic evaluation](doc/traffic_evaluation.md), [local pairwise pace](doc/LOCAL_PAIRWISE_RACE_PERFORMANCE.md) |
+| Interactive application | [woPlanner documentation](https://github.com/dr-wo/woPlanner) |
+
+Developed extensively with coding agents. Architecture and investigation notes
+preserve assumptions, interfaces and validation decisions across development
+sessions. Licensed under [MIT](LICENSE).
