@@ -99,8 +99,12 @@ values. Provisional timing displayed in the GUI is kept separate from analytical
 inputs, and missing evidence can leave the model unchanged. The historical figure
 illustrates that update mechanism, not a guarantee that every current recording
 or traffic-filter mode supplies enough usable evidence. On woPlanner main,
-automatic Race traffic retains the existing model; new Race fits require explicit
-sector-boundary mode and sufficient eligible clean laps.
+Automatic Race traffic uses Sector timing boundaries v2 with causally bounded
+input recovery. The effective method and version are visible in clean-lap details
+and recorded with the requested Automatic mode. New Race fits require sufficient
+eligible clean laps; when evidence is insufficient, the existing model is retained
+with an explicit waiting reason. Sector timing boundaries also remains available
+as an explicit selection.
 
 ## Performance and methodology
 
