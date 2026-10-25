@@ -730,9 +730,17 @@ def _variant_results(evidence):
                     {"variant": variant, "contrast": target, "value": fixed, "sse": sse}
                 )
     return {
-        "results": pd.DataFrame(results),
-        "sensitivities": pd.DataFrame(sensitivities),
-        "profiles": pd.DataFrame(profiles),
+        "results": pd.DataFrame(results, columns=(
+            "variant", "contrast", "central", "standard_error", "p10", "p50", "p90",
+            "supporting_runs", "supporting_teams", "supporting_clean_laps",
+            "tyre_age_span", "fit_rank", "residual_sigma_s",
+        )),
+        "sensitivities": pd.DataFrame(sensitivities, columns=(
+            "contrast", "dimension", "omitted", "central",
+        )),
+        "profiles": pd.DataFrame(profiles, columns=(
+            "variant", "contrast", "value", "sse",
+        )),
         "fits": fits,
     }
 
@@ -770,10 +778,37 @@ def _contrast_records(variants, convergence):
     results = variants["results"]
     sensitivity = variants["sensitivities"]
     profiles = variants["profiles"]
+    strict_frame = variants["fits"]["strict"]["frame"]
     records = []
     for name in ("Delta_HM", "Delta_SM", "Delta_SH"):
         rows = results.loc[results["contrast"].eq(name)].set_index("variant")
+        involved = {
+            "Delta_HM": ("HARD", "MEDIUM"),
+            "Delta_SM": ("SOFT", "MEDIUM"),
+            "Delta_SH": ("SOFT", "HARD"),
+        }[name]
+        support = strict_frame.loc[strict_frame["compound"].isin(involved)]
         if "strict" not in rows.index:
+            records.append({
+                "parameter": name,
+                "unit": "s/lap",
+                "provenance_type": "fp_longrun_contrast",
+                "status": "unsupported",
+                "support_status": "not_estimable_from_current_strict_design",
+                "automatic_strategy_update": False,
+                "reason": "The strict FP design does not identify this compound contrast.",
+                "strict_central": None,
+                "strict_p10": None,
+                "strict_p50": None,
+                "strict_p90": None,
+                "one_gap_central": None,
+                "robust_variability_central": None,
+                "supporting_runs": int(support.run_id.nunique()),
+                "supporting_teams": int(support.team.nunique()),
+                "supporting_clean_laps": int(len(support)),
+                "profile": None,
+                "rank": variants["fits"]["strict"]["rank"],
+            })
             continue
         strict = rows.loc["strict"]
         leave_run = sensitivity.loc[
@@ -806,6 +841,8 @@ def _contrast_records(variants, convergence):
                 "parameter": name,
                 "unit": "s/lap",
                 "provenance_type": "fp_longrun_contrast",
+                "status": "supported",
+                "support_status": "estimable_from_current_strict_design",
                 "automatic_strategy_update": False,
                 "strict_central": strict.central,
                 "strict_p10": strict.p10,

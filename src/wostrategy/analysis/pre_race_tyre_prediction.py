@@ -134,6 +134,7 @@ def _source_prediction(payload: dict[str, object], path: Path) -> PreRaceTyrePre
             compounds, declared_reference=declared_reference
         )
     )
+    prediction_provenance = dict(payload.get("provenance") or {})
     return PreRaceTyrePrediction(
         event=str(payload.get("event") or f"{payload['season']}-{payload['round']}"),
         season=int(payload["season"]), round_number=int(payload["round"]),
@@ -145,6 +146,29 @@ def _source_prediction(payload: dict[str, object], path: Path) -> PreRaceTyrePre
                     "trained_through_round": payload.get("trained_through_round"),
                     "training_rounds": payload.get("training_rounds"),
                     "default_prediction_family": payload.get("default_prediction_family"),
+                    "prediction_status": payload.get("prediction_status"),
+                    "classification": prediction_provenance.get("classification"),
+                    "independent_of_current_fp": prediction_provenance.get(
+                        "independent_of_current_fp"
+                    ),
+                    "fp_evidence_automatic_update": prediction_provenance.get(
+                        "fp_evidence_automatic_update"
+                    ),
+                    "source_round": prediction_provenance.get("source_round"),
+                    "allocation_source_url": prediction_provenance.get(
+                        "allocation_source_url"
+                    ),
+                    "prediction_provenance": {
+                        key: prediction_provenance.get(key)
+                        for key in (
+                            "classification", "independent_of_current_fp",
+                            "fp_evidence_automatic_update", "source_round",
+                            "source_training_cutoff_round", "source_training_rounds",
+                            "prediction_model_sha256", "allocation_source_url",
+                            "descriptor_models_available", "descriptor_values_used",
+                            "target_preview_available", "reason",
+                        )
+                    },
                     "production_policy": payload.get("production_policy"),
                     "pirelli_preview_effect": (
                         "compound_allocation_only_for_selected_historical_baseline"

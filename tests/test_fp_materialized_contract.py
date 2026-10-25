@@ -84,6 +84,20 @@ def test_current_materialized_calculation_and_empty_behavior():
         )
 
 
+def test_single_compound_support_returns_unidentified_contrasts_without_crashing():
+    frame = current_laps().loc[lambda rows: rows["Compound"].eq("MEDIUM")].copy()
+    result = evidence.analyse_fp_tyre_evidence_sessions(
+        {"FP2": frame}, year=2026, round_number=11,
+    )
+
+    assert result["longrun_support"]["strict_longrun_runs"] > 0
+    assert len(result["degradation_contrasts"]) == 3
+    assert {row["status"] for row in result["degradation_contrasts"]} == {"unsupported"}
+    assert all(row["strict_central"] is None for row in result["degradation_contrasts"])
+    assert result["identifiability"]["rank"] < 3
+    assert result["identifiability"]["nullity"] > 1
+
+
 @pytest.mark.parametrize("kind", ["v2", "v3", "missing", "mode", "mixed_rows"])
 def test_injected_loader_cannot_relabel_or_persist_incompatible_laps(tmp_path, kind):
     frame = incompatible(kind)
